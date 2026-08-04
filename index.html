@@ -341,6 +341,7 @@
 
   <footer>
     <div>모든 데이터는 지금 사용 중인 이 브라우저에만 저장됩니다(다른 기기·다른 브라우저에서는 보이지 않음). 기기를 바꾸거나 브라우저 데이터를 지우기 전에 반드시 백업을 내려받아 두세요.</div>
+    <div id="storageStatus" style="font-family:'JetBrains Mono',monospace;"></div>
     <div class="backup-row no-print">
       <button class="backup-btn" id="exportJsonBtn">전체 데이터 백업(JSON)</button>
       <button class="backup-btn" id="importJsonBtn">백업 불러오기</button>
@@ -348,6 +349,7 @@
     </div>
   </footer>
 </div>
+<div id="storageWarning" style="display:none;position:fixed;top:0;left:0;right:0;background:#A3273C;color:#fff;text-align:center;padding:10px;font-size:13px;font-weight:600;z-index:999;"></div>
 
 <script>
 const STORAGE_KEY = 'ledger:transactions';
@@ -367,6 +369,33 @@ function won(n){
   return sign + Math.abs(Math.round(n)).toLocaleString('ko-KR') + '원';
 }
 
+/* ---------- 저장소 자가진단 ---------- */
+function testLocalStorage(){
+  try{
+    const testKey = '__ls_test__';
+    localStorage.setItem(testKey, '1');
+    const ok = localStorage.getItem(testKey) === '1';
+    localStorage.removeItem(testKey);
+    return ok;
+  }catch(e){
+    return false;
+  }
+}
+
+const storageOk = testLocalStorage();
+if(!storageOk){
+  const w = document.getElementById('storageWarning');
+  w.style.display = 'block';
+  w.textContent = '⚠ 이 브라우저에서 데이터 저장이 차단되어 있습니다 (시크릿 모드이거나 사이트 데이터 차단 설정 때문일 수 있습니다). 지금 입력하는 내용은 새로고침하면 사라집니다.';
+}
+
+function updateStorageStatus(extra){
+  const el = document.getElementById('storageStatus');
+  if(!el) return;
+  const now = new Date().toLocaleTimeString('ko-KR');
+  el.textContent = `현재 주소: ${location.host || '(로컬 파일)'} · 저장된 거래: ${transactions.length}건 · ${extra || ''} ${now}`;
+}
+
 async function loadData(){
   try{
     const raw = localStorage.getItem(STORAGE_KEY);
@@ -375,15 +404,18 @@ async function loadData(){
     console.error('불러오기 실패', e);
     transactions = [];
   }
+  updateStorageStatus('불러옴');
   render();
 }
 
 async function saveData(){
   try{
     localStorage.setItem(STORAGE_KEY, JSON.stringify(transactions));
+    updateStorageStatus('저장됨');
   }catch(e){
     console.error('저장 실패', e);
     alert('데이터 저장에 실패했습니다. 브라우저 저장 공간이 가득 찼거나 시크릿 모드일 수 있습니다.');
+    updateStorageStatus('저장 실패!');
   }
 }
 
