@@ -327,7 +327,7 @@
   </div>
 
   <footer>
-    <div>모든 데이터는 이 브라우저 계정에만 저장됩니다. 기기를 바꾸기 전에 백업을 내려받아 두세요.</div>
+    <div>모든 데이터는 지금 사용 중인 이 브라우저에만 저장됩니다(다른 기기·다른 브라우저에서는 보이지 않음). 기기를 바꾸거나 브라우저 데이터를 지우기 전에 반드시 백업을 내려받아 두세요.</div>
     <div class="backup-row no-print">
       <button class="backup-btn" id="exportJsonBtn">전체 데이터 백업(JSON)</button>
       <button class="backup-btn" id="importJsonBtn">백업 불러오기</button>
@@ -356,9 +356,10 @@ function won(n){
 
 async function loadData(){
   try{
-    const res = await window.storage.get(STORAGE_KEY, false);
-    transactions = res ? JSON.parse(res.value) : [];
+    const raw = localStorage.getItem(STORAGE_KEY);
+    transactions = raw ? JSON.parse(raw) : [];
   }catch(e){
+    console.error('불러오기 실패', e);
     transactions = [];
   }
   render();
@@ -366,13 +367,10 @@ async function loadData(){
 
 async function saveData(){
   try{
-    const result = await window.storage.set(STORAGE_KEY, JSON.stringify(transactions), false);
-    if(!result){
-      alert('데이터 저장에 실패했습니다. 다시 시도해 주세요.');
-    }
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(transactions));
   }catch(e){
     console.error('저장 실패', e);
-    alert('데이터 저장에 실패했습니다. 다시 시도해 주세요.');
+    alert('데이터 저장에 실패했습니다. 브라우저 저장 공간이 가득 찼거나 시크릿 모드일 수 있습니다.');
   }
 }
 
