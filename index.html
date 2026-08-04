@@ -80,6 +80,22 @@
     form.entry{grid-template-columns:1fr 1fr;}
   }
 
+  .bulk-toolbar{display:flex;gap:10px;flex-wrap:wrap;align-items:end;margin-bottom:14px;}
+  .bulk-toolbar .f-item{display:flex;flex-direction:column;gap:4px;}
+  .bulk-toolbar label{font-size:12px;color:var(--ink-soft);}
+  .bulk-toolbar input{padding:7px 9px;border:1px solid var(--paper-line);border-radius:3px;font-size:13px;font-family:'Pretendard';}
+  #bulkRowsBody td{padding:4px 6px;text-align:left;}
+  #bulkRowsBody input, #bulkRowsBody select{
+    width:100%;padding:6px 7px;border:1px solid var(--paper-line);border-radius:3px;
+    font-family:'Pretendard';font-size:13px;background:#fff;color:var(--ink);
+  }
+  #bulkRowsBody input[type="number"]{text-align:right;font-family:'JetBrains Mono',monospace;}
+  .bulk-save-btn{
+    margin-top:14px;padding:10px 22px;border:none;border-radius:3px;background:var(--ink);color:#fff;
+    font-weight:700;cursor:pointer;font-size:14px;
+  }
+  .bulk-save-btn:hover{background:var(--accent);}
+
   /* tabs */
   .tabs{display:flex;gap:6px;margin-bottom:16px;flex-wrap:wrap;}
   .tabs button{
@@ -167,37 +183,68 @@
 
   <div class="card">
     <h2><span class="idx">01</span> 거래 입력</h2>
-    <div class="edit-banner" id="editBanner">✎ 거래를 수정하는 중입니다. 저장하려면 "수정 완료"를 누르세요.</div>
-    <form class="entry" id="entryForm">
-      <div>
-        <label>거래일</label>
-        <input type="date" id="f-date" required>
+    <div class="tabs no-print" id="entryModeTabs">
+      <button type="button" data-entrymode="single" class="active">한 건씩 입력</button>
+      <button type="button" data-entrymode="bulk">여러 건 한번에 입력</button>
+    </div>
+
+    <div id="singleEntryWrap">
+      <div class="edit-banner" id="editBanner">✎ 거래를 수정하는 중입니다. 저장하려면 "수정 완료"를 누르세요.</div>
+      <form class="entry" id="entryForm">
+        <div>
+          <label>거래일</label>
+          <input type="date" id="f-date" required>
+        </div>
+        <div>
+          <label>구분</label>
+          <select id="f-type">
+            <option value="income">수입</option>
+            <option value="expense">지출</option>
+          </select>
+        </div>
+        <div>
+          <label>통장</label>
+          <input type="text" id="f-account" list="accountOptions" placeholder="예: 국민 감사헌금" required>
+          <datalist id="accountOptions"></datalist>
+        </div>
+        <div>
+          <label>내용</label>
+          <input type="text" id="f-memo" placeholder="예: 홍길동 감사헌금, 선교사 지원비" required>
+        </div>
+        <div>
+          <label>금액</label>
+          <input type="number" id="f-amount" min="1" step="1" placeholder="0" required>
+        </div>
+        <div class="btn-row">
+          <button type="submit" id="submitBtn">추가</button>
+          <button type="button" id="cancelEditBtn" class="cancel-btn">취소</button>
+        </div>
+      </form>
+    </div>
+
+    <div id="bulkEntryWrap" style="display:none;">
+      <div class="bulk-toolbar no-print">
+        <div class="f-item">
+          <label>통장 (전체 행 공통)</label>
+          <input type="text" id="bulk-account" list="accountOptions" placeholder="예: 국민 감사헌금">
+        </div>
+        <div class="f-item">
+          <label>연월</label>
+          <input type="month" id="bulk-month">
+        </div>
+        <button type="button" class="tool-btn" id="fillMonthBtn">이 달 날짜로 채우기</button>
+        <button type="button" class="tool-btn" id="addBulkRowBtn">행 추가</button>
+        <button type="button" class="tool-btn" id="clearBulkRowsBtn">모두 지우기</button>
       </div>
-      <div>
-        <label>구분</label>
-        <select id="f-type">
-          <option value="income">수입</option>
-          <option value="expense">지출</option>
-        </select>
+      <div class="table-scroll">
+        <table>
+          <thead><tr><th style="text-align:left;">거래일</th><th style="text-align:left;">구분</th><th style="text-align:left;">내용</th><th style="text-align:left;">금액</th><th></th></tr></thead>
+          <tbody id="bulkRowsBody"></tbody>
+        </table>
       </div>
-      <div>
-        <label>통장</label>
-        <input type="text" id="f-account" list="accountOptions" placeholder="예: 국민 감사헌금" required>
-        <datalist id="accountOptions"></datalist>
-      </div>
-      <div>
-        <label>내용</label>
-        <input type="text" id="f-memo" placeholder="예: 홍길동 감사헌금, 선교사 지원비" required>
-      </div>
-      <div>
-        <label>금액</label>
-        <input type="number" id="f-amount" min="1" step="1" placeholder="0" required>
-      </div>
-      <div class="btn-row">
-        <button type="submit" id="submitBtn">추가</button>
-        <button type="button" id="cancelEditBtn" class="cancel-btn">취소</button>
-      </div>
-    </form>
+      <div class="empty" id="bulkEmpty">"이 달 날짜로 채우기"를 누르면 한 달치 행이 한 번에 만들어집니다. 필요한 날짜만 채우고 나머지는 비워두면 됩니다.</div>
+      <button type="button" class="bulk-save-btn" id="bulkSaveBtn">일괄 저장</button>
+    </div>
   </div>
 
   <div class="card" id="ledgerCard">
@@ -814,6 +861,120 @@ document.getElementById('importJsonInput').addEventListener('change', async (e)=
   }finally{
     e.target.value = '';
   }
+});
+
+/* ---------- 일괄 입력 (여러 건 한번에) ---------- */
+document.getElementById('bulk-month').value = new Date().toISOString().slice(0,7);
+
+document.getElementById('entryModeTabs').addEventListener('click', (e)=>{
+  if(e.target.tagName !== 'BUTTON') return;
+  const mode = e.target.dataset.entrymode;
+  document.querySelectorAll('#entryModeTabs button').forEach(b=>b.classList.remove('active'));
+  e.target.classList.add('active');
+  document.getElementById('singleEntryWrap').style.display = mode === 'single' ? 'block' : 'none';
+  document.getElementById('bulkEntryWrap').style.display = mode === 'bulk' ? 'block' : 'none';
+  if(mode === 'single') resetFormToAddMode();
+});
+
+function updateBulkEmptyState(){
+  const body = document.getElementById('bulkRowsBody');
+  document.getElementById('bulkEmpty').style.display = body.children.length === 0 ? 'block' : 'none';
+}
+
+function addBulkRow(dateVal){
+  const body = document.getElementById('bulkRowsBody');
+  const tr = document.createElement('tr');
+  tr.innerHTML = `
+    <td><input type="date" class="bulk-date" value="${dateVal || ''}"></td>
+    <td>
+      <select class="bulk-type">
+        <option value="income">수입</option>
+        <option value="expense">지출</option>
+      </select>
+    </td>
+    <td><input type="text" class="bulk-memo" placeholder="내용"></td>
+    <td><input type="number" class="bulk-amount" min="1" step="1" placeholder="0"></td>
+    <td><button type="button" class="del-btn bulk-row-del">삭제</button></td>
+  `;
+  body.appendChild(tr);
+  tr.querySelector('.bulk-row-del').addEventListener('click', ()=>{
+    tr.remove();
+    updateBulkEmptyState();
+  });
+  updateBulkEmptyState();
+  return tr;
+}
+
+document.getElementById('fillMonthBtn').addEventListener('click', ()=>{
+  const monthVal = document.getElementById('bulk-month').value;
+  if(!monthVal){ alert('연월을 먼저 선택해 주세요.'); return; }
+  const body = document.getElementById('bulkRowsBody');
+  if(body.children.length > 0 && !confirm('현재 입력된 행이 모두 지워지고 이번 달 날짜로 다시 채워집니다. 계속할까요?')) return;
+  body.innerHTML = '';
+  const [y, m] = monthVal.split('-').map(Number);
+  const daysInMonth = new Date(y, m, 0).getDate();
+  for(let d=1; d<=daysInMonth; d++){
+    const dateStr = `${y}-${String(m).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+    addBulkRow(dateStr);
+  }
+});
+
+document.getElementById('addBulkRowBtn').addEventListener('click', ()=>{
+  const monthVal = document.getElementById('bulk-month').value;
+  addBulkRow(monthVal ? `${monthVal}-01` : '');
+});
+
+document.getElementById('clearBulkRowsBtn').addEventListener('click', ()=>{
+  const body = document.getElementById('bulkRowsBody');
+  if(body.children.length === 0) return;
+  if(!confirm('입력 중인 모든 행을 지울까요?')) return;
+  body.innerHTML = '';
+  updateBulkEmptyState();
+});
+
+document.getElementById('bulkSaveBtn').addEventListener('click', async ()=>{
+  const account = document.getElementById('bulk-account').value.trim();
+  if(!account){ alert('통장을 입력해 주세요 (전체 행에 공통 적용됩니다).'); return; }
+
+  const rows = [...document.querySelectorAll('#bulkRowsBody tr')];
+  const toAdd = [];
+  const errorLines = [];
+
+  rows.forEach((tr, idx)=>{
+    const date = tr.querySelector('.bulk-date').value;
+    const type = tr.querySelector('.bulk-type').value;
+    const memo = tr.querySelector('.bulk-memo').value.trim();
+    const amountRaw = tr.querySelector('.bulk-amount').value;
+
+    if(!memo && !amountRaw) return; // 완전히 빈 행은 건너뜀
+
+    const amount = parseFloat(amountRaw);
+    if(!date || !memo || isNaN(amount) || amount <= 0 || !Number.isInteger(amount)){
+      errorLines.push(idx + 1);
+      return;
+    }
+    toAdd.push({date, type, memo, amount});
+  });
+
+  if(errorLines.length){
+    alert(`${errorLines.join(', ')}번째 행을 확인해 주세요.\n거래일·내용·금액(정수)이 모두 올바르게 입력되어야 합니다.`);
+    return;
+  }
+  if(toAdd.length === 0){ alert('저장할 내용이 없습니다. 내용과 금액을 입력한 행이 있는지 확인해 주세요.'); return; }
+  if(!confirm(`"${account}" 통장으로 ${toAdd.length}건을 저장할까요?`)) return;
+
+  toAdd.forEach(t=>{
+    transactions.push({
+      id: 'tx_' + Date.now() + '_' + Math.random().toString(36).slice(2,7),
+      account, ...t
+    });
+  });
+
+  await saveData();
+  document.getElementById('bulkRowsBody').innerHTML = '';
+  updateBulkEmptyState();
+  render();
+  alert(`${toAdd.length}건이 저장되었습니다.`);
 });
 
 loadData();
