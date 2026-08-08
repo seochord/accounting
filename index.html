@@ -340,7 +340,7 @@
   </div>
 
   <footer>
-    <div>모든 데이터는 지금 사용 중인 이 브라우저에만 저장됩니다(다른 기기·다른 브라우저에서는 보이지 않음). 기기를 바꾸거나 브라우저 데이터를 지우기 전에 반드시 백업을 내려받아 두세요.</div>
+    <div>암호를 입력하면 서버에 저장되어 어느 기기·브라우저에서도 같은 데이터를 볼 수 있습니다. 암호를 입력하지 않았거나 서버 연결에 실패한 경우에는 이 브라우저에만 임시로 저장됩니다. 정기적으로 백업을 내려받아 두는 것을 권장합니다.</div>
     <div id="storageStatus" style="font-family:'JetBrains Mono',monospace;"></div>
     <div class="backup-row no-print">
       <button class="backup-btn" id="exportJsonBtn">전체 데이터 백업(JSON)</button>
@@ -352,9 +352,26 @@
 <div id="storageWarning" style="display:none;position:fixed;top:0;left:0;right:0;background:#A3273C;color:#fff;text-align:center;padding:10px;font-size:13px;font-weight:600;z-index:999;"></div>
 
 <script>
-const STORAGE_KEY = 'ledger:transactions';
+const STORAGE_KEY = 'ledger:transactions';       // 로컬 캐시(오프라인 폴백)용
+const PASSCODE_KEY = 'ledger:passcode';           // 이 브라우저에 저장해두는 접근 암호
+const API_URL = '/api/transactions';
 const DEFAULT_ACCOUNTS = ['국민 감사헌금','국민 선교헌금','농협 감사헌금','농협 선교헌금'];
 let transactions = [];
+let serverAvailable = false; // 서버 저장 성공 여부(상태 표시용)
+
+function getPasscode(){
+  return sessionStorage.getItem(PASSCODE_KEY) || '';
+}
+
+async function ensurePasscode(){
+  let pw = getPasscode();
+  if(pw) return pw;
+  pw = prompt('회계 데이터 접근 암호를 입력하세요.\n(이 기기의 이 탭에서만 기억됩니다)');
+  if(pw){
+    sessionStorage.setItem(PASSCODE_KEY, pw);
+  }
+  return pw || '';
+}
 let currentMode = 'month';
 let currentYear = new Date().getFullYear();
 let filterAccount = '';
@@ -396,26 +413,87 @@ function updateStorageStatus(extra){
   el.textContent = `현재 주소: ${location.host || '(로컬 파일)'} · 저장된 거래: ${transactions.length}건 · ${extra || ''} ${now}`;
 }
 
-async function loadData(){
+function loadLocalCache(){
   try{
     const raw = localStorage.getItem(STORAGE_KEY);
-    transactions = raw ? JSON.parse(raw) : [];
+    return raw ? JSON.parse(raw) : [];
   }catch(e){
-    console.error('불러오기 실패', e);
-    transactions = [];
+    return [];
   }
-  updateStorageStatus('불러옴');
+}
+
+function saveLocalCache(){
+  try{
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(transactions));
+  }catch(e){
+    console.error('로컬 캐시 저장 실패', e);
+  }
+}
+
+async function loadData(){
+  // 우선 로컬 캐시로 즉시 화면을 채운 뒤, 서버 데이터가 오면 교체한다.
+  transactions = loadLocalCache();
   render();
+  updateStorageStatus('로컬 캐시 표시 중 · 서버 확인 중...');
+
+  const pw = await ensurePasscode();
+  if(!pw){
+    updateStorageStatus('암호 미입력 · 로컬 캐시만 사용');
+    return;
+  }
+
+  try{
+    const res = await fetch(API_URL, { headers: { 'X-Passcode': pw } });
+    if(res.status === 401){
+      sessionStorage.removeItem(PASSCODE_KEY);
+      alert('암호가 올바르지 않습니다. 새로고침 후 다시 입력해 주세요.');
+      updateStorageStatus('인증 실패 · 로컬 캐시만 사용');
+      return;
+    }
+    if(!res.ok) throw new Error('서버 응답 오류 (' + res.status + ')');
+    const data = await res.json();
+    transactions = Array.isArray(data.transactions) ? data.transactions : [];
+    saveLocalCache();
+    serverAvailable = true;
+    updateStorageStatus('서버에서 불러옴');
+    render();
+  }catch(e){
+    console.error('서버 불러오기 실패', e);
+    serverAvailable = false;
+    updateStorageStatus('서버 연결 실패 · 로컬 캐시만 사용');
+  }
 }
 
 async function saveData(){
+  // 로컬 캐시는 항상 즉시 저장(오프라인 대비)
+  saveLocalCache();
+
+  const pw = getPasscode();
+  if(!pw){
+    updateStorageStatus('암호 미입력 · 로컬에만 저장됨');
+    return;
+  }
+
   try{
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(transactions));
-    updateStorageStatus('저장됨');
+    const res = await fetch(API_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-Passcode': pw },
+      body: JSON.stringify({ transactions })
+    });
+    if(res.status === 401){
+      sessionStorage.removeItem(PASSCODE_KEY);
+      alert('암호가 올바르지 않아 서버에 저장되지 않았습니다. 로컬에는 저장되었습니다.');
+      serverAvailable = false;
+      updateStorageStatus('인증 실패 · 로컬에만 저장됨');
+      return;
+    }
+    if(!res.ok) throw new Error('서버 응답 오류 (' + res.status + ')');
+    serverAvailable = true;
+    updateStorageStatus('서버에 저장됨');
   }catch(e){
-    console.error('저장 실패', e);
-    alert('데이터 저장에 실패했습니다. 브라우저 저장 공간이 가득 찼거나 시크릿 모드일 수 있습니다.');
-    updateStorageStatus('저장 실패!');
+    console.error('서버 저장 실패', e);
+    serverAvailable = false;
+    updateStorageStatus('⚠ 서버 저장 실패 · 로컬에만 저장됨 (다른 기기에 반영 안 됨)');
   }
 }
 
