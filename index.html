@@ -148,7 +148,23 @@
 
   .table-scroll{overflow-x:auto;}
 
-  footer{text-align:center;color:var(--ink-soft);font-size:11px;margin-top:30px;display:flex;flex-direction:column;gap:10px;align-items:center;}
+  .mom-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;}
+  @media (max-width:720px){.mom-grid{grid-template-columns:1fr;}}
+  .mom-box{
+    border:1px solid var(--paper-line);border-radius:6px;padding:16px 18px;background:#fff;
+  }
+  .mom-box .mom-label{font-size:12.5px;color:var(--ink-soft);font-weight:600;margin-bottom:6px;}
+  .mom-box .mom-cur{font-family:'JetBrains Mono',monospace;font-size:20px;font-weight:700;margin-bottom:4px;}
+  .mom-box .mom-prev{font-size:12px;color:var(--ink-soft);margin-bottom:10px;}
+  .mom-box .mom-delta{
+    display:inline-flex;align-items:center;gap:5px;font-family:'JetBrains Mono',monospace;
+    font-size:13.5px;font-weight:700;padding:3px 9px;border-radius:12px;
+  }
+  .mom-box .mom-delta.up{color:var(--income);background:rgba(30,78,140,0.08);}
+  .mom-box .mom-delta.down{color:var(--expense);background:rgba(163,39,60,0.08);}
+  .mom-box .mom-delta.flat{color:var(--ink-soft);background:var(--row-alt);}
+  footer{text-align:center;
+color:var(--ink-soft);font-size:11px;margin-top:30px;display:flex;flex-direction:column;gap:10px;align-items:center;}
   footer .backup-row{display:flex;gap:8px;}
   footer .backup-btn{
     padding:6px 14px;border:1px solid var(--paper-line);background:#fff;border-radius:14px;
@@ -339,11 +355,35 @@
     <div id="accountEmpty" class="empty" style="display:none;">등록된 거래가 없습니다.</div>
   </div>
 
+  <div class="card" id="momCard">
+    <h2>
+      <span class="idx">05</span> 전월대비 증감
+      <span class="print-title print-target-title" id="momPrintTitle">전월대비 증감</span>
+      <div class="card-tools no-print">
+        <button class="tool-btn" id="momPrintBtn">인쇄</button>
+        <button class="tool-btn" id="momExcelBtn">엑셀 다운로드</button>
+        <button class="tool-btn" id="monthlyReportBtn">월간 재정보고서 출력</button>
+      </div>
+    </h2>
+    <div class="filter-row no-print">
+      <div class="f-item">
+        <label>기준월</label>
+        <input type="month" id="momMonth">
+      </div>
+    </div>
+    <div class="card-caption" id="momCaption"></div>
+    <div class="mom-grid" id="momGrid"></div>
+    <div id="momEmpty" class="empty" style="display:none;">비교할 거래 내역이 없습니다.</div>
+  </div>
+
+  <div class="card" id="reportPrintArea" style="display:none;"></div>
+
   <footer>
     <div>암호를 입력하면 서버에 저장되어 어느 기기·브라우저에서도 같은 데이터를 볼 수 있습니다. 암호를 입력하지 않았거나 서버 연결에 실패한 경우에는 이 브라우저에만 임시로 저장됩니다. 정기적으로 백업을 내려받아 두는 것을 권장합니다.</div>
     <div id="storageStatus" style="font-family:'JetBrains Mono',monospace;"></div>
     <div class="backup-row no-print">
       <button class="backup-btn" id="exportJsonBtn">전체 데이터 백업(JSON)</button>
+      <button class="backup-btn" id="exportFullExcelBtn">전체 데이터 백업(엑셀)</button>
       <button class="backup-btn" id="importJsonBtn">백업 불러오기</button>
       <input type="file" id="importJsonInput" accept="application/json" style="display:none;">
     </div>
@@ -380,6 +420,7 @@ let editingId = null;
 
 document.getElementById('todayStr').textContent = new Date().toLocaleDateString('ko-KR', {year:'numeric',month:'long',day:'numeric'});
 document.getElementById('f-date').value = new Date().toISOString().slice(0,10);
+document.getElementById('momMonth').value = new Date().toISOString().slice(0,7);
 
 function won(n){
   const sign = n < 0 ? '-' : '';
@@ -836,6 +877,81 @@ function renderGroupTable(field, bodyId, emptyId){
 
 function renderAccountSummary(){ renderGroupTable('account','accountBody','accountEmpty'); }
 
+/* ---------- 05 전월대비 증감 ---------- */
+function sumMonth(monthStr){
+  let income = 0, expense = 0;
+  transactions.forEach(t=>{
+    if(t.date.slice(0,7) === monthStr){
+      if(t.type === 'income') income += t.amount; else expense += t.amount;
+    }
+  });
+  return {income, expense, net: income - expense};
+}
+
+function prevMonthStr(monthStr){
+  const [y,m] = monthStr.split('-').map(Number);
+  const d = new Date(y, m-2, 1); // m은 1~12, m-2 -> 0-index 전달로 전월 계산
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
+}
+
+function momItem(label, cur, prev, biggerIsBetter, extraClass){
+  const diff = cur - prev;
+  let rateText, cls, arrow;
+  if(prev === 0){
+    rateText = cur === 0 ? '전월도 0원' : '직전월 실적 없음';
+    cls = cur === 0 ? 'flat' : (biggerIsBetter ? 'up' : 'down');
+    arrow = cur === 0 ? '' : (diff > 0 ? '▲' : '▼');
+  } else {
+    const rate = (diff / Math.abs(prev)) * 100;
+    rateText = (diff >= 0 ? '+' : '') + rate.toFixed(1) + '%';
+    if(diff === 0){ cls = 'flat'; arrow = ''; }
+    else if(diff > 0){ cls = biggerIsBetter ? 'up' : 'down'; arrow = '▲'; }
+    else { cls = biggerIsBetter ? 'down' : 'up'; arrow = '▼'; }
+  }
+  const diffText = (diff >= 0 ? '+' : '') + won(diff);
+  return `
+    <div class="mom-box${extraClass ? ' '+extraClass : ''}">
+      <div class="mom-label">${label}</div>
+      <div class="mom-cur">${won(cur)}</div>
+      <div class="mom-prev">전월 ${won(prev)}</div>
+      <div class="mom-delta ${cls}">${arrow} ${diffText} (${rateText})</div>
+    </div>
+  `;
+}
+
+function renderMoM(){
+  const monthInput = document.getElementById('momMonth');
+  const monthStr = monthInput.value;
+  const grid = document.getElementById('momGrid');
+  const empty = document.getElementById('momEmpty');
+  const caption = document.getElementById('momCaption');
+
+  if(!monthStr){ grid.innerHTML = ''; empty.style.display = 'block'; return; }
+
+  const prevStr = prevMonthStr(monthStr);
+  const cur = sumMonth(monthStr);
+  const prev = sumMonth(prevStr);
+
+  const [cy, cm] = monthStr.split('-');
+  const [py, pm] = prevStr.split('-');
+  caption.textContent = `${cy}년 ${parseInt(cm,10)}월 vs ${py}년 ${parseInt(pm,10)}월`;
+  document.getElementById('momPrintTitle').textContent = `전월대비 증감 - ${cy}년 ${parseInt(cm,10)}월 vs ${py}년 ${parseInt(pm,10)}월`;
+
+  if(cur.income === 0 && cur.expense === 0 && prev.income === 0 && prev.expense === 0){
+    grid.innerHTML = '';
+    empty.style.display = 'block';
+    return;
+  }
+  empty.style.display = 'none';
+
+  grid.innerHTML =
+    momItem('수입', cur.income, prev.income, true) +
+    momItem('지출', cur.expense, prev.expense, false) +
+    momItem('총합계(순액)', cur.net, prev.net, true, 'net');
+}
+
+document.getElementById('momMonth').addEventListener('change', renderMoM);
+
 document.getElementById('periodTabs').addEventListener('click', (e)=>{
   if(e.target.tagName !== 'BUTTON') return;
   currentMode = e.target.dataset.mode;
@@ -856,6 +972,7 @@ function render(){
   populateYearSelect();
   renderAgg();
   renderAccountSummary();
+  renderMoM();
 }
 
 /* ---------- 인쇄 ---------- */
@@ -873,17 +990,86 @@ window.addEventListener('afterprint', ()=>{
 document.getElementById('ledgerPrintBtn').addEventListener('click', ()=> printSection('ledgerCard'));
 document.getElementById('aggPrintBtn').addEventListener('click', ()=> printSection('aggCard'));
 document.getElementById('accountPrintBtn').addEventListener('click', ()=> printSection('accountCard'));
+document.getElementById('momPrintBtn').addEventListener('click', ()=> printSection('momCard'));
+
+/* ---------- 월간 재정보고서 (통합 인쇄) ---------- */
+function buildMonthlyReportHTML(monthStr){
+  const [y, m] = monthStr.split('-');
+  const monthLabel = `${y}년 ${parseInt(m,10)}월`;
+
+  const monthTx = sortedTx().filter(t => t.date.slice(0,7) === monthStr);
+  let balance = 0, totalIncome = 0, totalExpense = 0;
+  const ledgerRowsHtml = monthTx.map(tx=>{
+    const inc = tx.type === 'income' ? tx.amount : 0;
+    const exp = tx.type === 'expense' ? tx.amount : 0;
+    balance += inc - exp;
+    totalIncome += inc; totalExpense += exp;
+    return `<tr><td>${tx.date}</td><td class="memo">${escapeHtml(tx.account||'')}</td><td class="memo">${escapeHtml(tx.memo)}</td><td class="income">${inc?won(inc):''}</td><td class="expense">${exp?won(exp):''}</td><td>${won(balance)}</td></tr>`;
+  }).join('') || `<tr><td colspan="6" style="text-align:center;font-family:'Pretendard';color:var(--ink-soft);">해당 월 거래 내역이 없습니다.</td></tr>`;
+
+  const {rows: accRows} = computeGroupSummary('account');
+  const accRowsHtml = accRows.map(r=>`<tr><td colspan="2">${escapeHtml(r.label)}</td><td class="income">${r.income?won(r.income):'-'}</td><td class="expense">${r.expense?won(r.expense):'-'}</td><td class="${r.net>=0?'balance-pos':'balance-neg'}">${won(r.net)}</td></tr>`).join('');
+
+  const prevStr = prevMonthStr(monthStr);
+  const cur = sumMonth(monthStr);
+  const prev = sumMonth(prevStr);
+  const momHtml = momItem('수입', cur.income, prev.income, true)
+    + momItem('지출', cur.expense, prev.expense, false)
+    + momItem('총합계(순액)', cur.net, prev.net, true, 'net');
+
+  const today = new Date().toLocaleDateString('ko-KR', {year:'numeric',month:'long',day:'numeric'});
+
+  return `
+    <div class="print-title print-target-title">진리침례교회 재정보고서 — ${monthLabel}</div>
+
+    <h3 style="font-family:'Noto Serif KR',serif;font-size:15px;margin:20px 0 8px;">1. ${monthLabel} 거래 내역</h3>
+    <table><thead><tr><th style="text-align:left;">거래일</th><th style="text-align:left;">통장</th><th style="text-align:left;">내용</th><th>수입</th><th>지출</th><th>소계</th></tr></thead>
+    <tbody>
+      ${ledgerRowsHtml}
+      <tr class="total-row"><td colspan="3">합계</td><td class="income">${won(totalIncome)}</td><td class="expense">${won(totalExpense)}</td><td>${won(balance)}</td></tr>
+    </tbody></table>
+
+    <h3 style="font-family:'Noto Serif KR',serif;font-size:15px;margin:26px 0 8px;">2. 통장별 잔액 (전체 기간 누적)</h3>
+    <table><thead><tr><th style="text-align:left;">통장</th><th></th><th>수입 합계</th><th>지출 합계</th><th>잔액</th></tr></thead>
+    <tbody>${accRowsHtml}</tbody></table>
+
+    <h3 style="font-family:'Noto Serif KR',serif;font-size:15px;margin:26px 0 8px;">3. 전월대비 증감</h3>
+    <div class="mom-grid">${momHtml}</div>
+
+    <div style="margin-top:60px;font-size:13px;text-align:right;">작성일: ${today}</div>
+    <div style="margin-top:26px;display:flex;justify-content:flex-end;gap:50px;font-size:13px;">
+      <div>담당&nbsp;&nbsp;: ______________ (인)</div>
+      <div>확인&nbsp;&nbsp;: ______________ (인)</div>
+    </div>
+  `;
+}
+
+function printMonthlyReport(){
+  const monthStr = document.getElementById('momMonth').value;
+  if(!monthStr){ alert('기준월을 먼저 선택해 주세요.'); return; }
+  const area = document.getElementById('reportPrintArea');
+  area.innerHTML = buildMonthlyReportHTML(monthStr);
+  document.querySelectorAll('.card').forEach(c=>c.classList.remove('print-target'));
+  area.classList.add('print-target');
+  document.body.classList.add('printing');
+  window.print();
+}
+
+document.getElementById('monthlyReportBtn').addEventListener('click', printMonthlyReport);
 
 /* ---------- 엑셀 다운로드 ---------- */
 function excelFilename(prefix){
   return `${prefix}_${new Date().toISOString().slice(0,10)}.xlsx`;
 }
 
-function downloadLedgerExcel(){
-  let list = sortedTx();
-  if(filterYear) list = list.filter(t => t.date.slice(0,4) === String(filterYear));
-  if(filterAccount) list = list.filter(t => t.account === filterAccount);
-  if(list.length === 0){ alert('내보낼 거래 내역이 없습니다.'); return; }
+function summaryToSheetRows(headerLabel, rows, grandIncome, grandExpense){
+  const sheetRows = [[headerLabel, '수입 합계', '지출 합계', '소계(순액)']];
+  rows.forEach(r => sheetRows.push([r.label, r.income, r.expense, r.net]));
+  sheetRows.push(['합계', grandIncome, grandExpense, grandIncome - grandExpense]);
+  return sheetRows;
+}
+
+function buildLedgerSheetRows(list){
   const rows = [['거래일','통장','내용','수입','지출','소계(잔액)']];
   let balance = 0, totalIncome = 0, totalExpense = 0;
   list.forEach(tx=>{
@@ -894,48 +1080,105 @@ function downloadLedgerExcel(){
     rows.push([tx.date, tx.account || '', tx.memo, inc || 0, exp || 0, balance]);
   });
   rows.push(['합계', '', '', totalIncome, totalExpense, balance]);
+  return rows;
+}
 
-  const ws = XLSX.utils.aoa_to_sheet(rows);
-  ws['!cols'] = [{wch:12},{wch:14},{wch:22},{wch:12},{wch:12},{wch:14}];
+function appendSheet(wb, sheetRows, colWidths, sheetName){
+  const ws = XLSX.utils.aoa_to_sheet(sheetRows);
+  ws['!cols'] = colWidths;
+  XLSX.utils.book_append_sheet(wb, ws, sheetName);
+  return ws;
+}
+
+function writeSingleSheetWorkbook(sheetRows, colWidths, sheetName, filenamePrefix){
   const wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, ws, '거래내역');
-  XLSX.writeFile(wb, excelFilename('거래내역'));
+  appendSheet(wb, sheetRows, colWidths, sheetName);
+  XLSX.writeFile(wb, excelFilename(filenamePrefix));
+}
+
+const LEDGER_COL_WIDTHS = [{wch:12},{wch:14},{wch:22},{wch:12},{wch:12},{wch:14}];
+const SUMMARY4_COL_WIDTHS = [{wch:14},{wch:14},{wch:14},{wch:14}];
+
+function downloadLedgerExcel(){
+  let list = sortedTx();
+  if(filterYear) list = list.filter(t => t.date.slice(0,4) === String(filterYear));
+  if(filterAccount) list = list.filter(t => t.account === filterAccount);
+  if(list.length === 0){ alert('내보낼 거래 내역이 없습니다.'); return; }
+  writeSingleSheetWorkbook(buildLedgerSheetRows(list), LEDGER_COL_WIDTHS, '거래내역', '거래내역');
 }
 
 function downloadAggExcel(){
   const {rows, grandIncome, grandExpense, isEmpty} = computeAgg();
   if(isEmpty){ alert('내보낼 집계 내역이 없습니다.'); return; }
   const colLabel = AGG_LABELS[currentMode];
-  const sheetRows = [[colLabel, '수입 합계', '지출 합계', '소계(순액)']];
-  rows.forEach(r=> sheetRows.push([r.label, r.income, r.expense, r.net]));
-  sheetRows.push(['합계', grandIncome, grandExpense, grandIncome - grandExpense]);
-
-  const ws = XLSX.utils.aoa_to_sheet(sheetRows);
-  ws['!cols'] = [{wch:12},{wch:14},{wch:14},{wch:14}];
-  const wb = XLSX.utils.book_new();
   const sheetName = {month:'월별집계',quarter:'분기별집계',half:'반기별집계',year:'연도별집계'}[currentMode];
-  XLSX.utils.book_append_sheet(wb, ws, sheetName);
   const prefix = currentMode === 'year' ? '연도별집계' : `${currentYear}년_${sheetName}`;
-  XLSX.writeFile(wb, excelFilename(prefix));
+  writeSingleSheetWorkbook(summaryToSheetRows(colLabel, rows, grandIncome, grandExpense), SUMMARY4_COL_WIDTHS, sheetName, prefix);
 }
 
 function downloadGroupExcel(field, sheetName, prefix){
   const {rows, grandIncome, grandExpense, isEmpty} = computeGroupSummary(field);
   if(isEmpty){ alert('내보낼 내역이 없습니다.'); return; }
-  const sheetRows = [[field === 'account' ? '통장' : '명목', '수입 합계', '지출 합계', '소계(순액)']];
-  rows.forEach(r=> sheetRows.push([r.label, r.income, r.expense, r.net]));
-  sheetRows.push(['합계', grandIncome, grandExpense, grandIncome - grandExpense]);
+  const headerLabel = field === 'account' ? '통장' : '명목';
+  writeSingleSheetWorkbook(summaryToSheetRows(headerLabel, rows, grandIncome, grandExpense), SUMMARY4_COL_WIDTHS, sheetName, prefix);
+}
 
-  const ws = XLSX.utils.aoa_to_sheet(sheetRows);
-  ws['!cols'] = [{wch:14},{wch:14},{wch:14},{wch:14}];
+function downloadMomExcel(){
+  const monthStr = document.getElementById('momMonth').value;
+  if(!monthStr){ alert('기준월을 선택해 주세요.'); return; }
+  const prevStr = prevMonthStr(monthStr);
+  const cur = sumMonth(monthStr);
+  const prev = sumMonth(prevStr);
+  if(cur.income === 0 && cur.expense === 0 && prev.income === 0 && prev.expense === 0){
+    alert('내보낼 내역이 없습니다.'); return;
+  }
+  function momRow(label, c, p){
+    const diff = c - p;
+    const rate = p === 0 ? '' : Number(((diff / Math.abs(p)) * 100).toFixed(1));
+    return [label, c, p, diff, rate];
+  }
+  const sheetRows = [
+    ['구분','당월','전월','증감액','증감률(%)'],
+    momRow('수입', cur.income, prev.income),
+    momRow('지출', cur.expense, prev.expense),
+    momRow('총합계(순액)', cur.net, prev.net)
+  ];
+  writeSingleSheetWorkbook(sheetRows, [{wch:16},{wch:14},{wch:14},{wch:14},{wch:12}], '전월대비증감', `${monthStr}_전월대비증감`);
+}
+
+function yearlySummaryRows(){
+  const years = getYears().sort((a,b)=>a-b);
+  const groups = {};
+  years.forEach(y => groups[y] = {income:0, expense:0});
+  transactions.forEach(t=>{
+    const y = parseInt(t.date.slice(0,4),10);
+    if(groups[y]) groups[y][t.type] += t.amount;
+  });
+  return years.map(y=>({label:`${y}년`, income:groups[y].income, expense:groups[y].expense, net:groups[y].income-groups[y].expense}));
+}
+
+function downloadFullExcelBackup(){
+  if(transactions.length === 0){ alert('내보낼 데이터가 없습니다.'); return; }
   const wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, ws, sheetName);
-  XLSX.writeFile(wb, excelFilename(prefix));
+
+  appendSheet(wb, buildLedgerSheetRows(sortedTx()), LEDGER_COL_WIDTHS, '거래내역');
+
+  const yearRows = yearlySummaryRows();
+  const yGrandIncome = yearRows.reduce((s,r)=>s+r.income,0);
+  const yGrandExpense = yearRows.reduce((s,r)=>s+r.expense,0);
+  appendSheet(wb, summaryToSheetRows('연도', yearRows, yGrandIncome, yGrandExpense), SUMMARY4_COL_WIDTHS, '연도별집계');
+
+  const {rows: accRows, grandIncome: aGrandIncome, grandExpense: aGrandExpense} = computeGroupSummary('account');
+  appendSheet(wb, summaryToSheetRows('통장', accRows, aGrandIncome, aGrandExpense), SUMMARY4_COL_WIDTHS, '통장별잔액');
+
+  XLSX.writeFile(wb, excelFilename('전체데이터_종합백업'));
 }
 
 document.getElementById('ledgerExcelBtn').addEventListener('click', downloadLedgerExcel);
 document.getElementById('aggExcelBtn').addEventListener('click', downloadAggExcel);
 document.getElementById('accountExcelBtn').addEventListener('click', ()=> downloadGroupExcel('account','통장별잔액','통장별잔액'));
+document.getElementById('momExcelBtn').addEventListener('click', downloadMomExcel);
+document.getElementById('exportFullExcelBtn').addEventListener('click', downloadFullExcelBackup);
 
 /* ---------- 백업 / 복원 (JSON) ---------- */
 function downloadJson(filename, dataObj){
