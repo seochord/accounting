@@ -652,12 +652,1043 @@ function updateStorageStatus(extra){
   el.textContent = `현재 주소: ${location.host || '(로컬 파일)'} · 저장된 거래: ${transactions.length}건 · ${extra || ''} ${now}`;
 }
 
+const INITIAL_JULY_TRANSACTIONS = [
+  {
+    "id": "tx_202607_001_75gt",
+    "date": "2026-07-01",
+    "type": "income",
+    "account": "국민 감사헌금",
+    "memo": "6월 이월금",
+    "amount": 90174126
+  },
+  {
+    "id": "tx_202607_002_8zbs",
+    "date": "2026-07-01",
+    "type": "expense",
+    "account": "국민 선교헌금",
+    "memo": "26상반기 네팔",
+    "amount": 550000
+  },
+  {
+    "id": "tx_202607_003_47ob",
+    "date": "2026-07-01",
+    "type": "income",
+    "account": "국민 선교헌금",
+    "memo": "박승현",
+    "amount": 30000
+  },
+  {
+    "id": "tx_202607_004_4635",
+    "date": "2026-07-01",
+    "type": "income",
+    "account": "국민 선교헌금",
+    "memo": "6월 이월금",
+    "amount": 20837153
+  },
+  {
+    "id": "tx_202607_005_18nv",
+    "date": "2026-07-01",
+    "type": "expense",
+    "account": "국민 선교헌금",
+    "memo": "26상반기 필리핀",
+    "amount": 800000
+  },
+  {
+    "id": "tx_202607_006_irrf",
+    "date": "2026-07-01",
+    "type": "expense",
+    "account": "국민 선교헌금",
+    "memo": "26상반기 타사와르",
+    "amount": 400000
+  },
+  {
+    "id": "tx_202607_007_t8lc",
+    "date": "2026-07-02",
+    "type": "income",
+    "account": "국민 감사헌금",
+    "memo": "송정심",
+    "amount": 300000
+  },
+  {
+    "id": "tx_202607_008_2qd7",
+    "date": "2026-07-02",
+    "type": "expense",
+    "account": "국민 감사헌금",
+    "memo": "문화비 알라딘",
+    "amount": 125100
+  },
+  {
+    "id": "tx_202607_009_481p",
+    "date": "2026-07-04",
+    "type": "income",
+    "account": "국민 감사헌금",
+    "memo": "김은애",
+    "amount": 100000
+  },
+  {
+    "id": "tx_202607_010_uztf",
+    "date": "2026-07-05",
+    "type": "income",
+    "account": "국민 감사헌금",
+    "memo": "임은경성경",
+    "amount": 30000
+  },
+  {
+    "id": "tx_202607_011_n98h",
+    "date": "2026-07-05",
+    "type": "income",
+    "account": "국민 감사헌금",
+    "memo": "헌금",
+    "amount": 50000
+  },
+  {
+    "id": "tx_202607_012_e29a",
+    "date": "2026-07-05",
+    "type": "expense",
+    "account": "국민 감사헌금",
+    "memo": "농협감사헌금계좌로이체",
+    "amount": 50000000
+  },
+  {
+    "id": "tx_202607_013_6uji",
+    "date": "2026-07-05",
+    "type": "income",
+    "account": "국민 감사헌금",
+    "memo": "오혜리",
+    "amount": 30000
+  },
+  {
+    "id": "tx_202607_014_wnqb",
+    "date": "2026-07-05",
+    "type": "expense",
+    "account": "국민 감사헌금",
+    "memo": "농협감사헌금계좌로이체",
+    "amount": 20000000
+  },
+  {
+    "id": "tx_202607_015_v1eq",
+    "date": "2026-07-05",
+    "type": "income",
+    "account": "국민 감사헌금",
+    "memo": "홍성수",
+    "amount": 100000
+  },
+  {
+    "id": "tx_202607_016_iubm",
+    "date": "2026-07-05",
+    "type": "income",
+    "account": "국민 감사헌금",
+    "memo": "헌금",
+    "amount": 300000
+  },
+  {
+    "id": "tx_202607_017_e5zt",
+    "date": "2026-07-05",
+    "type": "income",
+    "account": "국민 감사헌금",
+    "memo": "황준성",
+    "amount": 50000
+  },
+  {
+    "id": "tx_202607_018_6hf5",
+    "date": "2026-07-05",
+    "type": "income",
+    "account": "국민 감사헌금",
+    "memo": "전예서",
+    "amount": 1000
+  },
+  {
+    "id": "tx_202607_019_jyo6",
+    "date": "2026-07-05",
+    "type": "income",
+    "account": "국민 감사헌금",
+    "memo": "헌금",
+    "amount": 50000
+  },
+  {
+    "id": "tx_202607_020_gjoa",
+    "date": "2026-07-05",
+    "type": "income",
+    "account": "국민 감사헌금",
+    "memo": "임은경",
+    "amount": 100000
+  },
+  {
+    "id": "tx_202607_021_77d7",
+    "date": "2026-07-05",
+    "type": "income",
+    "account": "국민 감사헌금",
+    "memo": "김희수",
+    "amount": 20000
+  },
+  {
+    "id": "tx_202607_022_v847",
+    "date": "2026-07-05",
+    "type": "income",
+    "account": "국민 감사헌금",
+    "memo": "전건휘",
+    "amount": 50000
+  },
+  {
+    "id": "tx_202607_023_oqaj",
+    "date": "2026-07-05",
+    "type": "expense",
+    "account": "국민 선교헌금",
+    "memo": "농협선교계좌로 이체",
+    "amount": 10000000
+  },
+  {
+    "id": "tx_202607_024_mtqd",
+    "date": "2026-07-05",
+    "type": "income",
+    "account": "농협 선교헌금",
+    "memo": "국민선교계좌에서 이체",
+    "amount": 10000000
+  },
+  {
+    "id": "tx_202607_025_i9ag",
+    "date": "2026-07-05",
+    "type": "income",
+    "account": "농협 감사헌금",
+    "memo": "국민감사헌금계좌에서 이체",
+    "amount": 50000000
+  },
+  {
+    "id": "tx_202607_026_xmq0",
+    "date": "2026-07-05",
+    "type": "income",
+    "account": "농협 감사헌금",
+    "memo": "국민감사헌금계좌에서 이체",
+    "amount": 20000000
+  },
+  {
+    "id": "tx_202607_027_zovf",
+    "date": "2026-07-05",
+    "type": "income",
+    "account": "농협 감사헌금",
+    "memo": "제천교회",
+    "amount": 5000000
+  },
+  {
+    "id": "tx_202607_028_1wbo",
+    "date": "2026-07-06",
+    "type": "income",
+    "account": "국민 감사헌금",
+    "memo": "주일헌금",
+    "amount": 50000
+  },
+  {
+    "id": "tx_202607_029_wfov",
+    "date": "2026-07-06",
+    "type": "expense",
+    "account": "국민 감사헌금",
+    "memo": "SSG.Com",
+    "amount": 82877
+  },
+  {
+    "id": "tx_202607_030_dizx",
+    "date": "2026-07-06",
+    "type": "income",
+    "account": "국민 선교헌금",
+    "memo": "국내외선교후원",
+    "amount": 30000
+  },
+  {
+    "id": "tx_202607_031_3wds",
+    "date": "2026-07-06",
+    "type": "expense",
+    "account": "국민 선교헌금",
+    "memo": "파키스탄 3분",
+    "amount": 2318129
+  },
+  {
+    "id": "tx_202607_032_pz09",
+    "date": "2026-07-06",
+    "type": "expense",
+    "account": "국민 선교헌금",
+    "memo": "농협선교계좌로 이체",
+    "amount": 5000000
+  },
+  {
+    "id": "tx_202607_033_kqp0",
+    "date": "2026-07-06",
+    "type": "income",
+    "account": "농협 선교헌금",
+    "memo": "국민선교계좌에서 이체",
+    "amount": 5000000
+  },
+  {
+    "id": "tx_202607_034_vksq",
+    "date": "2026-07-06",
+    "type": "income",
+    "account": "농협 감사헌금",
+    "memo": "주일헌금(현금)",
+    "amount": 3621000
+  },
+  {
+    "id": "tx_202607_035_xf4z",
+    "date": "2026-07-07",
+    "type": "expense",
+    "account": "국민 감사헌금",
+    "memo": "제티 80개 구입",
+    "amount": 21860
+  },
+  {
+    "id": "tx_202607_036_tm9h",
+    "date": "2026-07-08",
+    "type": "expense",
+    "account": "국민 감사헌금",
+    "memo": "윤지원사례비",
+    "amount": 1400300
+  },
+  {
+    "id": "tx_202607_037_ay3a",
+    "date": "2026-07-08",
+    "type": "expense",
+    "account": "국민 감사헌금",
+    "memo": "김성조사례비",
+    "amount": 2500000
+  },
+  {
+    "id": "tx_202607_038_b5u5",
+    "date": "2026-07-08",
+    "type": "expense",
+    "account": "국민 감사헌금",
+    "memo": "김영균사례비",
+    "amount": 1200300
+  },
+  {
+    "id": "tx_202607_039_bgv2",
+    "date": "2026-07-08",
+    "type": "expense",
+    "account": "국민 감사헌금",
+    "memo": "허국현사례비",
+    "amount": 1100300
+  },
+  {
+    "id": "tx_202607_040_efe3",
+    "date": "2026-07-08",
+    "type": "income",
+    "account": "농협 감사헌금",
+    "memo": "이미혜",
+    "amount": 100000000
+  },
+  {
+    "id": "tx_202607_041_tf0z",
+    "date": "2026-07-08",
+    "type": "income",
+    "account": "농협 감사헌금",
+    "memo": "이미혜",
+    "amount": 100000000
+  },
+  {
+    "id": "tx_202607_042_pude",
+    "date": "2026-07-10",
+    "type": "income",
+    "account": "국민 감사헌금",
+    "memo": "박상희",
+    "amount": 50000
+  },
+  {
+    "id": "tx_202607_043_xfdu",
+    "date": "2026-07-10",
+    "type": "income",
+    "account": "국민 감사헌금",
+    "memo": "조성배",
+    "amount": 1300000
+  },
+  {
+    "id": "tx_202607_044_a8fe",
+    "date": "2026-07-10",
+    "type": "income",
+    "account": "국민 감사헌금",
+    "memo": "황인호",
+    "amount": 500000
+  },
+  {
+    "id": "tx_202607_045_o2ku",
+    "date": "2026-07-10",
+    "type": "income",
+    "account": "국민 감사헌금",
+    "memo": "카드입금",
+    "amount": 3980
+  },
+  {
+    "id": "tx_202607_046_gcf7",
+    "date": "2026-07-10",
+    "type": "expense",
+    "account": "국민 선교헌금",
+    "memo": "쏘어TV",
+    "amount": 200000
+  },
+  {
+    "id": "tx_202607_047_7zxm",
+    "date": "2026-07-10",
+    "type": "expense",
+    "account": "국민 선교헌금",
+    "memo": "건강과생명",
+    "amount": 100000
+  },
+  {
+    "id": "tx_202607_048_8fqm",
+    "date": "2026-07-10",
+    "type": "expense",
+    "account": "국민 선교헌금",
+    "memo": "네팔 이정엽",
+    "amount": 200000
+  },
+  {
+    "id": "tx_202607_049_i7qz",
+    "date": "2026-07-10",
+    "type": "expense",
+    "account": "국민 선교헌금",
+    "memo": "필리핀 배요셉",
+    "amount": 200000
+  },
+  {
+    "id": "tx_202607_050_uoha",
+    "date": "2026-07-10",
+    "type": "income",
+    "account": "국민 선교헌금",
+    "memo": "박상희",
+    "amount": 20000
+  },
+  {
+    "id": "tx_202607_051_ehrv",
+    "date": "2026-07-10",
+    "type": "expense",
+    "account": "국민 선교헌금",
+    "memo": "대만 박정선",
+    "amount": 100000
+  },
+  {
+    "id": "tx_202607_052_payt",
+    "date": "2026-07-10",
+    "type": "income",
+    "account": "국민 선교헌금",
+    "memo": "조성배",
+    "amount": 1000000
+  },
+  {
+    "id": "tx_202607_053_yxqn",
+    "date": "2026-07-10",
+    "type": "income",
+    "account": "농협 감사헌금",
+    "memo": "대출연동",
+    "amount": 1300000000
+  },
+  {
+    "id": "tx_202607_054_f2yl",
+    "date": "2026-07-10",
+    "type": "expense",
+    "account": "농협 감사헌금",
+    "memo": "이전및설정비",
+    "amount": 5090000
+  },
+  {
+    "id": "tx_202607_055_xmzy",
+    "date": "2026-07-10",
+    "type": "expense",
+    "account": "농협 감사헌금",
+    "memo": "인지세",
+    "amount": 175000
+  },
+  {
+    "id": "tx_202607_056_ajv3",
+    "date": "2026-07-10",
+    "type": "expense",
+    "account": "농협 감사헌금",
+    "memo": "개봉동 건물잔금",
+    "amount": 1497134200
+  },
+  {
+    "id": "tx_202607_057_44z6",
+    "date": "2026-07-12",
+    "type": "income",
+    "account": "국민 감사헌금",
+    "memo": "오혜리",
+    "amount": 30000
+  },
+  {
+    "id": "tx_202607_058_nvgf",
+    "date": "2026-07-12",
+    "type": "income",
+    "account": "국민 감사헌금",
+    "memo": "김영광",
+    "amount": 300000
+  },
+  {
+    "id": "tx_202607_059_rifd",
+    "date": "2026-07-12",
+    "type": "income",
+    "account": "국민 감사헌금",
+    "memo": "감사헌금",
+    "amount": 50000
+  },
+  {
+    "id": "tx_202607_060_gufj",
+    "date": "2026-07-12",
+    "type": "income",
+    "account": "국민 감사헌금",
+    "memo": "헌금",
+    "amount": 10000
+  },
+  {
+    "id": "tx_202607_061_rfy8",
+    "date": "2026-07-12",
+    "type": "income",
+    "account": "국민 감사헌금",
+    "memo": "김희수",
+    "amount": 20000
+  },
+  {
+    "id": "tx_202607_062_3zvs",
+    "date": "2026-07-12",
+    "type": "income",
+    "account": "국민 감사헌금",
+    "memo": "헌금",
+    "amount": 100000
+  },
+  {
+    "id": "tx_202607_063_23lq",
+    "date": "2026-07-12",
+    "type": "income",
+    "account": "국민 감사헌금",
+    "memo": "이명식",
+    "amount": 30000
+  },
+  {
+    "id": "tx_202607_064_czy9",
+    "date": "2026-07-12",
+    "type": "expense",
+    "account": "국민 선교헌금",
+    "memo": "명동산돌교회 전도지",
+    "amount": 600000
+  },
+  {
+    "id": "tx_202607_065_87d4",
+    "date": "2026-07-12",
+    "type": "income",
+    "account": "농협 선교헌금",
+    "memo": "전예지",
+    "amount": 30000
+  },
+  {
+    "id": "tx_202607_066_62nl",
+    "date": "2026-07-12",
+    "type": "income",
+    "account": "농협 감사헌금",
+    "memo": "황준성",
+    "amount": 50000
+  },
+  {
+    "id": "tx_202607_067_9ur0",
+    "date": "2026-07-12",
+    "type": "income",
+    "account": "농협 감사헌금",
+    "memo": "주일헌금(현금)",
+    "amount": 5677000
+  },
+  {
+    "id": "tx_202607_068_3r55",
+    "date": "2026-07-12",
+    "type": "income",
+    "account": "농협 감사헌금",
+    "memo": "감사",
+    "amount": 300000
+  },
+  {
+    "id": "tx_202607_069_ct64",
+    "date": "2026-07-13",
+    "type": "income",
+    "account": "국민 감사헌금",
+    "memo": "주일헌금",
+    "amount": 50000
+  },
+  {
+    "id": "tx_202607_070_8hq5",
+    "date": "2026-07-13",
+    "type": "expense",
+    "account": "국민 감사헌금",
+    "memo": "청소비(7월)",
+    "amount": 300000
+  },
+  {
+    "id": "tx_202607_071_k4xw",
+    "date": "2026-07-13",
+    "type": "expense",
+    "account": "국민 감사헌금",
+    "memo": "주방봉사비(7월)",
+    "amount": 400000
+  },
+  {
+    "id": "tx_202607_072_grre",
+    "date": "2026-07-13",
+    "type": "expense",
+    "account": "국민 감사헌금",
+    "memo": "식사지원비(7월)",
+    "amount": 800000
+  },
+  {
+    "id": "tx_202607_073_jdmc",
+    "date": "2026-07-13",
+    "type": "expense",
+    "account": "농협 감사헌금",
+    "memo": "인도명령비용",
+    "amount": 78580
+  },
+  {
+    "id": "tx_202607_074_g31a",
+    "date": "2026-07-14",
+    "type": "income",
+    "account": "국민 감사헌금",
+    "memo": "이재신형지숙",
+    "amount": 300000
+  },
+  {
+    "id": "tx_202607_075_24ky",
+    "date": "2026-07-15",
+    "type": "income",
+    "account": "국민 선교헌금",
+    "memo": "정은경",
+    "amount": 20000
+  },
+  {
+    "id": "tx_202607_076_1pr2",
+    "date": "2026-07-15",
+    "type": "expense",
+    "account": "농협 감사헌금",
+    "memo": "김화영",
+    "amount": 426000
+  },
+  {
+    "id": "tx_202607_077_e44p",
+    "date": "2026-07-16",
+    "type": "expense",
+    "account": "국민 감사헌금",
+    "memo": "알라딘 서적",
+    "amount": 16200
+  },
+  {
+    "id": "tx_202607_078_t5bh",
+    "date": "2026-07-16",
+    "type": "income",
+    "account": "국민 감사헌금",
+    "memo": "주경선",
+    "amount": 100000
+  },
+  {
+    "id": "tx_202607_079_wmke",
+    "date": "2026-07-16",
+    "type": "expense",
+    "account": "국민 감사헌금",
+    "memo": "알라딘 서적",
+    "amount": 36000
+  },
+  {
+    "id": "tx_202607_080_3x9e",
+    "date": "2026-07-16",
+    "type": "expense",
+    "account": "농협 감사헌금",
+    "memo": "인증수수료",
+    "amount": 13200
+  },
+  {
+    "id": "tx_202607_081_6k4h",
+    "date": "2026-07-18",
+    "type": "expense",
+    "account": "국민 감사헌금",
+    "memo": "3분기 거리설교지원",
+    "amount": 150000
+  },
+  {
+    "id": "tx_202607_082_sk5u",
+    "date": "2026-07-18",
+    "type": "expense",
+    "account": "국민 감사헌금",
+    "memo": "3분기 유치부지원",
+    "amount": 150000
+  },
+  {
+    "id": "tx_202607_083_i6q0",
+    "date": "2026-07-18",
+    "type": "expense",
+    "account": "국민 감사헌금",
+    "memo": "3분기 중등부지원",
+    "amount": 150000
+  },
+  {
+    "id": "tx_202607_084_hwav",
+    "date": "2026-07-18",
+    "type": "expense",
+    "account": "국민 감사헌금",
+    "memo": "3분기 중고등부지원",
+    "amount": 150000
+  },
+  {
+    "id": "tx_202607_085_60z4",
+    "date": "2026-07-18",
+    "type": "expense",
+    "account": "국민 감사헌금",
+    "memo": "3분기 초등부지원",
+    "amount": 150000
+  },
+  {
+    "id": "tx_202607_086_z8fq",
+    "date": "2026-07-18",
+    "type": "expense",
+    "account": "국민 감사헌금",
+    "memo": "3분기 유년부지원",
+    "amount": 150000
+  },
+  {
+    "id": "tx_202607_087_jzw0",
+    "date": "2026-07-19",
+    "type": "income",
+    "account": "국민 감사헌금",
+    "memo": "김희수",
+    "amount": 20000
+  },
+  {
+    "id": "tx_202607_088_x38m",
+    "date": "2026-07-19",
+    "type": "income",
+    "account": "국민 감사헌금",
+    "memo": "오혜리",
+    "amount": 30000
+  },
+  {
+    "id": "tx_202607_089_itl9",
+    "date": "2026-07-19",
+    "type": "income",
+    "account": "국민 감사헌금",
+    "memo": "김현아",
+    "amount": 50000
+  },
+  {
+    "id": "tx_202607_090_kh9t",
+    "date": "2026-07-19",
+    "type": "income",
+    "account": "국민 감사헌금",
+    "memo": "이명식",
+    "amount": 30000
+  },
+  {
+    "id": "tx_202607_091_0zo0",
+    "date": "2026-07-19",
+    "type": "income",
+    "account": "국민 선교헌금",
+    "memo": "billy",
+    "amount": 30000
+  },
+  {
+    "id": "tx_202607_092_ppyn",
+    "date": "2026-07-19",
+    "type": "income",
+    "account": "농협 감사헌금",
+    "memo": "황준성",
+    "amount": 50000
+  },
+  {
+    "id": "tx_202607_093_s9rv",
+    "date": "2026-07-19",
+    "type": "income",
+    "account": "농협 감사헌금",
+    "memo": "주일헌금(현금)",
+    "amount": 1664000
+  },
+  {
+    "id": "tx_202607_094_r15g",
+    "date": "2026-07-19",
+    "type": "income",
+    "account": "농협 감사헌금",
+    "memo": "고형석",
+    "amount": 50000
+  },
+  {
+    "id": "tx_202607_095_jnp3",
+    "date": "2026-07-19",
+    "type": "income",
+    "account": "농협 감사헌금",
+    "memo": "헌금",
+    "amount": 300000
+  },
+  {
+    "id": "tx_202607_096_nkul",
+    "date": "2026-07-20",
+    "type": "income",
+    "account": "국민 감사헌금",
+    "memo": "주일헌금",
+    "amount": 50000
+  },
+  {
+    "id": "tx_202607_097_k5oi",
+    "date": "2026-07-21",
+    "type": "expense",
+    "account": "국민 감사헌금",
+    "memo": "생명의말씀사",
+    "amount": 108050
+  },
+  {
+    "id": "tx_202607_098_64p4",
+    "date": "2026-07-22",
+    "type": "income",
+    "account": "국민 선교헌금",
+    "memo": "박상희",
+    "amount": 10000
+  },
+  {
+    "id": "tx_202607_099_445g",
+    "date": "2026-07-22",
+    "type": "income",
+    "account": "농협 감사헌금",
+    "memo": "박상희",
+    "amount": 27700
+  },
+  {
+    "id": "tx_202607_100_1eyy",
+    "date": "2026-07-24",
+    "type": "income",
+    "account": "국민 선교헌금",
+    "memo": "박창용",
+    "amount": 100000
+  },
+  {
+    "id": "tx_202607_101_hrd3",
+    "date": "2026-07-26",
+    "type": "income",
+    "account": "국민 감사헌금",
+    "memo": "이명식",
+    "amount": 30000
+  },
+  {
+    "id": "tx_202607_102_c4o0",
+    "date": "2026-07-26",
+    "type": "income",
+    "account": "국민 감사헌금",
+    "memo": "김희수",
+    "amount": 20000
+  },
+  {
+    "id": "tx_202607_103_ex2x",
+    "date": "2026-07-26",
+    "type": "income",
+    "account": "국민 감사헌금",
+    "memo": "임은경",
+    "amount": 100000
+  },
+  {
+    "id": "tx_202607_104_7st5",
+    "date": "2026-07-26",
+    "type": "income",
+    "account": "국민 감사헌금",
+    "memo": "조수민",
+    "amount": 100000
+  },
+  {
+    "id": "tx_202607_105_mpbl",
+    "date": "2026-07-26",
+    "type": "income",
+    "account": "국민 감사헌금",
+    "memo": "이남순",
+    "amount": 100000
+  },
+  {
+    "id": "tx_202607_106_jk2k",
+    "date": "2026-07-26",
+    "type": "income",
+    "account": "농협 감사헌금",
+    "memo": "황준성",
+    "amount": 50000
+  },
+  {
+    "id": "tx_202607_107_4dix",
+    "date": "2026-07-26",
+    "type": "income",
+    "account": "농협 감사헌금",
+    "memo": "타사와르",
+    "amount": 100000
+  },
+  {
+    "id": "tx_202607_108_bq5w",
+    "date": "2026-07-26",
+    "type": "expense",
+    "account": "농협 감사헌금",
+    "memo": "박재호이사비",
+    "amount": 5000500
+  },
+  {
+    "id": "tx_202607_109_82zb",
+    "date": "2026-07-26",
+    "type": "expense",
+    "account": "농협 감사헌금",
+    "memo": "윤지원사례비-2중",
+    "amount": 400500
+  },
+  {
+    "id": "tx_202607_110_4x37",
+    "date": "2026-07-26",
+    "type": "income",
+    "account": "농협 감사헌금",
+    "memo": "주일헌금(현금)",
+    "amount": 3575000
+  },
+  {
+    "id": "tx_202607_111_uh6c",
+    "date": "2026-07-26",
+    "type": "expense",
+    "account": "농협 감사헌금",
+    "memo": "전기요금(7월)",
+    "amount": 624565
+  },
+  {
+    "id": "tx_202607_112_q31b",
+    "date": "2026-07-26",
+    "type": "expense",
+    "account": "농협 감사헌금",
+    "memo": "임차료(7월)",
+    "amount": 4574300
+  },
+  {
+    "id": "tx_202607_113_kdft",
+    "date": "2026-07-26",
+    "type": "expense",
+    "account": "농협 감사헌금",
+    "memo": "관리비(7월)",
+    "amount": 1804500
+  },
+  {
+    "id": "tx_202607_114_kkcw",
+    "date": "2026-07-26",
+    "type": "expense",
+    "account": "농협 감사헌금",
+    "memo": "주방봉사료",
+    "amount": 400500
+  },
+  {
+    "id": "tx_202607_115_941l",
+    "date": "2026-07-27",
+    "type": "expense",
+    "account": "국민 감사헌금",
+    "memo": "KT요금",
+    "amount": 42830
+  },
+  {
+    "id": "tx_202607_116_55xe",
+    "date": "2026-07-27",
+    "type": "income",
+    "account": "국민 감사헌금",
+    "memo": "주일헌금",
+    "amount": 50000
+  },
+  {
+    "id": "tx_202607_117_rz8h",
+    "date": "2026-07-27",
+    "type": "income",
+    "account": "국민 선교헌금",
+    "memo": "한정자",
+    "amount": 30000
+  },
+  {
+    "id": "tx_202607_118_qik1",
+    "date": "2026-07-27",
+    "type": "income",
+    "account": "국민 선교헌금",
+    "memo": "황선석",
+    "amount": 30000
+  },
+  {
+    "id": "tx_202607_119_dd13",
+    "date": "2026-07-27",
+    "type": "income",
+    "account": "국민 선교헌금",
+    "memo": "홍용만",
+    "amount": 20000
+  },
+  {
+    "id": "tx_202607_120_dr0z",
+    "date": "2026-07-27",
+    "type": "income",
+    "account": "국민 선교헌금",
+    "memo": "이남순",
+    "amount": 20000
+  },
+  {
+    "id": "tx_202607_121_loqb",
+    "date": "2026-07-27",
+    "type": "income",
+    "account": "국민 선교헌금",
+    "memo": "김선희",
+    "amount": 50000
+  },
+  {
+    "id": "tx_202607_122_nnw3",
+    "date": "2026-07-27",
+    "type": "income",
+    "account": "국민 선교헌금",
+    "memo": "김영선",
+    "amount": 30000
+  },
+  {
+    "id": "tx_202607_123_1jy8",
+    "date": "2026-07-28",
+    "type": "income",
+    "account": "국민 감사헌금",
+    "memo": "헌금",
+    "amount": 120000
+  },
+  {
+    "id": "tx_202607_124_me3b",
+    "date": "2026-07-29",
+    "type": "expense",
+    "account": "국민 감사헌금",
+    "memo": "알라딘 서적",
+    "amount": 34200
+  },
+  {
+    "id": "tx_202607_125_nm8d",
+    "date": "2026-07-30",
+    "type": "income",
+    "account": "농협 선교헌금",
+    "memo": "이현주",
+    "amount": 30000
+  },
+  {
+    "id": "tx_202607_126_er9u",
+    "date": "2026-07-31",
+    "type": "income",
+    "account": "국민 감사헌금",
+    "memo": "조현준",
+    "amount": 50000
+  },
+  {
+    "id": "tx_202607_127_pkp1",
+    "date": "2026-07-31",
+    "type": "income",
+    "account": "국민 선교헌금",
+    "memo": "전우연",
+    "amount": 10000
+  },
+  {
+    "id": "tx_202607_128_yi56",
+    "date": "2026-07-31",
+    "type": "income",
+    "account": "국민 선교헌금",
+    "memo": "한정자",
+    "amount": 10000
+  }
+];
+
 function loadLocalCache(){
   try{
     const raw = localStorage.getItem(STORAGE_KEY);
-    return raw ? JSON.parse(raw) : [];
+    if(raw){
+      const parsed = JSON.parse(raw);
+      if(Array.isArray(parsed) && parsed.length > 0) return parsed;
+    }
+    return INITIAL_JULY_TRANSACTIONS;
   }catch(e){
-    return [];
+    return INITIAL_JULY_TRANSACTIONS;
   }
 }
 
