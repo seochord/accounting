@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>진리침례교회 회계</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/tesseract.js@4/dist/tesseract.min.js"></script>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@500;700&family=Pretendard:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap');
 
@@ -148,7 +149,23 @@
 
   .table-scroll{overflow-x:auto;}
 
-  footer{text-align:center;color:var(--ink-soft);font-size:11px;margin-top:30px;display:flex;flex-direction:column;gap:10px;align-items:center;}
+  .mom-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;}
+  @media (max-width:720px){.mom-grid{grid-template-columns:1fr;}}
+  .mom-box{
+    border:1px solid var(--paper-line);border-radius:6px;padding:16px 18px;background:#fff;
+  }
+  .mom-box .mom-label{font-size:12.5px;color:var(--ink-soft);font-weight:600;margin-bottom:6px;}
+  .mom-box .mom-cur{font-family:'JetBrains Mono',monospace;font-size:20px;font-weight:700;margin-bottom:4px;}
+  .mom-box .mom-prev{font-size:12px;color:var(--ink-soft);margin-bottom:10px;}
+  .mom-box .mom-delta{
+    display:inline-flex;align-items:center;gap:5px;font-family:'JetBrains Mono',monospace;
+    font-size:13.5px;font-weight:700;padding:3px 9px;border-radius:12px;
+  }
+  .mom-box .mom-delta.up{color:var(--income);background:rgba(30,78,140,0.08);}
+  .mom-box .mom-delta.down{color:var(--expense);background:rgba(163,39,60,0.08);}
+  .mom-box .mom-delta.flat{color:var(--ink-soft);background:var(--row-alt);}
+  footer{text-align:center;
+color:var(--ink-soft);font-size:11px;margin-top:30px;display:flex;flex-direction:column;gap:10px;align-items:center;}
   footer .backup-row{display:flex;gap:8px;}
   footer .backup-btn{
     padding:6px 14px;border:1px solid var(--paper-line);background:#fff;border-radius:14px;
@@ -173,6 +190,57 @@
     .print-title{display:none;}
     body.printing .print-title.print-target-title{display:block;font-family:'Noto Serif KR',serif;font-size:18px;font-weight:700;margin-bottom:14px;}
   }
+
+  /* OCR & Excel Upload */
+  .ocr-toolbar, .excel-toolbar{display:flex;gap:10px;flex-wrap:wrap;align-items:end;margin-bottom:14px;}
+  .ocr-toolbar .f-item, .excel-toolbar .f-item{display:flex;flex-direction:column;gap:4px;}
+  .ocr-toolbar label, .excel-toolbar label{font-size:12px;color:var(--ink-soft);}
+  .ocr-toolbar input,.ocr-toolbar select, .excel-toolbar input, .excel-toolbar select{padding:7px 9px;border:1px solid var(--paper-line);border-radius:3px;font-size:13px;font-family:'Pretendard';background:#fff;}
+
+  .ocr-drop-zone, .excel-drop-zone{
+    border:2px dashed var(--paper-line);border-radius:8px;padding:44px 20px;
+    text-align:center;cursor:pointer;transition:all 0.25s;
+    background:var(--row-alt);position:relative;
+  }
+  .ocr-drop-zone:hover,.ocr-drop-zone.drag-over, .excel-drop-zone:hover,.excel-drop-zone.drag-over{
+    border-color:var(--accent);background:rgba(138,109,59,0.06);
+  }
+  .ocr-drop-zone .drop-icon, .excel-drop-zone .drop-icon{font-size:42px;margin-bottom:10px;display:block;}
+  .ocr-drop-zone .drop-text, .excel-drop-zone .drop-text{font-size:14px;color:var(--ink-soft);font-weight:500;}
+  .ocr-drop-zone .drop-sub, .excel-drop-zone .drop-sub{font-size:12px;color:var(--ink-soft);margin-top:6px;opacity:0.7;}
+  .ocr-drop-zone input[type="file"], .excel-drop-zone input[type="file"]{display:none;}
+
+  .ocr-preview-wrap, .excel-preview-wrap{margin:14px 0;display:flex;gap:16px;flex-wrap:wrap;align-items:flex-start;}
+  .ocr-preview-img{max-width:300px;max-height:220px;border:1px solid var(--paper-line);border-radius:4px;object-fit:contain;background:#fff;}
+  .ocr-preview-info, .excel-preview-info{font-size:12px;color:var(--ink-soft);display:flex;flex-direction:column;gap:6px;}
+
+  .ocr-progress-wrap, .excel-progress-wrap{margin:16px 0;display:none;}
+  .ocr-progress-bar, .excel-progress-bar{width:100%;height:8px;background:var(--row-alt);border-radius:4px;overflow:hidden;}
+  .ocr-progress-fill, .excel-progress-fill{height:100%;background:linear-gradient(90deg,var(--accent),#b8956a);border-radius:4px;transition:width 0.3s;width:0%;}
+  .ocr-progress-text, .excel-progress-text{font-size:12px;color:var(--ink-soft);margin-top:6px;font-family:'JetBrains Mono',monospace;}
+
+  .ocr-result-info, .excel-result-info{font-size:13px;color:var(--ink-soft);margin-bottom:10px;padding:8px 12px;background:var(--row-alt);border-radius:4px;}
+  .ocr-result-info strong, .excel-result-info strong{color:var(--ink);}
+  #ocrRowsBody td, #excelRowsBody td{padding:4px 6px;text-align:left;}
+  #ocrRowsBody input,#ocrRowsBody select, #excelRowsBody input,#excelRowsBody select{
+    width:100%;padding:6px 7px;border:1px solid var(--paper-line);border-radius:3px;
+    font-family:'Pretendard';font-size:13px;background:#fff;color:var(--ink);
+  }
+  #ocrRowsBody input[type="number"], #excelRowsBody input[type="number"]{text-align:right;font-family:'JetBrains Mono',monospace;}
+  .ocr-save-btn, .excel-save-btn{
+    padding:10px 22px;border:none;border-radius:3px;background:var(--ink);color:#fff;
+    font-weight:700;cursor:pointer;font-size:14px;
+  }
+  .ocr-save-btn:hover, .excel-save-btn:hover{background:var(--accent);}
+  .ocr-raw-toggle{
+    font-size:12px;color:var(--accent);cursor:pointer;text-decoration:underline;
+    background:none;border:none;margin-top:10px;padding:0;display:inline-block;
+  }
+  .ocr-raw-text{
+    display:none;margin-top:8px;padding:12px;background:var(--row-alt);border:1px solid var(--paper-line);
+    border-radius:4px;font-family:'JetBrains Mono',monospace;font-size:11px;white-space:pre-wrap;
+    max-height:200px;overflow-y:auto;color:var(--ink-soft);
+  }
 </style>
 </head>
 <body>
@@ -188,6 +256,8 @@
     <div class="tabs no-print" id="entryModeTabs">
       <button type="button" data-entrymode="single" class="active">한 건씩 입력</button>
       <button type="button" data-entrymode="bulk">여러 건 한번에 입력</button>
+      <button type="button" data-entrymode="ocr">📷 통장사본 OCR</button>
+      <button type="button" data-entrymode="excel">📊 엑셀 파일 업로드</button>
     </div>
 
     <div id="singleEntryWrap">
@@ -246,6 +316,96 @@
       </div>
       <div class="empty" id="bulkEmpty">"이 달 날짜로 채우기"를 누르면 한 달치 행이 한 번에 만들어집니다. 필요한 날짜만 채우고 나머지는 비워두면 됩니다.</div>
       <button type="button" class="bulk-save-btn" id="bulkSaveBtn">일괄 저장</button>
+    </div>
+
+    <div id="ocrEntryWrap" style="display:none;">
+      <div class="ocr-toolbar no-print">
+        <div class="f-item">
+          <label>통장 (인식된 거래에 공통 적용)</label>
+          <input type="text" id="ocr-account" list="accountOptions" placeholder="예: 국민 감사헌금">
+        </div>
+      </div>
+      <div class="ocr-drop-zone" id="ocrDropZone">
+        <span class="drop-icon">📷</span>
+        <div class="drop-text">통장사본 이미지를 끌어다 놓거나 클릭하여 선택하세요</div>
+        <div class="drop-sub">JPG · PNG 지원 — 사진이 선명하고 글씨가 클수록 인식률이 높아집니다</div>
+        <input type="file" id="ocrFileInput" accept="image/*">
+      </div>
+      <div class="ocr-preview-wrap" id="ocrPreviewWrap" style="display:none;">
+        <img id="ocrPreviewImg" class="ocr-preview-img" alt="업로드된 이미지">
+        <div class="ocr-preview-info">
+          <span id="ocrFileName"></span>
+          <span id="ocrFileSize"></span>
+          <button type="button" class="tool-btn" id="ocrRetryBtn">다른 이미지 선택</button>
+        </div>
+      </div>
+      <div class="ocr-progress-wrap" id="ocrProgressWrap">
+        <div class="ocr-progress-bar"><div class="ocr-progress-fill" id="ocrProgressFill"></div></div>
+        <div class="ocr-progress-text" id="ocrProgressText">OCR 준비 중...</div>
+      </div>
+      <div id="ocrResultWrap" style="display:none;">
+        <div class="ocr-result-info" id="ocrResultInfo"></div>
+        <div class="table-scroll">
+          <table>
+            <thead><tr>
+              <th style="text-align:left;">거래일</th>
+              <th style="text-align:left;">구분</th>
+              <th style="text-align:left;">내용</th>
+              <th style="text-align:left;">금액</th>
+              <th></th>
+            </tr></thead>
+            <tbody id="ocrRowsBody"></tbody>
+          </table>
+        </div>
+        <button type="button" class="ocr-raw-toggle" id="ocrRawToggle">OCR 원본 텍스트 보기 ▾</button>
+        <pre class="ocr-raw-text" id="ocrRawText"></pre>
+        <div style="display:flex;gap:8px;margin-top:14px;">
+          <button type="button" class="ocr-save-btn" id="ocrSaveBtn">일괄 저장</button>
+          <button type="button" class="tool-btn" id="ocrAddRowBtn">행 추가</button>
+          <button type="button" class="tool-btn" id="ocrClearBtn">초기화</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="excelEntryWrap" style="display:none;">
+      <div class="excel-toolbar no-print">
+        <div class="f-item">
+          <label>통장 (인식된 거래에 공통 적용)</label>
+          <input type="text" id="excel-account" list="accountOptions" placeholder="예: 국민 감사헌금">
+        </div>
+      </div>
+      <div class="excel-drop-zone" id="excelDropZone">
+        <span class="drop-icon">📊</span>
+        <div class="drop-text">은행 거래내역 엑셀 파일(.xlsx, .xls, .csv)을 끌어다 놓거나 클릭하여 선택하세요</div>
+        <div class="drop-sub">농협, 국민, 신한, 우리, 하나 등 모든 은행 거래내역 엑셀 파일을 자동으로 읽습니다</div>
+        <input type="file" id="excelFileInput" accept=".xlsx, .xls, .csv, application/vnd.openxmlformats-officedocument.spreadsheetml.sheet, application/vnd.ms-excel">
+      </div>
+      <div class="excel-preview-wrap" id="excelPreviewWrap" style="display:none;">
+        <div class="excel-preview-info">
+          📄 <strong id="excelFileName"></strong> (<span id="excelFileSize"></span>)
+          <button type="button" class="tool-btn" id="excelRetryBtn" style="margin-top:4px;">다른 엑셀 파일 선택</button>
+        </div>
+      </div>
+      <div id="excelResultWrap" style="display:none;">
+        <div class="excel-result-info" id="excelResultInfo"></div>
+        <div class="table-scroll">
+          <table>
+            <thead><tr>
+              <th style="text-align:left;">거래일</th>
+              <th style="text-align:left;">구분</th>
+              <th style="text-align:left;">내용</th>
+              <th style="text-align:left;">금액</th>
+              <th></th>
+            </tr></thead>
+            <tbody id="excelRowsBody"></tbody>
+          </table>
+        </div>
+        <div style="display:flex;gap:8px;margin-top:14px;">
+          <button type="button" class="excel-save-btn" id="excelSaveBtn">일괄 저장</button>
+          <button type="button" class="tool-btn" id="excelAddRowBtn">행 추가</button>
+          <button type="button" class="tool-btn" id="excelClearBtn">초기화</button>
+        </div>
+      </div>
     </div>
   </div>
 
@@ -339,11 +499,35 @@
     <div id="accountEmpty" class="empty" style="display:none;">등록된 거래가 없습니다.</div>
   </div>
 
+  <div class="card" id="momCard">
+    <h2>
+      <span class="idx">05</span> 전월대비 증감
+      <span class="print-title print-target-title" id="momPrintTitle">전월대비 증감</span>
+      <div class="card-tools no-print">
+        <button class="tool-btn" id="momPrintBtn">인쇄</button>
+        <button class="tool-btn" id="momExcelBtn">엑셀 다운로드</button>
+        <button class="tool-btn" id="monthlyReportBtn">월간 재정보고서 출력</button>
+      </div>
+    </h2>
+    <div class="filter-row no-print">
+      <div class="f-item">
+        <label>기준월</label>
+        <input type="month" id="momMonth">
+      </div>
+    </div>
+    <div class="card-caption" id="momCaption"></div>
+    <div class="mom-grid" id="momGrid"></div>
+    <div id="momEmpty" class="empty" style="display:none;">비교할 거래 내역이 없습니다.</div>
+  </div>
+
+  <div class="card" id="reportPrintArea" style="display:none;"></div>
+
   <footer>
-    <div>모든 데이터는 지금 사용 중인 이 브라우저에만 저장됩니다(다른 기기·다른 브라우저에서는 보이지 않음). 기기를 바꾸거나 브라우저 데이터를 지우기 전에 반드시 백업을 내려받아 두세요.</div>
+    <div>암호를 입력하면 서버에 저장되어 어느 기기·브라우저에서도 같은 데이터를 볼 수 있습니다. 암호를 입력하지 않았거나 서버 연결에 실패한 경우에는 이 브라우저에만 임시로 저장됩니다. 정기적으로 백업을 내려받아 두는 것을 권장합니다.</div>
     <div id="storageStatus" style="font-family:'JetBrains Mono',monospace;"></div>
     <div class="backup-row no-print">
       <button class="backup-btn" id="exportJsonBtn">전체 데이터 백업(JSON)</button>
+      <button class="backup-btn" id="exportFullExcelBtn">전체 데이터 백업(엑셀)</button>
       <button class="backup-btn" id="importJsonBtn">백업 불러오기</button>
       <input type="file" id="importJsonInput" accept="application/json" style="display:none;">
     </div>
@@ -352,9 +536,26 @@
 <div id="storageWarning" style="display:none;position:fixed;top:0;left:0;right:0;background:#A3273C;color:#fff;text-align:center;padding:10px;font-size:13px;font-weight:600;z-index:999;"></div>
 
 <script>
-const STORAGE_KEY = 'ledger:transactions';
+const STORAGE_KEY = 'ledger:transactions';       // 로컬 캐시(오프라인 폴백)용
+const PASSCODE_KEY = 'ledger:passcode';           // 이 브라우저에 저장해두는 접근 암호
+const API_URL = '/api/transactions';
 const DEFAULT_ACCOUNTS = ['국민 감사헌금','국민 선교헌금','농협 감사헌금','농협 선교헌금'];
 let transactions = [];
+let serverAvailable = false; // 서버 저장 성공 여부(상태 표시용)
+
+function getPasscode(){
+  return sessionStorage.getItem(PASSCODE_KEY) || '';
+}
+
+async function ensurePasscode(){
+  let pw = getPasscode();
+  if(pw) return pw;
+  pw = prompt('회계 데이터 접근 암호를 입력하세요.\n(이 기기의 이 탭에서만 기억됩니다)');
+  if(pw){
+    sessionStorage.setItem(PASSCODE_KEY, pw);
+  }
+  return pw || '';
+}
 let currentMode = 'month';
 let currentYear = new Date().getFullYear();
 let filterAccount = '';
@@ -363,6 +564,7 @@ let editingId = null;
 
 document.getElementById('todayStr').textContent = new Date().toLocaleDateString('ko-KR', {year:'numeric',month:'long',day:'numeric'});
 document.getElementById('f-date').value = new Date().toISOString().slice(0,10);
+document.getElementById('momMonth').value = new Date().toISOString().slice(0,7);
 
 function won(n){
   const sign = n < 0 ? '-' : '';
@@ -396,26 +598,87 @@ function updateStorageStatus(extra){
   el.textContent = `현재 주소: ${location.host || '(로컬 파일)'} · 저장된 거래: ${transactions.length}건 · ${extra || ''} ${now}`;
 }
 
-async function loadData(){
+function loadLocalCache(){
   try{
     const raw = localStorage.getItem(STORAGE_KEY);
-    transactions = raw ? JSON.parse(raw) : [];
+    return raw ? JSON.parse(raw) : [];
   }catch(e){
-    console.error('불러오기 실패', e);
-    transactions = [];
+    return [];
   }
-  updateStorageStatus('불러옴');
+}
+
+function saveLocalCache(){
+  try{
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(transactions));
+  }catch(e){
+    console.error('로컬 캐시 저장 실패', e);
+  }
+}
+
+async function loadData(){
+  // 우선 로컬 캐시로 즉시 화면을 채운 뒤, 서버 데이터가 오면 교체한다.
+  transactions = loadLocalCache();
   render();
+  updateStorageStatus('로컬 캐시 표시 중 · 서버 확인 중...');
+
+  const pw = await ensurePasscode();
+  if(!pw){
+    updateStorageStatus('암호 미입력 · 로컬 캐시만 사용');
+    return;
+  }
+
+  try{
+    const res = await fetch(API_URL, { headers: { 'X-Passcode': pw } });
+    if(res.status === 401){
+      sessionStorage.removeItem(PASSCODE_KEY);
+      alert('암호가 올바르지 않습니다. 새로고침 후 다시 입력해 주세요.');
+      updateStorageStatus('인증 실패 · 로컬 캐시만 사용');
+      return;
+    }
+    if(!res.ok) throw new Error('서버 응답 오류 (' + res.status + ')');
+    const data = await res.json();
+    transactions = Array.isArray(data.transactions) ? data.transactions : [];
+    saveLocalCache();
+    serverAvailable = true;
+    updateStorageStatus('서버에서 불러옴');
+    render();
+  }catch(e){
+    console.error('서버 불러오기 실패', e);
+    serverAvailable = false;
+    updateStorageStatus('서버 연결 실패 · 로컬 캐시만 사용');
+  }
 }
 
 async function saveData(){
+  // 로컬 캐시는 항상 즉시 저장(오프라인 대비)
+  saveLocalCache();
+
+  const pw = getPasscode();
+  if(!pw){
+    updateStorageStatus('암호 미입력 · 로컬에만 저장됨');
+    return;
+  }
+
   try{
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(transactions));
-    updateStorageStatus('저장됨');
+    const res = await fetch(API_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-Passcode': pw },
+      body: JSON.stringify({ transactions })
+    });
+    if(res.status === 401){
+      sessionStorage.removeItem(PASSCODE_KEY);
+      alert('암호가 올바르지 않아 서버에 저장되지 않았습니다. 로컬에는 저장되었습니다.');
+      serverAvailable = false;
+      updateStorageStatus('인증 실패 · 로컬에만 저장됨');
+      return;
+    }
+    if(!res.ok) throw new Error('서버 응답 오류 (' + res.status + ')');
+    serverAvailable = true;
+    updateStorageStatus('서버에 저장됨');
   }catch(e){
-    console.error('저장 실패', e);
-    alert('데이터 저장에 실패했습니다. 브라우저 저장 공간이 가득 찼거나 시크릿 모드일 수 있습니다.');
-    updateStorageStatus('저장 실패!');
+    console.error('서버 저장 실패', e);
+    serverAvailable = false;
+    updateStorageStatus('⚠ 서버 저장 실패 · 로컬에만 저장됨 (다른 기기에 반영 안 됨)');
   }
 }
 
@@ -758,6 +1021,81 @@ function renderGroupTable(field, bodyId, emptyId){
 
 function renderAccountSummary(){ renderGroupTable('account','accountBody','accountEmpty'); }
 
+/* ---------- 05 전월대비 증감 ---------- */
+function sumMonth(monthStr){
+  let income = 0, expense = 0;
+  transactions.forEach(t=>{
+    if(t.date.slice(0,7) === monthStr){
+      if(t.type === 'income') income += t.amount; else expense += t.amount;
+    }
+  });
+  return {income, expense, net: income - expense};
+}
+
+function prevMonthStr(monthStr){
+  const [y,m] = monthStr.split('-').map(Number);
+  const d = new Date(y, m-2, 1); // m은 1~12, m-2 -> 0-index 전달로 전월 계산
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
+}
+
+function momItem(label, cur, prev, biggerIsBetter, extraClass){
+  const diff = cur - prev;
+  let rateText, cls, arrow;
+  if(prev === 0){
+    rateText = cur === 0 ? '전월도 0원' : '직전월 실적 없음';
+    cls = cur === 0 ? 'flat' : (biggerIsBetter ? 'up' : 'down');
+    arrow = cur === 0 ? '' : (diff > 0 ? '▲' : '▼');
+  } else {
+    const rate = (diff / Math.abs(prev)) * 100;
+    rateText = (diff >= 0 ? '+' : '') + rate.toFixed(1) + '%';
+    if(diff === 0){ cls = 'flat'; arrow = ''; }
+    else if(diff > 0){ cls = biggerIsBetter ? 'up' : 'down'; arrow = '▲'; }
+    else { cls = biggerIsBetter ? 'down' : 'up'; arrow = '▼'; }
+  }
+  const diffText = (diff >= 0 ? '+' : '') + won(diff);
+  return `
+    <div class="mom-box${extraClass ? ' '+extraClass : ''}">
+      <div class="mom-label">${label}</div>
+      <div class="mom-cur">${won(cur)}</div>
+      <div class="mom-prev">전월 ${won(prev)}</div>
+      <div class="mom-delta ${cls}">${arrow} ${diffText} (${rateText})</div>
+    </div>
+  `;
+}
+
+function renderMoM(){
+  const monthInput = document.getElementById('momMonth');
+  const monthStr = monthInput.value;
+  const grid = document.getElementById('momGrid');
+  const empty = document.getElementById('momEmpty');
+  const caption = document.getElementById('momCaption');
+
+  if(!monthStr){ grid.innerHTML = ''; empty.style.display = 'block'; return; }
+
+  const prevStr = prevMonthStr(monthStr);
+  const cur = sumMonth(monthStr);
+  const prev = sumMonth(prevStr);
+
+  const [cy, cm] = monthStr.split('-');
+  const [py, pm] = prevStr.split('-');
+  caption.textContent = `${cy}년 ${parseInt(cm,10)}월 vs ${py}년 ${parseInt(pm,10)}월`;
+  document.getElementById('momPrintTitle').textContent = `전월대비 증감 - ${cy}년 ${parseInt(cm,10)}월 vs ${py}년 ${parseInt(pm,10)}월`;
+
+  if(cur.income === 0 && cur.expense === 0 && prev.income === 0 && prev.expense === 0){
+    grid.innerHTML = '';
+    empty.style.display = 'block';
+    return;
+  }
+  empty.style.display = 'none';
+
+  grid.innerHTML =
+    momItem('수입', cur.income, prev.income, true) +
+    momItem('지출', cur.expense, prev.expense, false) +
+    momItem('총합계(순액)', cur.net, prev.net, true, 'net');
+}
+
+document.getElementById('momMonth').addEventListener('change', renderMoM);
+
 document.getElementById('periodTabs').addEventListener('click', (e)=>{
   if(e.target.tagName !== 'BUTTON') return;
   currentMode = e.target.dataset.mode;
@@ -778,6 +1116,7 @@ function render(){
   populateYearSelect();
   renderAgg();
   renderAccountSummary();
+  renderMoM();
 }
 
 /* ---------- 인쇄 ---------- */
@@ -795,17 +1134,86 @@ window.addEventListener('afterprint', ()=>{
 document.getElementById('ledgerPrintBtn').addEventListener('click', ()=> printSection('ledgerCard'));
 document.getElementById('aggPrintBtn').addEventListener('click', ()=> printSection('aggCard'));
 document.getElementById('accountPrintBtn').addEventListener('click', ()=> printSection('accountCard'));
+document.getElementById('momPrintBtn').addEventListener('click', ()=> printSection('momCard'));
+
+/* ---------- 월간 재정보고서 (통합 인쇄) ---------- */
+function buildMonthlyReportHTML(monthStr){
+  const [y, m] = monthStr.split('-');
+  const monthLabel = `${y}년 ${parseInt(m,10)}월`;
+
+  const monthTx = sortedTx().filter(t => t.date.slice(0,7) === monthStr);
+  let balance = 0, totalIncome = 0, totalExpense = 0;
+  const ledgerRowsHtml = monthTx.map(tx=>{
+    const inc = tx.type === 'income' ? tx.amount : 0;
+    const exp = tx.type === 'expense' ? tx.amount : 0;
+    balance += inc - exp;
+    totalIncome += inc; totalExpense += exp;
+    return `<tr><td>${tx.date}</td><td class="memo">${escapeHtml(tx.account||'')}</td><td class="memo">${escapeHtml(tx.memo)}</td><td class="income">${inc?won(inc):''}</td><td class="expense">${exp?won(exp):''}</td><td>${won(balance)}</td></tr>`;
+  }).join('') || `<tr><td colspan="6" style="text-align:center;font-family:'Pretendard';color:var(--ink-soft);">해당 월 거래 내역이 없습니다.</td></tr>`;
+
+  const {rows: accRows} = computeGroupSummary('account');
+  const accRowsHtml = accRows.map(r=>`<tr><td colspan="2">${escapeHtml(r.label)}</td><td class="income">${r.income?won(r.income):'-'}</td><td class="expense">${r.expense?won(r.expense):'-'}</td><td class="${r.net>=0?'balance-pos':'balance-neg'}">${won(r.net)}</td></tr>`).join('');
+
+  const prevStr = prevMonthStr(monthStr);
+  const cur = sumMonth(monthStr);
+  const prev = sumMonth(prevStr);
+  const momHtml = momItem('수입', cur.income, prev.income, true)
+    + momItem('지출', cur.expense, prev.expense, false)
+    + momItem('총합계(순액)', cur.net, prev.net, true, 'net');
+
+  const today = new Date().toLocaleDateString('ko-KR', {year:'numeric',month:'long',day:'numeric'});
+
+  return `
+    <div class="print-title print-target-title">진리침례교회 재정보고서 — ${monthLabel}</div>
+
+    <h3 style="font-family:'Noto Serif KR',serif;font-size:15px;margin:20px 0 8px;">1. ${monthLabel} 거래 내역</h3>
+    <table><thead><tr><th style="text-align:left;">거래일</th><th style="text-align:left;">통장</th><th style="text-align:left;">내용</th><th>수입</th><th>지출</th><th>소계</th></tr></thead>
+    <tbody>
+      ${ledgerRowsHtml}
+      <tr class="total-row"><td colspan="3">합계</td><td class="income">${won(totalIncome)}</td><td class="expense">${won(totalExpense)}</td><td>${won(balance)}</td></tr>
+    </tbody></table>
+
+    <h3 style="font-family:'Noto Serif KR',serif;font-size:15px;margin:26px 0 8px;">2. 통장별 잔액 (전체 기간 누적)</h3>
+    <table><thead><tr><th style="text-align:left;">통장</th><th></th><th>수입 합계</th><th>지출 합계</th><th>잔액</th></tr></thead>
+    <tbody>${accRowsHtml}</tbody></table>
+
+    <h3 style="font-family:'Noto Serif KR',serif;font-size:15px;margin:26px 0 8px;">3. 전월대비 증감</h3>
+    <div class="mom-grid">${momHtml}</div>
+
+    <div style="margin-top:60px;font-size:13px;text-align:right;">작성일: ${today}</div>
+    <div style="margin-top:26px;display:flex;justify-content:flex-end;gap:50px;font-size:13px;">
+      <div>담당&nbsp;&nbsp;: ______________ (인)</div>
+      <div>확인&nbsp;&nbsp;: ______________ (인)</div>
+    </div>
+  `;
+}
+
+function printMonthlyReport(){
+  const monthStr = document.getElementById('momMonth').value;
+  if(!monthStr){ alert('기준월을 먼저 선택해 주세요.'); return; }
+  const area = document.getElementById('reportPrintArea');
+  area.innerHTML = buildMonthlyReportHTML(monthStr);
+  document.querySelectorAll('.card').forEach(c=>c.classList.remove('print-target'));
+  area.classList.add('print-target');
+  document.body.classList.add('printing');
+  window.print();
+}
+
+document.getElementById('monthlyReportBtn').addEventListener('click', printMonthlyReport);
 
 /* ---------- 엑셀 다운로드 ---------- */
 function excelFilename(prefix){
   return `${prefix}_${new Date().toISOString().slice(0,10)}.xlsx`;
 }
 
-function downloadLedgerExcel(){
-  let list = sortedTx();
-  if(filterYear) list = list.filter(t => t.date.slice(0,4) === String(filterYear));
-  if(filterAccount) list = list.filter(t => t.account === filterAccount);
-  if(list.length === 0){ alert('내보낼 거래 내역이 없습니다.'); return; }
+function summaryToSheetRows(headerLabel, rows, grandIncome, grandExpense){
+  const sheetRows = [[headerLabel, '수입 합계', '지출 합계', '소계(순액)']];
+  rows.forEach(r => sheetRows.push([r.label, r.income, r.expense, r.net]));
+  sheetRows.push(['합계', grandIncome, grandExpense, grandIncome - grandExpense]);
+  return sheetRows;
+}
+
+function buildLedgerSheetRows(list){
   const rows = [['거래일','통장','내용','수입','지출','소계(잔액)']];
   let balance = 0, totalIncome = 0, totalExpense = 0;
   list.forEach(tx=>{
@@ -816,48 +1224,105 @@ function downloadLedgerExcel(){
     rows.push([tx.date, tx.account || '', tx.memo, inc || 0, exp || 0, balance]);
   });
   rows.push(['합계', '', '', totalIncome, totalExpense, balance]);
+  return rows;
+}
 
-  const ws = XLSX.utils.aoa_to_sheet(rows);
-  ws['!cols'] = [{wch:12},{wch:14},{wch:22},{wch:12},{wch:12},{wch:14}];
+function appendSheet(wb, sheetRows, colWidths, sheetName){
+  const ws = XLSX.utils.aoa_to_sheet(sheetRows);
+  ws['!cols'] = colWidths;
+  XLSX.utils.book_append_sheet(wb, ws, sheetName);
+  return ws;
+}
+
+function writeSingleSheetWorkbook(sheetRows, colWidths, sheetName, filenamePrefix){
   const wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, ws, '거래내역');
-  XLSX.writeFile(wb, excelFilename('거래내역'));
+  appendSheet(wb, sheetRows, colWidths, sheetName);
+  XLSX.writeFile(wb, excelFilename(filenamePrefix));
+}
+
+const LEDGER_COL_WIDTHS = [{wch:12},{wch:14},{wch:22},{wch:12},{wch:12},{wch:14}];
+const SUMMARY4_COL_WIDTHS = [{wch:14},{wch:14},{wch:14},{wch:14}];
+
+function downloadLedgerExcel(){
+  let list = sortedTx();
+  if(filterYear) list = list.filter(t => t.date.slice(0,4) === String(filterYear));
+  if(filterAccount) list = list.filter(t => t.account === filterAccount);
+  if(list.length === 0){ alert('내보낼 거래 내역이 없습니다.'); return; }
+  writeSingleSheetWorkbook(buildLedgerSheetRows(list), LEDGER_COL_WIDTHS, '거래내역', '거래내역');
 }
 
 function downloadAggExcel(){
   const {rows, grandIncome, grandExpense, isEmpty} = computeAgg();
   if(isEmpty){ alert('내보낼 집계 내역이 없습니다.'); return; }
   const colLabel = AGG_LABELS[currentMode];
-  const sheetRows = [[colLabel, '수입 합계', '지출 합계', '소계(순액)']];
-  rows.forEach(r=> sheetRows.push([r.label, r.income, r.expense, r.net]));
-  sheetRows.push(['합계', grandIncome, grandExpense, grandIncome - grandExpense]);
-
-  const ws = XLSX.utils.aoa_to_sheet(sheetRows);
-  ws['!cols'] = [{wch:12},{wch:14},{wch:14},{wch:14}];
-  const wb = XLSX.utils.book_new();
   const sheetName = {month:'월별집계',quarter:'분기별집계',half:'반기별집계',year:'연도별집계'}[currentMode];
-  XLSX.utils.book_append_sheet(wb, ws, sheetName);
   const prefix = currentMode === 'year' ? '연도별집계' : `${currentYear}년_${sheetName}`;
-  XLSX.writeFile(wb, excelFilename(prefix));
+  writeSingleSheetWorkbook(summaryToSheetRows(colLabel, rows, grandIncome, grandExpense), SUMMARY4_COL_WIDTHS, sheetName, prefix);
 }
 
 function downloadGroupExcel(field, sheetName, prefix){
   const {rows, grandIncome, grandExpense, isEmpty} = computeGroupSummary(field);
   if(isEmpty){ alert('내보낼 내역이 없습니다.'); return; }
-  const sheetRows = [[field === 'account' ? '통장' : '명목', '수입 합계', '지출 합계', '소계(순액)']];
-  rows.forEach(r=> sheetRows.push([r.label, r.income, r.expense, r.net]));
-  sheetRows.push(['합계', grandIncome, grandExpense, grandIncome - grandExpense]);
+  const headerLabel = field === 'account' ? '통장' : '명목';
+  writeSingleSheetWorkbook(summaryToSheetRows(headerLabel, rows, grandIncome, grandExpense), SUMMARY4_COL_WIDTHS, sheetName, prefix);
+}
 
-  const ws = XLSX.utils.aoa_to_sheet(sheetRows);
-  ws['!cols'] = [{wch:14},{wch:14},{wch:14},{wch:14}];
+function downloadMomExcel(){
+  const monthStr = document.getElementById('momMonth').value;
+  if(!monthStr){ alert('기준월을 선택해 주세요.'); return; }
+  const prevStr = prevMonthStr(monthStr);
+  const cur = sumMonth(monthStr);
+  const prev = sumMonth(prevStr);
+  if(cur.income === 0 && cur.expense === 0 && prev.income === 0 && prev.expense === 0){
+    alert('내보낼 내역이 없습니다.'); return;
+  }
+  function momRow(label, c, p){
+    const diff = c - p;
+    const rate = p === 0 ? '' : Number(((diff / Math.abs(p)) * 100).toFixed(1));
+    return [label, c, p, diff, rate];
+  }
+  const sheetRows = [
+    ['구분','당월','전월','증감액','증감률(%)'],
+    momRow('수입', cur.income, prev.income),
+    momRow('지출', cur.expense, prev.expense),
+    momRow('총합계(순액)', cur.net, prev.net)
+  ];
+  writeSingleSheetWorkbook(sheetRows, [{wch:16},{wch:14},{wch:14},{wch:14},{wch:12}], '전월대비증감', `${monthStr}_전월대비증감`);
+}
+
+function yearlySummaryRows(){
+  const years = getYears().sort((a,b)=>a-b);
+  const groups = {};
+  years.forEach(y => groups[y] = {income:0, expense:0});
+  transactions.forEach(t=>{
+    const y = parseInt(t.date.slice(0,4),10);
+    if(groups[y]) groups[y][t.type] += t.amount;
+  });
+  return years.map(y=>({label:`${y}년`, income:groups[y].income, expense:groups[y].expense, net:groups[y].income-groups[y].expense}));
+}
+
+function downloadFullExcelBackup(){
+  if(transactions.length === 0){ alert('내보낼 데이터가 없습니다.'); return; }
   const wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, ws, sheetName);
-  XLSX.writeFile(wb, excelFilename(prefix));
+
+  appendSheet(wb, buildLedgerSheetRows(sortedTx()), LEDGER_COL_WIDTHS, '거래내역');
+
+  const yearRows = yearlySummaryRows();
+  const yGrandIncome = yearRows.reduce((s,r)=>s+r.income,0);
+  const yGrandExpense = yearRows.reduce((s,r)=>s+r.expense,0);
+  appendSheet(wb, summaryToSheetRows('연도', yearRows, yGrandIncome, yGrandExpense), SUMMARY4_COL_WIDTHS, '연도별집계');
+
+  const {rows: accRows, grandIncome: aGrandIncome, grandExpense: aGrandExpense} = computeGroupSummary('account');
+  appendSheet(wb, summaryToSheetRows('통장', accRows, aGrandIncome, aGrandExpense), SUMMARY4_COL_WIDTHS, '통장별잔액');
+
+  XLSX.writeFile(wb, excelFilename('전체데이터_종합백업'));
 }
 
 document.getElementById('ledgerExcelBtn').addEventListener('click', downloadLedgerExcel);
 document.getElementById('aggExcelBtn').addEventListener('click', downloadAggExcel);
 document.getElementById('accountExcelBtn').addEventListener('click', ()=> downloadGroupExcel('account','통장별잔액','통장별잔액'));
+document.getElementById('momExcelBtn').addEventListener('click', downloadMomExcel);
+document.getElementById('exportFullExcelBtn').addEventListener('click', downloadFullExcelBackup);
 
 /* ---------- 백업 / 복원 (JSON) ---------- */
 function downloadJson(filename, dataObj){
@@ -941,6 +1406,8 @@ document.getElementById('entryModeTabs').addEventListener('click', (e)=>{
   e.target.classList.add('active');
   document.getElementById('singleEntryWrap').style.display = mode === 'single' ? 'block' : 'none';
   document.getElementById('bulkEntryWrap').style.display = mode === 'bulk' ? 'block' : 'none';
+  document.getElementById('ocrEntryWrap').style.display = mode === 'ocr' ? 'block' : 'none';
+  document.getElementById('excelEntryWrap').style.display = mode === 'excel' ? 'block' : 'none';
   if(mode === 'single') resetFormToAddMode();
 });
 
@@ -1044,6 +1511,613 @@ document.getElementById('bulkSaveBtn').addEventListener('click', async ()=>{
   render();
   alert(`${toAdd.length}건이 저장되었습니다.`);
 });
+
+/* ---------- 통장사본 OCR ---------- */
+(function(){
+  const ocrDropZone = document.getElementById('ocrDropZone');
+  const ocrFileInput = document.getElementById('ocrFileInput');
+  const ocrPreviewWrap = document.getElementById('ocrPreviewWrap');
+  const ocrPreviewImg = document.getElementById('ocrPreviewImg');
+  const ocrProgressWrap = document.getElementById('ocrProgressWrap');
+  const ocrProgressFill = document.getElementById('ocrProgressFill');
+  const ocrProgressText = document.getElementById('ocrProgressText');
+  const ocrResultWrap = document.getElementById('ocrResultWrap');
+  const ocrResultInfo = document.getElementById('ocrResultInfo');
+  const ocrRowsBody = document.getElementById('ocrRowsBody');
+  const ocrRawTextEl = document.getElementById('ocrRawText');
+
+  /* 드래그 & 드롭 / 클릭 업로드 */
+  ocrDropZone.addEventListener('click', () => ocrFileInput.click());
+  ocrDropZone.addEventListener('dragover', (e) => { e.preventDefault(); ocrDropZone.classList.add('drag-over'); });
+  ocrDropZone.addEventListener('dragleave', () => ocrDropZone.classList.remove('drag-over'));
+  ocrDropZone.addEventListener('drop', (e) => {
+    e.preventDefault();
+    ocrDropZone.classList.remove('drag-over');
+    const file = e.dataTransfer.files[0];
+    if(file && file.type.startsWith('image/')) handleOcrImage(file);
+    else alert('이미지 파일만 지원합니다 (JPG, PNG 등).');
+  });
+  ocrFileInput.addEventListener('change', (e) => {
+    if(e.target.files[0]) handleOcrImage(e.target.files[0]);
+  });
+  document.getElementById('ocrRetryBtn').addEventListener('click', () => {
+    ocrFileInput.value = '';
+    ocrFileInput.click();
+  });
+  document.getElementById('ocrRawToggle').addEventListener('click', function() {
+    const raw = ocrRawTextEl;
+    const open = raw.style.display === 'block';
+    raw.style.display = open ? 'none' : 'block';
+    this.textContent = open ? 'OCR 원본 텍스트 보기 ▾' : 'OCR 원본 텍스트 닫기 ▴';
+  });
+  document.getElementById('ocrClearBtn').addEventListener('click', () => {
+    ocrRowsBody.innerHTML = '';
+    ocrResultWrap.style.display = 'none';
+    ocrDropZone.style.display = 'block';
+    ocrPreviewWrap.style.display = 'none';
+    ocrProgressWrap.style.display = 'none';
+    ocrFileInput.value = '';
+  });
+
+  /* 이미지 전처리: 그레이스케일 + 대비 강화 (사진 OCR 정확도 향상) */
+  function preprocessImage(img){
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d');
+    const scale = Math.max(1, 2400 / Math.max(img.naturalWidth, img.naturalHeight));
+    canvas.width = Math.round(img.naturalWidth * scale);
+    canvas.height = Math.round(img.naturalHeight * scale);
+    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+
+    const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+    const d = imageData.data;
+    for(let i = 0; i < d.length; i += 4){
+      const gray = 0.299 * d[i] + 0.587 * d[i+1] + 0.114 * d[i+2];
+      const enhanced = Math.min(255, Math.max(0, ((gray - 128) * 1.6) + 128));
+      d[i] = d[i+1] = d[i+2] = enhanced;
+    }
+    ctx.putImageData(imageData, 0, 0);
+    return canvas;
+  }
+
+  /* OCR 메인 처리 */
+  async function handleOcrImage(file){
+    const url = URL.createObjectURL(file);
+    ocrPreviewImg.src = url;
+    document.getElementById('ocrFileName').textContent = file.name;
+    document.getElementById('ocrFileSize').textContent = (file.size / 1024).toFixed(1) + ' KB';
+    ocrPreviewWrap.style.display = 'flex';
+    ocrDropZone.style.display = 'none';
+
+    ocrResultWrap.style.display = 'none';
+    ocrRowsBody.innerHTML = '';
+
+    ocrProgressWrap.style.display = 'block';
+    ocrProgressFill.style.width = '0%';
+    ocrProgressText.textContent = '이미지 전처리 중...';
+
+    try {
+      const img = new Image();
+      img.src = url;
+      await new Promise((resolve, reject) => { img.onload = resolve; img.onerror = reject; });
+      const processedCanvas = preprocessImage(img);
+
+      ocrProgressText.textContent = 'OCR 엔진 로딩 중... (처음에는 한국어 데이터를 다운로드합니다. 약 15MB)';
+
+      const worker = await Tesseract.createWorker('kor', 1, {
+        logger: (m) => {
+          if(m.status === 'recognizing text'){
+            const pct = Math.round(m.progress * 100);
+            ocrProgressFill.style.width = (50 + pct * 0.5) + '%';
+            ocrProgressText.textContent = '텍스트 인식 중... ' + pct + '%';
+          } else if(m.status && m.status.includes('loading')){
+            const pct = Math.round((m.progress || 0) * 100);
+            ocrProgressFill.style.width = (pct * 0.3) + '%';
+            ocrProgressText.textContent = '한국어 데이터 로딩 중... ' + pct + '%';
+          } else if(m.status === 'initializing api'){
+            ocrProgressFill.style.width = '40%';
+            ocrProgressText.textContent = 'OCR 엔진 초기화 중...';
+          }
+        }
+      });
+
+      const { data: { text } } = await worker.recognize(processedCanvas);
+      await worker.terminate();
+
+      ocrProgressWrap.style.display = 'none';
+      ocrRawTextEl.textContent = text;
+      ocrRawTextEl.style.display = 'none';
+      document.getElementById('ocrRawToggle').textContent = 'OCR 원본 텍스트 보기 ▾';
+
+      const parsed = parseBankStatement(text);
+
+      if(parsed.length === 0){
+        ocrResultInfo.innerHTML = '<strong>⚠ 거래 내역을 자동 인식하지 못했습니다.</strong><br>OCR 원본 텍스트를 확인하고, "행 추가" 버튼으로 수동 입력하거나 더 선명한 사진으로 다시 시도해 주세요.';
+      } else {
+        ocrResultInfo.innerHTML = '<strong>' + parsed.length + '건</strong>의 거래를 인식했습니다. 내용을 확인하고 필요하면 수정한 뒤 "일괄 저장"을 누르세요.';
+      }
+
+      parsed.forEach(tx => addOcrRow(tx.date, tx.type, tx.memo, tx.amount));
+      ocrResultWrap.style.display = 'block';
+
+    } catch(err) {
+      console.error('OCR 오류:', err);
+      ocrProgressWrap.style.display = 'none';
+      alert('OCR 처리 중 오류가 발생했습니다: ' + err.message);
+    } finally {
+      URL.revokeObjectURL(url);
+    }
+  }
+
+  /* ===== 통장 거래내역 텍스트 파싱 (농협 · 국민은행 특화) ===== */
+  function parseBankStatement(text){
+    const lines = text.split('\n').map(l => l.trim()).filter(l => l.length > 2);
+    const results = [];
+
+    // 날짜 패턴들
+    const datePatterns = [
+      { re: /(\d{4})[.\-\/](\d{1,2})[.\-\/](\d{1,2})/, fullYear: true },
+      { re: /(\d{2})[.\-\/](\d{1,2})[.\-\/](\d{1,2})/, fullYear: false },
+    ];
+
+    // 금액 패턴: 쉼표 포함 또는 4자리 이상 숫자
+    const amountRe = /[\d,]{4,}/g;
+
+    // 수입 키워드
+    const incomeKeywords = ['입금','이자','급여','수입','환급','보조금','배당','지원금','감사헌금','선교헌금','헌금','봉헌'];
+    // 지출 키워드
+    const expenseKeywords = ['출금','이체','결제','인출','카드','수수료','이용료','납부','지급','구매','배송','주문'];
+
+    for(const line of lines){
+      let dateStr = '';
+      let dateMatchObj = null;
+
+      for(const dp of datePatterns){
+        const m = line.match(dp.re);
+        if(m){
+          let y = parseInt(m[1], 10);
+          if(!dp.fullYear) y = y > 50 ? 1900 + y : 2000 + y;
+          const mo = m[2].padStart(2, '0');
+          const da = m[3].padStart(2, '0');
+          if(parseInt(mo,10) >= 1 && parseInt(mo,10) <= 12 && parseInt(da,10) >= 1 && parseInt(da,10) <= 31){
+            dateStr = y + '-' + mo + '-' + da;
+            dateMatchObj = m;
+            break;
+          }
+        }
+      }
+
+      if(!dateStr) continue;
+
+      let remaining = line.replace(dateMatchObj[0], ' ').trim();
+      // 시간 패턴 제거 (HH:MM 또는 HH:MM:SS)
+      remaining = remaining.replace(/\d{1,2}:\d{2}(:\d{2})?/g, ' ').trim();
+
+      // 금액 추출
+      const amounts = [];
+      const amountPositions = [];
+      let am;
+      amountRe.lastIndex = 0;
+      while((am = amountRe.exec(remaining)) !== null){
+        const numStr = am[0].replace(/,/g, '');
+        const num = parseInt(numStr, 10);
+        // 합리적 거래 금액 범위 (100원 ~ 999억)
+        if(num >= 100 && num < 100000000000){
+          amounts.push(num);
+          amountPositions.push({index: am.index, length: am[0].length, value: num});
+        }
+      }
+
+      if(amounts.length === 0) continue;
+
+      // 내용(적요) 추출: 금액 부분을 제거한 나머지 텍스트
+      let memo = remaining;
+      for(let i = amountPositions.length - 1; i >= 0; i--){
+        const pos = amountPositions[i];
+        memo = memo.slice(0, pos.index) + ' ' + memo.slice(pos.index + pos.length);
+      }
+      memo = memo.replace(/[|│┃\[\]()（）]/g, ' ').replace(/\s+/g, ' ').trim();
+      memo = memo.replace(/^[\s\-·.,;:]+|[\s\-·.,;:]+$/g, '').trim();
+      if(!memo) memo = '(내용 없음)';
+
+      // 수입/지출 판별
+      let type = 'expense'; // 기본값
+      let amount = 0;
+
+      // 농협·국민 통장: 보통 [출금, 입금, 잔액] 또는 [금액, 잔액] 순서
+      if(amounts.length >= 3){
+        // 3개 이상: 출금, 입금, 잔액 (0이 아닌 쪽이 실 거래)
+        const withdraw = amounts[0];
+        const deposit = amounts[1];
+        // 잔액은 amounts[2] (무시)
+        // 두 금액 중 하나가 더 작으면 거래액, 큰 쪽이 잔액일 수도 있음
+        if(deposit > withdraw && withdraw < amounts[2]){
+          // 입금이 더 크면 입금 거래일 가능성
+          type = 'income'; amount = deposit;
+        } else {
+          type = 'expense'; amount = withdraw;
+        }
+        // 둘 다 0이 아닌 경우 첫 번째를 거래액으로
+        if(amount === 0) amount = withdraw || deposit;
+      } else if(amounts.length === 2){
+        // [거래액, 잔액]
+        amount = amounts[0];
+        // 잔액이 거래액보다 작다면? 순서가 바뀌었을 수 있음
+      } else {
+        amount = amounts[0];
+      }
+
+      // 키워드 기반 수입/지출 보정
+      const lowerLine = line.replace(/\s/g,'');
+      for(const kw of incomeKeywords){
+        if(lowerLine.includes(kw)){ type = 'income'; break; }
+      }
+      for(const kw of expenseKeywords){
+        if(lowerLine.includes(kw)){ type = 'expense'; break; }
+      }
+
+      if(amount > 0){
+        results.push({ date: dateStr, type, memo, amount });
+      }
+    }
+
+    return results;
+  }
+
+  /* OCR 결과 행 추가 */
+  function addOcrRow(date, type, memo, amount){
+    const tr = document.createElement('tr');
+    tr.innerHTML =
+      '<td><input type="date" class="ocr-date"></td>' +
+      '<td><select class="ocr-type"><option value="income">수입</option><option value="expense">지출</option></select></td>' +
+      '<td><input type="text" class="ocr-memo" placeholder="내용"></td>' +
+      '<td><input type="number" class="ocr-amount" min="1" step="1" placeholder="0"></td>' +
+      '<td><button type="button" class="del-btn ocr-row-del">삭제</button></td>';
+    tr.querySelector('.ocr-date').value = date || '';
+    tr.querySelector('.ocr-type').value = type || 'expense';
+    tr.querySelector('.ocr-memo').value = memo || '';
+    tr.querySelector('.ocr-amount').value = amount || '';
+    ocrRowsBody.appendChild(tr);
+    tr.querySelector('.ocr-row-del').addEventListener('click', () => tr.remove());
+    return tr;
+  }
+
+  document.getElementById('ocrAddRowBtn').addEventListener('click', () => addOcrRow('', 'expense', '', ''));
+
+  /* 일괄 저장 */
+  document.getElementById('ocrSaveBtn').addEventListener('click', async () => {
+    const account = document.getElementById('ocr-account').value.trim();
+    if(!account){ alert('통장을 입력해 주세요 (인식된 거래에 공통 적용됩니다).'); return; }
+
+    const rows = [...ocrRowsBody.querySelectorAll('tr')];
+    const toAdd = [];
+    const errorLines = [];
+
+    rows.forEach((tr, idx) => {
+      const date = tr.querySelector('.ocr-date').value;
+      const type = tr.querySelector('.ocr-type').value;
+      const memo = tr.querySelector('.ocr-memo').value.trim();
+      const amountRaw = tr.querySelector('.ocr-amount').value;
+
+      if(!memo && !amountRaw) return;
+
+      const amount = parseFloat(amountRaw);
+      if(!date || !memo || isNaN(amount) || amount <= 0 || !Number.isInteger(amount)){
+        errorLines.push(idx + 1);
+        return;
+      }
+      toAdd.push({date, type, memo, amount});
+    });
+
+    if(errorLines.length){
+      alert(errorLines.join(', ') + '번째 행을 확인해 주세요.\n거래일·내용·금액(정수)이 모두 올바르게 입력되어야 합니다.');
+      return;
+    }
+    if(toAdd.length === 0){ alert('저장할 내용이 없습니다.'); return; }
+    if(!confirm('"' + account + '" 통장으로 ' + toAdd.length + '건을 저장할까요?')) return;
+
+    toAdd.forEach(t => {
+      transactions.push({
+        id: 'tx_' + Date.now() + '_' + Math.random().toString(36).slice(2,7),
+        account: account,
+        date: t.date,
+        type: t.type,
+        memo: t.memo,
+        amount: t.amount
+      });
+    });
+
+    await saveData();
+    ocrRowsBody.innerHTML = '';
+    ocrResultWrap.style.display = 'none';
+    ocrDropZone.style.display = 'block';
+    ocrPreviewWrap.style.display = 'none';
+    render();
+    alert(toAdd.length + '건이 저장되었습니다.');
+  });
+})();
+
+/* ---------- 엑셀 파일 거래내역 업로드 ---------- */
+(function(){
+  const excelDropZone = document.getElementById('excelDropZone');
+  const excelFileInput = document.getElementById('excelFileInput');
+  const excelPreviewWrap = document.getElementById('excelPreviewWrap');
+  const excelResultWrap = document.getElementById('excelResultWrap');
+  const excelResultInfo = document.getElementById('excelResultInfo');
+  const excelRowsBody = document.getElementById('excelRowsBody');
+
+  excelDropZone.addEventListener('click', () => excelFileInput.click());
+  excelDropZone.addEventListener('dragover', (e) => { e.preventDefault(); excelDropZone.classList.add('drag-over'); });
+  excelDropZone.addEventListener('dragleave', () => excelDropZone.classList.remove('drag-over'));
+  excelDropZone.addEventListener('drop', (e) => {
+    e.preventDefault();
+    excelDropZone.classList.remove('drag-over');
+    const file = e.dataTransfer.files[0];
+    if(file && (file.name.endsWith('.xlsx') || file.name.endsWith('.xls') || file.name.endsWith('.csv'))) {
+      handleExcelFile(file);
+    } else {
+      alert('엑셀 파일(.xlsx, .xls, .csv)만 업로드할 수 있습니다.');
+    }
+  });
+  excelFileInput.addEventListener('change', (e) => {
+    if(e.target.files[0]) handleExcelFile(e.target.files[0]);
+  });
+  document.getElementById('excelRetryBtn').addEventListener('click', () => {
+    excelFileInput.value = '';
+    excelFileInput.click();
+  });
+  document.getElementById('excelClearBtn').addEventListener('click', () => {
+    excelRowsBody.innerHTML = '';
+    excelResultWrap.style.display = 'none';
+    excelDropZone.style.display = 'block';
+    excelPreviewWrap.style.display = 'none';
+    excelFileInput.value = '';
+  });
+
+  function addExcelRow(date, type, memo, amount){
+    const tr = document.createElement('tr');
+    tr.innerHTML =
+      '<td><input type="date" class="excel-date"></td>' +
+      '<td><select class="excel-type"><option value="income">수입</option><option value="expense">지출</option></select></td>' +
+      '<td><input type="text" class="excel-memo" placeholder="내용"></td>' +
+      '<td><input type="number" class="excel-amount" min="1" step="1" placeholder="0"></td>' +
+      '<td><button type="button" class="del-btn excel-row-del">삭제</button></td>';
+    tr.querySelector('.excel-date').value = date || '';
+    tr.querySelector('.excel-type').value = type || 'income';
+    tr.querySelector('.excel-memo').value = memo || '';
+    tr.querySelector('.excel-amount').value = amount || '';
+    excelRowsBody.appendChild(tr);
+    tr.querySelector('.excel-row-del').addEventListener('click', () => tr.remove());
+    return tr;
+  }
+
+  document.getElementById('excelAddRowBtn').addEventListener('click', () => addExcelRow('', 'income', '', ''));
+
+  function formatExcelDate(val) {
+    if(!val) return '';
+    if(typeof val === 'number') {
+      // Excel Serial Date Number
+      const jsDate = new Date(Math.round((val - (25567 + 2)) * 86400 * 1000));
+      if(!isNaN(jsDate.getTime())) {
+        return jsDate.toISOString().slice(0, 10);
+      }
+    }
+    const str = String(val).trim();
+    // YYYY-MM-DD, YYYY.MM.DD, YYYY/MM/DD, YYYYMMDD
+    const clean = str.replace(/[.\/]/g, '-');
+    const match = clean.match(/(\d{4})[\-]?(\d{2})[\-]?(\d{2})/);
+    if(match) {
+      return `${match[1]}-${match[2]}-${match[3]}`;
+    }
+    const shortMatch = clean.match(/(\d{2})[\-]?(\d{2})[\-]?(\d{2})/);
+    if(shortMatch) {
+      let y = parseInt(shortMatch[1], 10);
+      y = y > 50 ? 1900 + y : 2000 + y;
+      return `${y}-${shortMatch[2]}-${shortMatch[3]}`;
+    }
+    return '';
+  }
+
+  function parseCleanAmount(val) {
+    if(val === null || val === undefined) return 0;
+    if(typeof val === 'number') return Math.abs(val);
+    const str = String(val).replace(/[^0-9.-]/g, '');
+    const num = parseFloat(str);
+    return isNaN(num) ? 0 : Math.abs(num);
+  }
+
+  function handleExcelFile(file){
+    document.getElementById('excelFileName').textContent = file.name;
+    document.getElementById('excelFileSize').textContent = (file.size / 1024).toFixed(1) + ' KB';
+    excelPreviewWrap.style.display = 'flex';
+    excelDropZone.style.display = 'none';
+
+    excelResultWrap.style.display = 'none';
+    excelRowsBody.innerHTML = '';
+
+    const reader = new FileReader();
+    reader.onload = function(e){
+      try {
+        const data = new Uint8Array(e.target.result);
+        const workbook = XLSX.read(data, { type: 'array', cellDates: true });
+        
+        let sheetName = workbook.SheetNames[0];
+        let sheet = workbook.Sheets[sheetName];
+        let rows = XLSX.utils.sheet_to_json(sheet, { header: 1, raw: false, dateNF: 'yyyy-mm-dd' });
+
+        if(!rows || rows.length === 0){
+          alert('엑셀 파일에 데이터가 없습니다.');
+          return;
+        }
+
+        // 헤더 행 찾기
+        let headerIdx = -1;
+        let colMap = { date: -1, memo: -1, income: -1, expense: -1, amount: -1, type: -1 };
+
+        const dateKeys = ['거래일', '일자', '거래일자', '날짜', 'date', '일시'];
+        const memoKeys = ['적요', '내용', '거래내용', '취급점', '기증자', '비고', '상호', '기름', '적요/내용', '입금자'];
+        const incomeKeys = ['입금원금', '입금', '입금액', '수입', '수입액', '받은금액'];
+        const expenseKeys = ['출금원금', '출금', '출금액', '지출', '지출액', '보낸금액'];
+        const amountKeys = ['거래금액', '금액', '잔액', '금 액'];
+        const typeKeys = ['구분', '입출금', '유형'];
+
+        for(let r = 0; r < Math.min(rows.length, 20); r++){
+          const row = rows[r];
+          if(!Array.isArray(row)) continue;
+          
+          let dCol = -1, mCol = -1, iCol = -1, eCol = -1, aCol = -1, tCol = -1;
+
+          row.forEach((cell, c) => {
+            if(!cell) return;
+            const text = String(cell).replace(/\s/g, '').toLowerCase();
+
+            if(dCol === -1 && dateKeys.some(k => text.includes(k))) dCol = c;
+            if(mCol === -1 && memoKeys.some(k => text.includes(k))) mCol = c;
+            if(iCol === -1 && incomeKeys.some(k => text.includes(k))) iCol = c;
+            if(eCol === -1 && expenseKeys.some(k => text.includes(k))) eCol = c;
+            if(aCol === -1 && amountKeys.some(k => text.includes(k))) aCol = c;
+            if(tCol === -1 && typeKeys.some(k => text.includes(k))) tCol = c;
+          });
+
+          if(dCol !== -1 && (iCol !== -1 || eCol !== -1 || aCol !== -1)){
+            headerIdx = r;
+            colMap = { date: dCol, memo: mCol, income: iCol, expense: eCol, amount: aCol, type: tCol };
+            break;
+          }
+        }
+
+        // 헤더를 못 찾은 경우 0번째 행을 시도
+        if(headerIdx === -1) {
+          headerIdx = 0;
+          // 첫 행 데이터 검사
+          const firstRow = rows[0] || [];
+          colMap.date = 0;
+          if(firstRow.length >= 4) {
+            colMap.memo = 1;
+            colMap.income = 2;
+            colMap.expense = 3;
+          } else if(firstRow.length >= 3) {
+            colMap.memo = 1;
+            colMap.amount = 2;
+          }
+        }
+
+        const parsedResults = [];
+
+        for(let r = headerIdx + 1; r < rows.length; r++){
+          const row = rows[r];
+          if(!row || row.length === 0) continue;
+
+          const dateRaw = row[colMap.date];
+          const date = formatExcelDate(dateRaw);
+          if(!date) continue;
+
+          let memo = colMap.memo !== -1 && row[colMap.memo] ? String(row[colMap.memo]).trim() : '';
+          if(!memo) memo = '거래';
+
+          let incomeVal = colMap.income !== -1 ? parseCleanAmount(row[colMap.income]) : 0;
+          let expenseVal = colMap.expense !== -1 ? parseCleanAmount(row[colMap.expense]) : 0;
+          let amountVal = colMap.amount !== -1 ? parseCleanAmount(row[colMap.amount]) : 0;
+          let typeVal = colMap.type !== -1 && row[colMap.type] ? String(row[colMap.type]).trim() : '';
+
+          let finalType = 'income';
+          let finalAmount = 0;
+
+          if(incomeVal > 0 || expenseVal > 0){
+            if(incomeVal > 0 && expenseVal === 0){
+              finalType = 'income'; finalAmount = incomeVal;
+            } else if(expenseVal > 0 && incomeVal === 0){
+              finalType = 'expense'; finalAmount = expenseVal;
+            } else {
+              finalType = 'income'; finalAmount = incomeVal;
+            }
+          } else if(amountVal > 0){
+            finalAmount = amountVal;
+            if(typeVal.includes('출금') || typeVal.includes('지출') || typeVal.includes('-')) {
+              finalType = 'expense';
+            } else if(typeVal.includes('입금') || typeVal.includes('수입') || typeVal.includes('+')) {
+              finalType = 'income';
+            } else {
+              // 행 원본 문자열 검색
+              const rowStr = row.join(' ');
+              if(rowStr.includes('출금') || rowStr.includes('지출')) finalType = 'expense';
+              else finalType = 'income';
+            }
+          }
+
+          if(finalAmount > 0){
+            parsedResults.push({ date, type: finalType, memo, amount: finalAmount });
+          }
+        }
+
+        if(parsedResults.length === 0){
+          excelResultInfo.innerHTML = '<strong>⚠ 엑셀 파일에서 거래 내역을 자동으로 읽지 못했습니다.</strong><br>"행 추가" 버튼으로 직접 입력하시거나 파일 형식을 확인해주세요.';
+        } else {
+          excelResultInfo.innerHTML = '<strong>' + parsedResults.length + '건</strong>의 거래를 읽었습니다. 내용을 확인하고 필요하면 수정한 뒤 "일괄 저장"을 누르세요.';
+        }
+
+        parsedResults.forEach(tx => addExcelRow(tx.date, tx.type, tx.memo, tx.amount));
+        excelResultWrap.style.display = 'block';
+
+      } catch(err) {
+        console.error('엑셀 읽기 오류:', err);
+        alert('엑셀 파일을 읽는 중 오류가 발생했습니다: ' + err.message);
+      }
+    };
+    reader.readAsArrayBuffer(file);
+  }
+
+  /* 엑셀 일괄 저장 */
+  document.getElementById('excelSaveBtn').addEventListener('click', async () => {
+    const account = document.getElementById('excel-account').value.trim();
+    if(!account){ alert('통장을 입력해 주세요 (인식된 거래에 공통 적용됩니다).'); return; }
+
+    const rows = [...excelRowsBody.querySelectorAll('tr')];
+    const toAdd = [];
+    const errorLines = [];
+
+    rows.forEach((tr, idx) => {
+      const date = tr.querySelector('.excel-date').value;
+      const type = tr.querySelector('.excel-type').value;
+      const memo = tr.querySelector('.excel-memo').value.trim();
+      const amountRaw = tr.querySelector('.excel-amount').value;
+
+      if(!memo && !amountRaw) return;
+
+      const amount = parseFloat(amountRaw);
+      if(!date || !memo || isNaN(amount) || amount <= 0 || !Number.isInteger(amount)){
+        errorLines.push(idx + 1);
+        return;
+      }
+      toAdd.push({date, type, memo, amount});
+    });
+
+    if(errorLines.length){
+      alert(errorLines.join(', ') + '번째 행을 확인해 주세요.\n거래일·내용·금액(정수)이 모두 올바르게 입력되어야 합니다.');
+      return;
+    }
+    if(toAdd.length === 0){ alert('저장할 내용이 없습니다.'); return; }
+    if(!confirm('"' + account + '" 통장으로 ' + toAdd.length + '건을 저장할까요?')) return;
+
+    toAdd.forEach(t => {
+      transactions.push({
+        id: 'tx_' + Date.now() + '_' + Math.random().toString(36).slice(2,7),
+        account: account,
+        date: t.date,
+        type: t.type,
+        memo: t.memo,
+        amount: t.amount
+      });
+    });
+
+    await saveData();
+    excelRowsBody.innerHTML = '';
+    excelResultWrap.style.display = 'none';
+    excelDropZone.style.display = 'block';
+    excelPreviewWrap.style.display = 'none';
+    render();
+    alert(toAdd.length + '건이 저장되었습니다.');
+  });
+})();
 
 loadData();
 </script>
