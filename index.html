@@ -6,6 +6,12 @@
 <title>진리침례교회 회계</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/tesseract.js@4/dist/tesseract.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script>
+  if (window.pdfjsLib) {
+    pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+  }
+</script>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@500;700&family=Pretendard:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap');
 
@@ -191,52 +197,52 @@ color:var(--ink-soft);font-size:11px;margin-top:30px;display:flex;flex-direction
     body.printing .print-title.print-target-title{display:block;font-family:'Noto Serif KR',serif;font-size:18px;font-weight:700;margin-bottom:14px;}
   }
 
-  /* OCR & Excel Upload */
-  .ocr-toolbar, .excel-toolbar{display:flex;gap:10px;flex-wrap:wrap;align-items:end;margin-bottom:14px;}
-  .ocr-toolbar .f-item, .excel-toolbar .f-item{display:flex;flex-direction:column;gap:4px;}
-  .ocr-toolbar label, .excel-toolbar label{font-size:12px;color:var(--ink-soft);}
-  .ocr-toolbar input,.ocr-toolbar select, .excel-toolbar input, .excel-toolbar select{padding:7px 9px;border:1px solid var(--paper-line);border-radius:3px;font-size:13px;font-family:'Pretendard';background:#fff;}
+  /* OCR & Excel & PDF Upload */
+  .ocr-toolbar, .excel-toolbar, .pdf-toolbar{display:flex;gap:10px;flex-wrap:wrap;align-items:end;margin-bottom:14px;}
+  .ocr-toolbar .f-item, .excel-toolbar .f-item, .pdf-toolbar .f-item{display:flex;flex-direction:column;gap:4px;}
+  .ocr-toolbar label, .excel-toolbar label, .pdf-toolbar label{font-size:12px;color:var(--ink-soft);}
+  .ocr-toolbar input,.ocr-toolbar select, .excel-toolbar input, .excel-toolbar select, .pdf-toolbar input, .pdf-toolbar select{padding:7px 9px;border:1px solid var(--paper-line);border-radius:3px;font-size:13px;font-family:'Pretendard';background:#fff;}
 
-  .ocr-drop-zone, .excel-drop-zone{
+  .ocr-drop-zone, .excel-drop-zone, .pdf-drop-zone{
     border:2px dashed var(--paper-line);border-radius:8px;padding:44px 20px;
     text-align:center;cursor:pointer;transition:all 0.25s;
     background:var(--row-alt);position:relative;
   }
-  .ocr-drop-zone:hover,.ocr-drop-zone.drag-over, .excel-drop-zone:hover,.excel-drop-zone.drag-over{
+  .ocr-drop-zone:hover,.ocr-drop-zone.drag-over, .excel-drop-zone:hover,.excel-drop-zone.drag-over, .pdf-drop-zone:hover,.pdf-drop-zone.drag-over{
     border-color:var(--accent);background:rgba(138,109,59,0.06);
   }
-  .ocr-drop-zone .drop-icon, .excel-drop-zone .drop-icon{font-size:42px;margin-bottom:10px;display:block;}
-  .ocr-drop-zone .drop-text, .excel-drop-zone .drop-text{font-size:14px;color:var(--ink-soft);font-weight:500;}
-  .ocr-drop-zone .drop-sub, .excel-drop-zone .drop-sub{font-size:12px;color:var(--ink-soft);margin-top:6px;opacity:0.7;}
-  .ocr-drop-zone input[type="file"], .excel-drop-zone input[type="file"]{display:none;}
+  .ocr-drop-zone .drop-icon, .excel-drop-zone .drop-icon, .pdf-drop-zone .drop-icon{font-size:42px;margin-bottom:10px;display:block;}
+  .ocr-drop-zone .drop-text, .excel-drop-zone .drop-text, .pdf-drop-zone .drop-text{font-size:14px;color:var(--ink-soft);font-weight:500;}
+  .ocr-drop-zone .drop-sub, .excel-drop-zone .drop-sub, .pdf-drop-zone .drop-sub{font-size:12px;color:var(--ink-soft);margin-top:6px;opacity:0.7;}
+  .ocr-drop-zone input[type="file"], .excel-drop-zone input[type="file"], .pdf-drop-zone input[type="file"]{display:none;}
 
-  .ocr-preview-wrap, .excel-preview-wrap{margin:14px 0;display:flex;gap:16px;flex-wrap:wrap;align-items:flex-start;}
+  .ocr-preview-wrap, .excel-preview-wrap, .pdf-preview-wrap{margin:14px 0;display:flex;gap:16px;flex-wrap:wrap;align-items:flex-start;}
   .ocr-preview-img{max-width:300px;max-height:220px;border:1px solid var(--paper-line);border-radius:4px;object-fit:contain;background:#fff;}
-  .ocr-preview-info, .excel-preview-info{font-size:12px;color:var(--ink-soft);display:flex;flex-direction:column;gap:6px;}
+  .ocr-preview-info, .excel-preview-info, .pdf-preview-info{font-size:12px;color:var(--ink-soft);display:flex;flex-direction:column;gap:6px;}
 
-  .ocr-progress-wrap, .excel-progress-wrap{margin:16px 0;display:none;}
-  .ocr-progress-bar, .excel-progress-bar{width:100%;height:8px;background:var(--row-alt);border-radius:4px;overflow:hidden;}
-  .ocr-progress-fill, .excel-progress-fill{height:100%;background:linear-gradient(90deg,var(--accent),#b8956a);border-radius:4px;transition:width 0.3s;width:0%;}
-  .ocr-progress-text, .excel-progress-text{font-size:12px;color:var(--ink-soft);margin-top:6px;font-family:'JetBrains Mono',monospace;}
+  .ocr-progress-wrap, .excel-progress-wrap, .pdf-progress-wrap{margin:16px 0;display:none;}
+  .ocr-progress-bar, .excel-progress-bar, .pdf-progress-bar{width:100%;height:8px;background:var(--row-alt);border-radius:4px;overflow:hidden;}
+  .ocr-progress-fill, .excel-progress-fill, .pdf-progress-fill{height:100%;background:linear-gradient(90deg,var(--accent),#b8956a);border-radius:4px;transition:width 0.3s;width:0%;}
+  .ocr-progress-text, .excel-progress-text, .pdf-progress-text{font-size:12px;color:var(--ink-soft);margin-top:6px;font-family:'JetBrains Mono',monospace;}
 
-  .ocr-result-info, .excel-result-info{font-size:13px;color:var(--ink-soft);margin-bottom:10px;padding:8px 12px;background:var(--row-alt);border-radius:4px;}
-  .ocr-result-info strong, .excel-result-info strong{color:var(--ink);}
-  #ocrRowsBody td, #excelRowsBody td{padding:4px 6px;text-align:left;}
-  #ocrRowsBody input,#ocrRowsBody select, #excelRowsBody input,#excelRowsBody select{
+  .ocr-result-info, .excel-result-info, .pdf-result-info{font-size:13px;color:var(--ink-soft);margin-bottom:10px;padding:8px 12px;background:var(--row-alt);border-radius:4px;}
+  .ocr-result-info strong, .excel-result-info strong, .pdf-result-info strong{color:var(--ink);}
+  #ocrRowsBody td, #excelRowsBody td, #pdfRowsBody td{padding:4px 6px;text-align:left;}
+  #ocrRowsBody input,#ocrRowsBody select, #excelRowsBody input,#excelRowsBody select, #pdfRowsBody input,#pdfRowsBody select{
     width:100%;padding:6px 7px;border:1px solid var(--paper-line);border-radius:3px;
     font-family:'Pretendard';font-size:13px;background:#fff;color:var(--ink);
   }
-  #ocrRowsBody input[type="number"], #excelRowsBody input[type="number"]{text-align:right;font-family:'JetBrains Mono',monospace;}
-  .ocr-save-btn, .excel-save-btn{
+  #ocrRowsBody input[type="number"], #excelRowsBody input[type="number"], #pdfRowsBody input[type="number"]{text-align:right;font-family:'JetBrains Mono',monospace;}
+  .ocr-save-btn, .excel-save-btn, .pdf-save-btn{
     padding:10px 22px;border:none;border-radius:3px;background:var(--ink);color:#fff;
     font-weight:700;cursor:pointer;font-size:14px;
   }
-  .ocr-save-btn:hover, .excel-save-btn:hover{background:var(--accent);}
-  .ocr-raw-toggle{
+  .ocr-save-btn:hover, .excel-save-btn:hover, .pdf-save-btn:hover{background:var(--accent);}
+  .ocr-raw-toggle, .pdf-raw-toggle{
     font-size:12px;color:var(--accent);cursor:pointer;text-decoration:underline;
     background:none;border:none;margin-top:10px;padding:0;display:inline-block;
   }
-  .ocr-raw-text{
+  .ocr-raw-text, .pdf-raw-text{
     display:none;margin-top:8px;padding:12px;background:var(--row-alt);border:1px solid var(--paper-line);
     border-radius:4px;font-family:'JetBrains Mono',monospace;font-size:11px;white-space:pre-wrap;
     max-height:200px;overflow-y:auto;color:var(--ink-soft);
@@ -256,6 +262,7 @@ color:var(--ink-soft);font-size:11px;margin-top:30px;display:flex;flex-direction
     <div class="tabs no-print" id="entryModeTabs">
       <button type="button" data-entrymode="single" class="active">한 건씩 입력</button>
       <button type="button" data-entrymode="bulk">여러 건 한번에 입력</button>
+      <button type="button" data-entrymode="pdf">📄 PDF 거래내역 업로드</button>
       <button type="button" data-entrymode="ocr">📷 통장사본 OCR</button>
       <button type="button" data-entrymode="excel">📊 엑셀 파일 업로드</button>
     </div>
@@ -363,6 +370,53 @@ color:var(--ink-soft);font-size:11px;margin-top:30px;display:flex;flex-direction
           <button type="button" class="ocr-save-btn" id="ocrSaveBtn">일괄 저장</button>
           <button type="button" class="tool-btn" id="ocrAddRowBtn">행 추가</button>
           <button type="button" class="tool-btn" id="ocrClearBtn">초기화</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="pdfEntryWrap" style="display:none;">
+      <div class="pdf-toolbar no-print">
+        <div class="f-item">
+          <label>통장 (인식된 거래에 공통 적용)</label>
+          <input type="text" id="pdf-account" list="accountOptions" placeholder="예: 국민 감사헌금">
+        </div>
+      </div>
+      <div class="pdf-drop-zone" id="pdfDropZone">
+        <span class="drop-icon">📄</span>
+        <div class="drop-text">은행 거래내역 PDF 파일(.pdf)을 끌어다 놓거나 클릭하여 선택하세요</div>
+        <div class="drop-sub">농협, 국민, 신한, 우리, 하나 등 인터넷뱅킹 발급 PDF 거래내역서를 읽습니다</div>
+        <input type="file" id="pdfFileInput" accept=".pdf, application/pdf">
+      </div>
+      <div class="pdf-preview-wrap" id="pdfPreviewWrap" style="display:none;">
+        <div class="pdf-preview-info">
+          📄 <strong id="pdfFileName"></strong> (<span id="pdfFileSize"></span>)
+          <button type="button" class="tool-btn" id="pdfRetryBtn" style="margin-top:4px;">다른 PDF 파일 선택</button>
+        </div>
+      </div>
+      <div class="pdf-progress-wrap" id="pdfProgressWrap">
+        <div class="pdf-progress-bar"><div class="pdf-progress-fill" id="pdfProgressFill"></div></div>
+        <div class="pdf-progress-text" id="pdfProgressText">PDF 분석 중...</div>
+      </div>
+      <div id="pdfResultWrap" style="display:none;">
+        <div class="pdf-result-info" id="pdfResultInfo"></div>
+        <div class="table-scroll">
+          <table>
+            <thead><tr>
+              <th style="text-align:left;">거래일</th>
+              <th style="text-align:left;">구분</th>
+              <th style="text-align:left;">내용</th>
+              <th style="text-align:left;">금액</th>
+              <th></th>
+            </tr></thead>
+            <tbody id="pdfRowsBody"></tbody>
+          </table>
+        </div>
+        <button type="button" class="pdf-raw-toggle" id="pdfRawToggle">PDF 텍스트 원본 보기 ▾</button>
+        <pre class="pdf-raw-text" id="pdfRawText"></pre>
+        <div style="display:flex;gap:8px;margin-top:14px;">
+          <button type="button" class="pdf-save-btn" id="pdfSaveBtn">일괄 저장</button>
+          <button type="button" class="tool-btn" id="pdfAddRowBtn">행 추가</button>
+          <button type="button" class="tool-btn" id="pdfClearBtn">초기화</button>
         </div>
       </div>
     </div>
@@ -1406,6 +1460,7 @@ document.getElementById('entryModeTabs').addEventListener('click', (e)=>{
   e.target.classList.add('active');
   document.getElementById('singleEntryWrap').style.display = mode === 'single' ? 'block' : 'none';
   document.getElementById('bulkEntryWrap').style.display = mode === 'bulk' ? 'block' : 'none';
+  document.getElementById('pdfEntryWrap').style.display = mode === 'pdf' ? 'block' : 'none';
   document.getElementById('ocrEntryWrap').style.display = mode === 'ocr' ? 'block' : 'none';
   document.getElementById('excelEntryWrap').style.display = mode === 'excel' ? 'block' : 'none';
   if(mode === 'single') resetFormToAddMode();
@@ -2114,6 +2169,295 @@ document.getElementById('bulkSaveBtn').addEventListener('click', async ()=>{
     excelResultWrap.style.display = 'none';
     excelDropZone.style.display = 'block';
     excelPreviewWrap.style.display = 'none';
+    render();
+    alert(toAdd.length + '건이 저장되었습니다.');
+  });
+})();
+
+/* ---------- PDF 거래내역 업로드 ---------- */
+(function(){
+  const pdfDropZone = document.getElementById('pdfDropZone');
+  const pdfFileInput = document.getElementById('pdfFileInput');
+  const pdfPreviewWrap = document.getElementById('pdfPreviewWrap');
+  const pdfProgressWrap = document.getElementById('pdfProgressWrap');
+  const pdfProgressFill = document.getElementById('pdfProgressFill');
+  const pdfProgressText = document.getElementById('pdfProgressText');
+  const pdfResultWrap = document.getElementById('pdfResultWrap');
+  const pdfResultInfo = document.getElementById('pdfResultInfo');
+  const pdfRowsBody = document.getElementById('pdfRowsBody');
+  const pdfRawTextEl = document.getElementById('pdfRawText');
+
+  pdfDropZone.addEventListener('click', () => pdfFileInput.click());
+  pdfDropZone.addEventListener('dragover', (e) => { e.preventDefault(); pdfDropZone.classList.add('drag-over'); });
+  pdfDropZone.addEventListener('dragleave', () => pdfDropZone.classList.remove('drag-over'));
+  pdfDropZone.addEventListener('drop', (e) => {
+    e.preventDefault();
+    pdfDropZone.classList.remove('drag-over');
+    const file = e.dataTransfer.files[0];
+    if(file && (file.type === 'application/pdf' || file.name.endsWith('.pdf'))) {
+      handlePdfFile(file);
+    } else {
+      alert('PDF 파일(.pdf)만 업로드할 수 있습니다.');
+    }
+  });
+  pdfFileInput.addEventListener('change', (e) => {
+    if(e.target.files[0]) handlePdfFile(e.target.files[0]);
+  });
+  document.getElementById('pdfRetryBtn').addEventListener('click', () => {
+    pdfFileInput.value = '';
+    pdfFileInput.click();
+  });
+  document.getElementById('pdfRawToggle').addEventListener('click', function() {
+    const raw = pdfRawTextEl;
+    const open = raw.style.display === 'block';
+    raw.style.display = open ? 'none' : 'block';
+    this.textContent = open ? 'PDF 텍스트 원본 보기 ▾' : 'PDF 텍스트 원본 닫기 ▴';
+  });
+  document.getElementById('pdfClearBtn').addEventListener('click', () => {
+    pdfRowsBody.innerHTML = '';
+    pdfResultWrap.style.display = 'none';
+    pdfDropZone.style.display = 'block';
+    pdfPreviewWrap.style.display = 'none';
+    pdfProgressWrap.style.display = 'none';
+    pdfFileInput.value = '';
+  });
+
+  function addPdfRow(date, type, memo, amount){
+    const tr = document.createElement('tr');
+    tr.innerHTML =
+      '<td><input type="date" class="pdf-date"></td>' +
+      '<td><select class="pdf-type"><option value="income">수입</option><option value="expense">지출</option></select></td>' +
+      '<td><input type="text" class="pdf-memo" placeholder="내용"></td>' +
+      '<td><input type="number" class="pdf-amount" min="1" step="1" placeholder="0"></td>' +
+      '<td><button type="button" class="del-btn pdf-row-del">삭제</button></td>';
+    tr.querySelector('.pdf-date').value = date || '';
+    tr.querySelector('.pdf-type').value = type || 'income';
+    tr.querySelector('.pdf-memo').value = memo || '';
+    tr.querySelector('.pdf-amount').value = amount || '';
+    pdfRowsBody.appendChild(tr);
+    tr.querySelector('.pdf-row-del').addEventListener('click', () => tr.remove());
+    return tr;
+  }
+
+  document.getElementById('pdfAddRowBtn').addEventListener('click', () => addPdfRow('', 'income', '', ''));
+
+  /* PDF 파싱 (텍스트 기반 및 y좌표 행 조합) */
+  async function handlePdfFile(file){
+    document.getElementById('pdfFileName').textContent = file.name;
+    document.getElementById('pdfFileSize').textContent = (file.size / 1024).toFixed(1) + ' KB';
+    pdfPreviewWrap.style.display = 'flex';
+    pdfDropZone.style.display = 'none';
+
+    pdfResultWrap.style.display = 'none';
+    pdfRowsBody.innerHTML = '';
+    pdfProgressWrap.style.display = 'block';
+    pdfProgressFill.style.width = '10%';
+    pdfProgressText.textContent = 'PDF 로딩 및 텍스트 추출 중...';
+
+    try {
+      const arrayBuffer = await file.arrayBuffer();
+      if(!window.pdfjsLib) {
+        throw new Error('PDF.js 라이브러리를 로드하지 못했습니다.');
+      }
+
+      const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+      const numPages = pdf.numPages;
+      let fullTextLines = [];
+
+      for(let p = 1; p <= numPages; p++){
+        pdfProgressFill.style.width = Math.round(10 + (p / numPages) * 70) + '%';
+        pdfProgressText.textContent = `PDF ${p}/${numPages} 페이지 분석 중...`;
+
+        const page = await pdf.getPage(p);
+        const textContent = await page.getTextContent();
+        
+        // y 좌표별로 텍스트 아이템 묶기 (같은 행으로 조합)
+        const lineMap = new Map();
+        textContent.items.forEach(item => {
+          if(!item.str || !item.str.trim()) return;
+          const y = Math.round(item.transform[5]); // y좌표
+          let foundY = null;
+          for(let k of lineMap.keys()) {
+            if(Math.abs(k - y) <= 4) { // 4px 이내면 동일한 행으로 간주
+              foundY = k;
+              break;
+            }
+          }
+          const targetY = foundY !== null ? foundY : y;
+          if(!lineMap.has(targetY)) lineMap.set(targetY, []);
+          lineMap.get(targetY).push({ x: item.transform[4], str: item.str });
+        });
+
+        // y좌표 내림차순(위에서 아래로) 정렬 후 x좌표 순으로 텍스트 결합
+        const sortedY = [...lineMap.keys()].sort((a,b) => b - a);
+        sortedY.forEach(y => {
+          const items = lineMap.get(y).sort((a,b) => a.x - b.x);
+          const lineStr = items.map(i => i.str).join('   ').trim();
+          if(lineStr) fullTextLines.push(lineStr);
+        });
+      }
+
+      pdfProgressWrap.style.display = 'none';
+      const rawText = fullTextLines.join('\n');
+      pdfRawTextEl.textContent = rawText;
+      pdfRawTextEl.style.display = 'none';
+      document.getElementById('pdfRawToggle').textContent = 'PDF 텍스트 원본 보기 ▾';
+
+      const parsed = parsePdfBankStatement(fullTextLines);
+
+      if(parsed.length === 0){
+        pdfResultInfo.innerHTML = '<strong>⚠ PDF에서 거래 내역을 자동으로 추출하지 못했습니다.</strong><br>스캔본 PDF이거나 특이한 형식인 경우 "통장사본 OCR" 탭을 이용하시거나 "행 추가"로 직접 입력할 수 있습니다.';
+      } else {
+        pdfResultInfo.innerHTML = '<strong>' + parsed.length + '건</strong>의 거래를 PDF에서 읽었습니다. 내용을 확인하고 수정한 뒤 "일괄 저장"을 누르세요.';
+      }
+
+      parsed.forEach(tx => addPdfRow(tx.date, tx.type, tx.memo, tx.amount));
+      pdfResultWrap.style.display = 'block';
+
+    } catch(err) {
+      console.error('PDF 읽기 오류:', err);
+      pdfProgressWrap.style.display = 'none';
+      alert('PDF 파일을 읽는 중 오류가 발생했습니다: ' + err.message);
+    }
+  }
+
+  /* PDF 거래내역 텍스트 구조 분석 및 라인 파서 (농협, 국민, 신한, 우리, 하나 등) */
+  function parsePdfBankStatement(lines){
+    const results = [];
+    const datePatterns = [
+      { re: /(\d{4})[.\-\/](\d{1,2})[.\-\/](\d{1,2})/, fullYear: true },
+      { re: /(\d{2})[.\-\/](\d{1,2})[.\-\/](\d{1,2})/, fullYear: false },
+    ];
+    const amountRe = /[\d,]{4,}/g;
+
+    const incomeKeywords = ['입금','이자','급여','수입','환급','보조금','배당','지원금','감사헌금','선교헌금','헌금','봉헌'];
+    const expenseKeywords = ['출금','이체','결제','인출','카드','수수료','이용료','납부','지급','구매','배송','주문'];
+
+    for(const line of lines){
+      let dateStr = '';
+      let dateMatchObj = null;
+
+      for(const dp of datePatterns){
+        const m = line.match(dp.re);
+        if(m){
+          let y = parseInt(m[1], 10);
+          if(!dp.fullYear) y = y > 50 ? 1900 + y : 2000 + y;
+          const mo = m[2].padStart(2, '0');
+          const da = m[3].padStart(2, '0');
+          if(parseInt(mo,10) >= 1 && parseInt(mo,10) <= 12 && parseInt(da,10) >= 1 && parseInt(da,10) <= 31){
+            dateStr = y + '-' + mo + '-' + da;
+            dateMatchObj = m;
+            break;
+          }
+        }
+      }
+
+      if(!dateStr) continue;
+
+      let remaining = line.replace(dateMatchObj[0], ' ').trim();
+      remaining = remaining.replace(/\d{1,2}:\d{2}(:\d{2})?/g, ' ').trim();
+
+      const amounts = [];
+      const amountPositions = [];
+      let am;
+      amountRe.lastIndex = 0;
+      while((am = amountRe.exec(remaining)) !== null){
+        const numStr = am[0].replace(/,/g, '');
+        const num = parseInt(numStr, 10);
+        if(num >= 100 && num < 100000000000){
+          amounts.push(num);
+          amountPositions.push({index: am.index, length: am[0].length, value: num});
+        }
+      }
+
+      if(amounts.length === 0) continue;
+
+      let memo = remaining;
+      for(let i = amountPositions.length - 1; i >= 0; i--){
+        const pos = amountPositions[i];
+        memo = memo.slice(0, pos.index) + ' ' + memo.slice(pos.index + pos.length);
+      }
+      memo = memo.replace(/[|│┃\[\]()（）]/g, ' ').replace(/\s+/g, ' ').trim();
+      memo = memo.replace(/^[\s\-·.,;:]+|[\s\-·.,;:]+$/g, '').trim();
+      if(!memo) memo = '거래내역';
+
+      let type = 'income';
+      let amount = amounts[0];
+
+      if(amounts.length >= 3){
+        const withdraw = amounts[0];
+        const deposit = amounts[1];
+        if(deposit > 0 && (withdraw === 0 || deposit < amounts[2])){
+          type = 'income'; amount = deposit;
+        } else {
+          type = 'expense'; amount = withdraw;
+        }
+      }
+
+      const lowerLine = line.replace(/\s/g,'');
+      for(const kw of incomeKeywords){
+        if(lowerLine.includes(kw)){ type = 'income'; break; }
+      }
+      for(const kw of expenseKeywords){
+        if(lowerLine.includes(kw)){ type = 'expense'; break; }
+      }
+
+      if(amount > 0){
+        results.push({ date: dateStr, type, memo, amount });
+      }
+    }
+
+    return results;
+  }
+
+  /* PDF 일괄 저장 */
+  document.getElementById('pdfSaveBtn').addEventListener('click', async () => {
+    const account = document.getElementById('pdf-account').value.trim();
+    if(!account){ alert('통장을 입력해 주세요 (인식된 거래에 공통 적용됩니다).'); return; }
+
+    const rows = [...pdfRowsBody.querySelectorAll('tr')];
+    const toAdd = [];
+    const errorLines = [];
+
+    rows.forEach((tr, idx) => {
+      const date = tr.querySelector('.pdf-date').value;
+      const type = tr.querySelector('.pdf-type').value;
+      const memo = tr.querySelector('.pdf-memo').value.trim();
+      const amountRaw = tr.querySelector('.pdf-amount').value;
+
+      if(!memo && !amountRaw) return;
+
+      const amount = parseFloat(amountRaw);
+      if(!date || !memo || isNaN(amount) || amount <= 0 || !Number.isInteger(amount)){
+        errorLines.push(idx + 1);
+        return;
+      }
+      toAdd.push({date, type, memo, amount});
+    });
+
+    if(errorLines.length){
+      alert(errorLines.join(', ') + '번째 행을 확인해 주세요.\n거래일·내용·금액(정수)이 모두 올바르게 입력되어야 합니다.');
+      return;
+    }
+    if(toAdd.length === 0){ alert('저장할 내용이 없습니다.'); return; }
+    if(!confirm('"' + account + '" 통장으로 ' + toAdd.length + '건을 저장할까요?')) return;
+
+    toAdd.forEach(t => {
+      transactions.push({
+        id: 'tx_' + Date.now() + '_' + Math.random().toString(36).slice(2,7),
+        account: account,
+        date: t.date,
+        type: t.type,
+        memo: t.memo,
+        amount: t.amount
+      });
+    });
+
+    await saveData();
+    pdfRowsBody.innerHTML = '';
+    pdfResultWrap.style.display = 'none';
+    pdfDropZone.style.display = 'block';
+    pdfPreviewWrap.style.display = 'none';
     render();
     alert(toAdd.length + '건이 저장되었습니다.');
   });
