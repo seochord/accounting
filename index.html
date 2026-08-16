@@ -130,6 +130,10 @@
     border-top:2px solid var(--ink);border-bottom:none;font-weight:700;
     background:#fff;
   }
+  tbody tr.opening-row td{
+    background:var(--row-alt);font-style:italic;color:var(--ink-soft);font-weight:600;
+    border-bottom:1px solid var(--ink);
+  }
   td.income{color:var(--income);}
   td.expense{color:var(--expense);}
   td.balance-pos{color:var(--income);}
@@ -1821,14 +1825,29 @@ function renderLedger(){
   if(filterMonth) list = list.filter(t => t.date.slice(5,7) === String(filterMonth).padStart(2,'0'));
   if(filterAccount) list = list.filter(t => t.account === filterAccount);
 
-  if(list.length === 0){
+  const {openingBalance, showOpening, openingLabel} = computeOpeningBalance(list);
+
+  if(list.length === 0 && !showOpening){
     empty.style.display = 'block';
     return;
   }
   empty.style.display = 'none';
 
-  let balance = 0;
+  let balance = showOpening ? openingBalance : 0;
   let totalIncome = 0, totalExpense = 0;
+
+  if(showOpening){
+    const openRow = document.createElement('tr');
+    openRow.className = 'opening-row';
+    openRow.innerHTML = `
+      <td colspan="3">${escapeHtml(openingLabel)}</td>
+      <td class="income"></td>
+      <td class="expense"></td>
+      <td class="${balance>=0?'balance-pos':'balance-neg'}">${won(balance)}</td>
+      <td></td>
+    `;
+    body.appendChild(openRow);
+  }
 
   list.forEach(tx=>{
     const inc = tx.type === 'income' ? tx.amount : 0;
@@ -1877,6 +1896,38 @@ function escapeHtml(s){
   const d = document.createElement('div');
   d.textContent = s;
   return d.innerHTML;
+}
+
+/* 이월금(전월/전년 이전 누적 잔액) 계산
+   - 연도 필터가 걸려 있으면: (연도+월 필터) 해당 월 1일 이전, 또는 (연도만) 해당 연도 1월 1일 이전까지의 누적 잔액
+   - 연도 없이 월만 필터된 경우: 필터된 목록의 최초 거래일 이전까지의 누적 잔액 (거래가 있을 때만)
+   - 통장 필터가 걸려 있으면 해당 통장 거래만으로 계산 */
+function computeOpeningBalance(list){
+  let boundary = null;
+  let label = '';
+
+  if(filterYear){
+    if(filterMonth){
+      boundary = `${filterYear}-${filterMonth}-01`;
+      label = `이월금 (${filterYear}년 ${parseInt(filterMonth,10)}월 이전)`;
+    } else {
+      boundary = `${filterYear}-01-01`;
+      label = `이월금 (${filterYear}년 이전)`;
+    }
+  } else if(filterMonth && list.length > 0){
+    boundary = list[0].date;
+    label = `이월금 (${boundary} 이전)`;
+  }
+
+  if(!boundary) return { openingBalance: 0, showOpening: false, openingLabel: '' };
+
+  const acctTx = filterAccount ? transactions.filter(t => t.account === filterAccount) : transactions;
+  let openingBalance = 0;
+  acctTx.forEach(t=>{
+    if(t.date < boundary) openingBalance += (t.type === 'income' ? t.amount : -t.amount);
+  });
+
+  return { openingBalance, showOpening: true, openingLabel: label };
 }
 
 function getYears(){
@@ -2150,7 +2201,11 @@ function buildMonthlyReportHTML(monthStr){
   const monthLabel = `${y}년 ${parseInt(m,10)}월`;
 
   const monthTx = sortedTx().filter(t => t.date.slice(0,7) === monthStr);
-  let balance = 0, totalIncome = 0, totalExpense = 0;
+  const openingBalance = transactions.reduce((sum, t) => {
+    return t.date < `${monthStr}-01` ? sum + (t.type === 'income' ? t.amount : -t.amount) : sum;
+  }, 0);
+  let balance = openingBalance, totalIncome = 0, totalExpense = 0;
+  const openingRowHtml = `<tr class="opening-row"><td colspan="3">이월금 (${monthLabel} 이전)</td><td class="income"></td><td class="expense"></td><td>${won(balance)}</td></tr>`;
   const ledgerRowsHtml = monthTx.map(tx=>{
     const inc = tx.type === 'income' ? tx.amount : 0;
     const exp = tx.type === 'expense' ? tx.amount : 0;
@@ -2177,6 +2232,7 @@ function buildMonthlyReportHTML(monthStr){
     <h3 style="font-family:'Noto Serif KR',serif;font-size:15px;margin:20px 0 8px;">1. ${monthLabel} 거래 내역</h3>
     <table><thead><tr><th style="text-align:left;">거래일</th><th style="text-align:left;">통장</th><th style="text-align:left;">내용</th><th>수입</th><th>지출</th><th>소계</th></tr></thead>
     <tbody>
+      ${openingRowHtml}
       ${ledgerRowsHtml}
       <tr class="total-row"><td colspan="3">합계</td><td class="income">${won(totalIncome)}</td><td class="expense">${won(totalExpense)}</td><td>${won(balance)}</td></tr>
     </tbody></table>
@@ -2221,9 +2277,13 @@ function summaryToSheetRows(headerLabel, rows, grandIncome, grandExpense){
   return sheetRows;
 }
 
-function buildLedgerSheetRows(list){
+function buildLedgerSheetRows(list, openingInfo){
   const rows = [['거래일','통장','내용','수입','지출','소계(잔액)']];
   let balance = 0, totalIncome = 0, totalExpense = 0;
+  if(openingInfo && openingInfo.showOpening){
+    balance = openingInfo.openingBalance;
+    rows.push([openingInfo.openingLabel, '', '', '', '', balance]);
+  }
   list.forEach(tx=>{
     const inc = tx.type === 'income' ? tx.amount : 0;
     const exp = tx.type === 'expense' ? tx.amount : 0;
@@ -2256,8 +2316,9 @@ function downloadLedgerExcel(){
   if(filterYear) list = list.filter(t => t.date.slice(0,4) === String(filterYear));
   if(filterMonth) list = list.filter(t => t.date.slice(5,7) === String(filterMonth).padStart(2,'0'));
   if(filterAccount) list = list.filter(t => t.account === filterAccount);
-  if(list.length === 0){ alert('내보낼 거래 내역이 없습니다.'); return; }
-  writeSingleSheetWorkbook(buildLedgerSheetRows(list), LEDGER_COL_WIDTHS, '거래내역', '거래내역');
+  const openingInfo = computeOpeningBalance(list);
+  if(list.length === 0 && !openingInfo.showOpening){ alert('내보낼 거래 내역이 없습니다.'); return; }
+  writeSingleSheetWorkbook(buildLedgerSheetRows(list, openingInfo), LEDGER_COL_WIDTHS, '거래내역', '거래내역');
 }
 
 function downloadAggExcel(){
