@@ -16,14 +16,14 @@
   @import url('https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@500;700&family=Pretendard:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap');
 
   :root{
-    --paper: #FAF7F0;
-    --paper-line: #D8D0BC;
-    --ink: #1F2A38;
-    --ink-soft: #5B6472;
-    --income: #1E4E8C;
-    --expense: #A3273C;
-    --accent: #8A6D3B;
-    --row-alt: #F2EEE2;
+    --paper: #F4F7FB;
+    --paper-line: #D3DEEC;
+    --ink: #0F2A4A;
+    --ink-soft: #5B7290;
+    --income: #1565C0;
+    --expense: #C0392B;
+    --accent: #1E6FD9;
+    --row-alt: #EAF1FB;
   }
   *{box-sizing:border-box;}
   body{
@@ -37,12 +37,12 @@
 
   header.top{
     display:flex;align-items:baseline;justify-content:space-between;
-    border-bottom:3px double var(--ink);
+    border-bottom:2px solid var(--accent);
     padding-bottom:16px;margin-bottom:24px;
   }
   header.top h1{
     font-family:'Noto Serif KR',serif;font-weight:700;font-size:26px;margin:0;
-    letter-spacing:-0.5px;cursor:pointer;
+    letter-spacing:-0.5px;cursor:pointer;color:var(--ink);
   }
   header.top h1:hover{opacity:0.75;}
   header.top .today{font-family:'JetBrains Mono',monospace;font-size:13px;color:var(--ink-soft);}
@@ -50,17 +50,17 @@
   .card{
     background:#fff;
     border:1px solid var(--paper-line);
-    border-radius:4px;
-    padding:20px;
+    border-radius:10px;
+    padding:22px;
     margin-bottom:20px;
-    box-shadow:0 1px 2px rgba(0,0,0,0.03);
+    box-shadow:0 2px 10px rgba(15,42,74,0.05);
   }
   .card h2{
     font-family:'Noto Serif KR',serif;font-size:16px;font-weight:700;
-    margin:0 0 14px;padding-bottom:8px;border-bottom:1px solid var(--paper-line);
-    display:flex;align-items:center;gap:8px;flex-wrap:wrap;
+    margin:0 0 14px;padding-bottom:10px;border-bottom:1px solid var(--paper-line);
+    display:flex;align-items:center;gap:8px;flex-wrap:wrap;color:var(--ink);
   }
-  .card h2 .idx{font-family:'JetBrains Mono',monospace;color:var(--accent);font-size:13px;}
+  .card h2 .idx{font-family:'JetBrains Mono',monospace;color:var(--accent);font-size:13px;font-weight:600;}
   .print-title{display:none;}
   .card-caption{font-size:12px;color:var(--ink-soft);margin:-8px 0 14px;}
 
@@ -427,8 +427,7 @@ color:var(--ink-soft);font-size:11px;margin-top:30px;display:flex;flex-direction
 
   <div class="card" id="momCard">
     <h2>
-      <span class="idx">05</span> 월간 재정보고서
-      <span class="print-title print-target-title" id="momPrintTitle">월간 재정보고서</span>
+      <span class="idx">05</span> 전월대비 증감
       <div class="card-tools no-print">
         <button class="tool-btn" id="monthlyReportBtn">월간 재정보고서 출력</button>
       </div>
@@ -440,6 +439,8 @@ color:var(--ink-soft);font-size:11px;margin-top:30px;display:flex;flex-direction
       </div>
     </div>
     <div class="card-caption" id="momCaption"></div>
+    <div class="mom-grid no-print" id="momGrid"></div>
+    <div id="momEmpty" class="empty no-print" style="display:none;">비교할 거래 내역이 없습니다.</div>
   </div>
 
   <div class="card" id="reportPrintArea" style="display:none;"></div>
@@ -1944,7 +1945,7 @@ function renderGroupTable(field, bodyId, emptyId){
 
 function renderAccountSummary(){ renderGroupTable('account','accountBody','accountEmpty'); }
 
-/* ---------- 05 월간 재정보고서 (기준월 표시용) ---------- */
+/* ---------- 05 전월대비 증감 (화면 전용, 인쇄 보고서에는 포함하지 않음) ---------- */
 function sumMonth(monthStr){
   let income = 0, expense = 0;
   transactions.forEach(t=>{
@@ -1961,16 +1962,59 @@ function prevMonthStr(monthStr){
   return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
 }
 
+function momItem(label, cur, prev, biggerIsBetter, extraClass){
+  const diff = cur - prev;
+  let rateText, cls, arrow;
+  if(prev === 0){
+    rateText = cur === 0 ? '전월도 0원' : '직전월 실적 없음';
+    cls = cur === 0 ? 'flat' : (biggerIsBetter ? 'up' : 'down');
+    arrow = cur === 0 ? '' : (diff > 0 ? '▲' : '▼');
+  } else {
+    const rate = (diff / Math.abs(prev)) * 100;
+    rateText = (diff >= 0 ? '+' : '') + rate.toFixed(1) + '%';
+    if(diff === 0){ cls = 'flat'; arrow = ''; }
+    else if(diff > 0){ cls = biggerIsBetter ? 'up' : 'down'; arrow = '▲'; }
+    else { cls = biggerIsBetter ? 'down' : 'up'; arrow = '▼'; }
+  }
+  const diffText = (diff >= 0 ? '+' : '') + won(diff);
+  return `
+    <div class="mom-box${extraClass ? ' '+extraClass : ''}">
+      <div class="mom-label">${label}</div>
+      <div class="mom-cur">${won(cur)}</div>
+      <div class="mom-prev">전월 ${won(prev)}</div>
+      <div class="mom-delta ${cls}">${arrow} ${diffText} (${rateText})</div>
+    </div>
+  `;
+}
+
 function renderMoM(){
   const monthInput = document.getElementById('momMonth');
   const monthStr = monthInput.value;
+  const grid = document.getElementById('momGrid');
+  const empty = document.getElementById('momEmpty');
   const caption = document.getElementById('momCaption');
 
-  if(!monthStr){ caption.textContent = ''; return; }
+  if(!monthStr){ caption.textContent = ''; grid.innerHTML = ''; empty.style.display = 'block'; return; }
+
+  const prevStr = prevMonthStr(monthStr);
+  const cur = sumMonth(monthStr);
+  const prev = sumMonth(prevStr);
 
   const [cy, cm] = monthStr.split('-');
-  caption.textContent = `기준월: ${cy}년 ${parseInt(cm,10)}월`;
-  document.getElementById('momPrintTitle').textContent = `월간 재정보고서 - ${cy}년 ${parseInt(cm,10)}월`;
+  const [py, pm] = prevStr.split('-');
+  caption.textContent = `${cy}년 ${parseInt(cm,10)}월 vs ${py}년 ${parseInt(pm,10)}월`;
+
+  if(cur.income === 0 && cur.expense === 0 && prev.income === 0 && prev.expense === 0){
+    grid.innerHTML = '';
+    empty.style.display = 'block';
+    return;
+  }
+  empty.style.display = 'none';
+
+  grid.innerHTML =
+    momItem('수입', cur.income, prev.income, true) +
+    momItem('지출', cur.expense, prev.expense, false) +
+    momItem('총합계(순액)', cur.net, prev.net, true, 'net');
 }
 
 document.getElementById('momMonth').addEventListener('change', renderMoM);
