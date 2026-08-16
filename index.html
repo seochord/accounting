@@ -518,8 +518,9 @@ async function ensurePasscode(){
 let currentMode = 'month';
 let currentYear = new Date().getFullYear();
 let filterAccount = '';
-let filterYear = '';
-let filterMonth = '';
+// 거래 내역 카드는 항상 오늘 날짜 기준 연/월로 시작한다
+let filterYear = String(new Date().getFullYear());
+let filterMonth = String(new Date().getMonth() + 1).padStart(2, '0');
 let editingId = null;
 
 document.getElementById('todayStr').textContent = new Date().toLocaleDateString('ko-KR', {year:'numeric',month:'long',day:'numeric'});
