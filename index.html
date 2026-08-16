@@ -42,8 +42,9 @@
   }
   header.top h1{
     font-family:'Noto Serif KR',serif;font-weight:700;font-size:26px;margin:0;
-    letter-spacing:-0.5px;
+    letter-spacing:-0.5px;cursor:pointer;
   }
+  header.top h1:hover{opacity:0.75;}
   header.top .today{font-family:'JetBrains Mono',monospace;font-size:13px;color:var(--ink-soft);}
 
   .card{
@@ -256,57 +257,23 @@ color:var(--ink-soft);font-size:11px;margin-top:30px;display:flex;flex-direction
 <div class="wrap">
 
   <header class="top">
-    <h1>진리침례교회 회계</h1>
+    <h1 id="appTitle" role="button" tabindex="0" title="클릭하면 새로고침됩니다">진리침례교회 회계</h1>
     <span class="today" id="todayStr"></span>
   </header>
 
   <div class="card">
     <h2><span class="idx">01</span> 거래 입력</h2>
     <div class="tabs no-print" id="entryModeTabs">
-      <button type="button" data-entrymode="single" class="active">한 건씩 입력</button>
-      <button type="button" data-entrymode="bulk">여러 건 한번에 입력</button>
+      <button type="button" data-entrymode="bulk" class="active">여러 건 한번에 입력</button>
       <button type="button" data-entrymode="auto">📁 파일로 자동 입력 (이미지 · PDF · 엑셀)</button>
     </div>
 
-    <div id="singleEntryWrap">
-      <div class="edit-banner" id="editBanner">✎ 거래를 수정하는 중입니다. 저장하려면 "수정 완료"를 누르세요.</div>
-      <form class="entry" id="entryForm">
-        <div>
-          <label>거래일</label>
-          <input type="date" id="f-date" required>
-        </div>
-        <div>
-          <label>구분</label>
-          <select id="f-type">
-            <option value="income">수입</option>
-            <option value="expense">지출</option>
-          </select>
-        </div>
-        <div>
-          <label>통장</label>
-          <input type="text" id="f-account" list="accountOptions" placeholder="예: 국민 감사헌금" required>
-          <datalist id="accountOptions"></datalist>
-        </div>
-        <div>
-          <label>내용</label>
-          <input type="text" id="f-memo" placeholder="예: 홍길동 감사헌금, 선교사 지원비" required>
-        </div>
-        <div>
-          <label>금액 (마이너스 지출은 -금액 입력)</label>
-          <input type="number" id="f-amount" step="1" placeholder="0" required>
-        </div>
-        <div class="btn-row">
-          <button type="submit" id="submitBtn">추가</button>
-          <button type="button" id="cancelEditBtn" class="cancel-btn">취소</button>
-        </div>
-      </form>
-    </div>
-
-    <div id="bulkEntryWrap" style="display:none;">
+    <div id="bulkEntryWrap">
       <div class="bulk-toolbar no-print">
         <div class="f-item">
           <label>통장 (전체 행 공통)</label>
           <input type="text" id="bulk-account" list="accountOptions" placeholder="예: 국민 감사헌금">
+          <datalist id="accountOptions"></datalist>
         </div>
         <div class="f-item">
           <label>연월</label>
@@ -460,11 +427,9 @@ color:var(--ink-soft);font-size:11px;margin-top:30px;display:flex;flex-direction
 
   <div class="card" id="momCard">
     <h2>
-      <span class="idx">05</span> 전월대비 증감
-      <span class="print-title print-target-title" id="momPrintTitle">전월대비 증감</span>
+      <span class="idx">05</span> 월간 재정보고서
+      <span class="print-title print-target-title" id="momPrintTitle">월간 재정보고서</span>
       <div class="card-tools no-print">
-        <button class="tool-btn" id="momPrintBtn">인쇄</button>
-        <button class="tool-btn" id="momExcelBtn">엑셀 다운로드</button>
         <button class="tool-btn" id="monthlyReportBtn">월간 재정보고서 출력</button>
       </div>
     </h2>
@@ -475,8 +440,6 @@ color:var(--ink-soft);font-size:11px;margin-top:30px;display:flex;flex-direction
       </div>
     </div>
     <div class="card-caption" id="momCaption"></div>
-    <div class="mom-grid" id="momGrid"></div>
-    <div id="momEmpty" class="empty" style="display:none;">비교할 거래 내역이 없습니다.</div>
   </div>
 
   <div class="card" id="reportPrintArea" style="display:none;"></div>
@@ -524,7 +487,11 @@ let filterMonth = String(new Date().getMonth() + 1).padStart(2, '0');
 let editingId = null;
 
 document.getElementById('todayStr').textContent = new Date().toLocaleDateString('ko-KR', {year:'numeric',month:'long',day:'numeric'});
-document.getElementById('f-date').value = new Date().toISOString().slice(0,10);
+
+document.getElementById('appTitle').addEventListener('click', ()=> window.location.reload());
+document.getElementById('appTitle').addEventListener('keydown', (e)=>{
+  if(e.key === 'Enter' || e.key === ' '){ e.preventDefault(); window.location.reload(); }
+});
 document.getElementById('momMonth').value = new Date().toISOString().slice(0,7);
 
 function won(n){
@@ -1608,7 +1575,6 @@ function saveLocalCache(){
 }
 
 async function loadData(){
-  // 우선 로컬 캐시로 즉시 화면을 채운 뒤, 서버 데이터가 오면 교체한다.
   transactions = loadLocalCache();
   render();
   updateStorageStatus('로컬 캐시 표시 중 · 서버 확인 중...');
@@ -1642,7 +1608,6 @@ async function loadData(){
 }
 
 async function saveData(){
-  // 로컬 캐시는 항상 즉시 저장(오프라인 대비)
   saveLocalCache();
 
   const pw = getPasscode();
@@ -1674,68 +1639,12 @@ async function saveData(){
   }
 }
 
-function resetFormToAddMode(){
-  editingId = null;
-  document.getElementById('entryForm').reset();
-  document.getElementById('f-date').value = new Date().toISOString().slice(0,10);
-  document.getElementById('submitBtn').textContent = '추가';
-  document.getElementById('cancelEditBtn').style.display = 'none';
-  document.getElementById('editBanner').style.display = 'none';
-}
-
-function enterEditMode(tx){
-  editingId = tx.id;
-  document.getElementById('f-date').value = tx.date;
-  document.getElementById('f-type').value = tx.type;
-  document.getElementById('f-account').value = tx.account;
-  document.getElementById('f-memo').value = tx.memo;
-  document.getElementById('f-amount').value = tx.amount;
-  document.getElementById('submitBtn').textContent = '수정 완료';
-  document.getElementById('cancelEditBtn').style.display = 'inline-block';
-  document.getElementById('editBanner').style.display = 'block';
-  document.getElementById('entryForm').scrollIntoView({behavior:'smooth', block:'center'});
-}
-
-document.getElementById('cancelEditBtn').addEventListener('click', resetFormToAddMode);
-
-document.getElementById('entryForm').addEventListener('submit', async (e)=>{
-  e.preventDefault();
-  const date = document.getElementById('f-date').value;
-  const type = document.getElementById('f-type').value;
-  const account = document.getElementById('f-account').value.trim();
-  const memo = document.getElementById('f-memo').value.trim();
-  const amountRaw = document.getElementById('f-amount').value;
-  const amount = parseFloat(amountRaw);
-
-  if(!date || !account || !memo || isNaN(amount) || amount === 0) return;
-  if(!Number.isInteger(amount)){
-    alert('금액은 원 단위 정수로 입력해 주세요 (소수점 불가).');
-    return;
-  }
-
-  if(editingId){
-    const idx = transactions.findIndex(t => t.id === editingId);
-    if(idx !== -1){
-      transactions[idx] = {...transactions[idx], date, type, account, memo, amount};
-    }
-  } else {
-    transactions.push({
-      id: 'tx_' + Date.now() + '_' + Math.random().toString(36).slice(2,7),
-      date, type, account, memo, amount
-    });
-  }
-  await saveData();
-  resetFormToAddMode();
-  render();
-});
-
 async function deleteTx(id){
   const tx = transactions.find(t => t.id === id);
   if(!tx) return;
   const label = `${tx.date} · ${tx.memo} · ${won(tx.amount)}`;
   if(!confirm(`이 거래를 삭제할까요?\n\n${label}\n\n삭제하면 되돌릴 수 없습니다.`)) return;
   transactions = transactions.filter(t => t.id !== id);
-  if(editingId === id) resetFormToAddMode();
   await saveData();
   render();
 }
@@ -1829,7 +1738,7 @@ function renderLedger(){
       <td class="income">${inc ? won(inc) : ''}</td>
       <td class="expense">${exp ? won(exp) : ''}</td>
       <td class="${balance>=0?'balance-pos':'balance-neg'}">${won(balance)}</td>
-      <td class="row-actions"><button class="edit-btn" data-id="${tx.id}">수정</button><button class="del-btn" data-id="${tx.id}">삭제</button></td>
+      <td class="row-actions"><button class="del-btn" data-id="${tx.id}">삭제</button></td>
     `;
     body.appendChild(tr);
   });
@@ -1849,12 +1758,6 @@ function renderLedger(){
   body.querySelectorAll('.del-btn').forEach(btn=>{
     btn.addEventListener('click', ()=> deleteTx(btn.dataset.id));
   });
-  body.querySelectorAll('.edit-btn').forEach(btn=>{
-    btn.addEventListener('click', ()=>{
-      const tx = transactions.find(t => t.id === btn.dataset.id);
-      if(tx) enterEditMode(tx);
-    });
-  });
 }
 
 function escapeHtml(s){
@@ -1863,10 +1766,6 @@ function escapeHtml(s){
   return d.innerHTML;
 }
 
-/* 이월금(전월/전년 이전 누적 잔액) 계산
-   - 연도 필터가 걸려 있으면: (연도+월 필터) 해당 월 1일 이전, 또는 (연도만) 해당 연도 1월 1일 이전까지의 누적 잔액
-   - 연도 없이 월만 필터된 경우: 필터된 목록의 최초 거래일 이전까지의 누적 잔액 (거래가 있을 때만)
-   - 통장 필터가 걸려 있으면 해당 통장 거래만으로 계산 */
 function computeOpeningBalance(list){
   let boundary = null;
   let label = '';
@@ -2045,7 +1944,7 @@ function renderGroupTable(field, bodyId, emptyId){
 
 function renderAccountSummary(){ renderGroupTable('account','accountBody','accountEmpty'); }
 
-/* ---------- 05 전월대비 증감 ---------- */
+/* ---------- 05 월간 재정보고서 (기준월 표시용) ---------- */
 function sumMonth(monthStr){
   let income = 0, expense = 0;
   transactions.forEach(t=>{
@@ -2062,60 +1961,16 @@ function prevMonthStr(monthStr){
   return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
 }
 
-function momItem(label, cur, prev, biggerIsBetter, extraClass){
-  const diff = cur - prev;
-  let rateText, cls, arrow;
-  if(prev === 0){
-    rateText = cur === 0 ? '전월도 0원' : '직전월 실적 없음';
-    cls = cur === 0 ? 'flat' : (biggerIsBetter ? 'up' : 'down');
-    arrow = cur === 0 ? '' : (diff > 0 ? '▲' : '▼');
-  } else {
-    const rate = (diff / Math.abs(prev)) * 100;
-    rateText = (diff >= 0 ? '+' : '') + rate.toFixed(1) + '%';
-    if(diff === 0){ cls = 'flat'; arrow = ''; }
-    else if(diff > 0){ cls = biggerIsBetter ? 'up' : 'down'; arrow = '▲'; }
-    else { cls = biggerIsBetter ? 'down' : 'up'; arrow = '▼'; }
-  }
-  const diffText = (diff >= 0 ? '+' : '') + won(diff);
-  return `
-    <div class="mom-box${extraClass ? ' '+extraClass : ''}">
-      <div class="mom-label">${label}</div>
-      <div class="mom-cur">${won(cur)}</div>
-      <div class="mom-prev">전월 ${won(prev)}</div>
-      <div class="mom-delta ${cls}">${arrow} ${diffText} (${rateText})</div>
-    </div>
-  `;
-}
-
 function renderMoM(){
   const monthInput = document.getElementById('momMonth');
   const monthStr = monthInput.value;
-  const grid = document.getElementById('momGrid');
-  const empty = document.getElementById('momEmpty');
   const caption = document.getElementById('momCaption');
 
-  if(!monthStr){ grid.innerHTML = ''; empty.style.display = 'block'; return; }
-
-  const prevStr = prevMonthStr(monthStr);
-  const cur = sumMonth(monthStr);
-  const prev = sumMonth(prevStr);
+  if(!monthStr){ caption.textContent = ''; return; }
 
   const [cy, cm] = monthStr.split('-');
-  const [py, pm] = prevStr.split('-');
-  caption.textContent = `${cy}년 ${parseInt(cm,10)}월 vs ${py}년 ${parseInt(pm,10)}월`;
-  document.getElementById('momPrintTitle').textContent = `전월대비 증감 - ${cy}년 ${parseInt(cm,10)}월 vs ${py}년 ${parseInt(pm,10)}월`;
-
-  if(cur.income === 0 && cur.expense === 0 && prev.income === 0 && prev.expense === 0){
-    grid.innerHTML = '';
-    empty.style.display = 'block';
-    return;
-  }
-  empty.style.display = 'none';
-
-  grid.innerHTML =
-    momItem('수입', cur.income, prev.income, true) +
-    momItem('지출', cur.expense, prev.expense, false) +
-    momItem('총합계(순액)', cur.net, prev.net, true, 'net');
+  caption.textContent = `기준월: ${cy}년 ${parseInt(cm,10)}월`;
+  document.getElementById('momPrintTitle').textContent = `월간 재정보고서 - ${cy}년 ${parseInt(cm,10)}월`;
 }
 
 document.getElementById('momMonth').addEventListener('change', renderMoM);
@@ -2158,9 +2013,8 @@ window.addEventListener('afterprint', ()=>{
 document.getElementById('ledgerPrintBtn').addEventListener('click', ()=> printSection('ledgerCard'));
 document.getElementById('aggPrintBtn').addEventListener('click', ()=> printSection('aggCard'));
 document.getElementById('accountPrintBtn').addEventListener('click', ()=> printSection('accountCard'));
-document.getElementById('momPrintBtn').addEventListener('click', ()=> printSection('momCard'));
 
-/* ---------- 월간 재정보고서 (통합 인쇄) ---------- */
+/* ---------- 월간 재정보고서 (통합 인쇄, 증감 비교 제외) ---------- */
 function buildMonthlyReportHTML(monthStr){
   const [y, m] = monthStr.split('-');
   const monthLabel = `${y}년 ${parseInt(m,10)}월`;
@@ -2182,13 +2036,6 @@ function buildMonthlyReportHTML(monthStr){
   const {rows: accRows} = computeGroupSummary('account');
   const accRowsHtml = accRows.map(r=>`<tr><td colspan="2">${escapeHtml(r.label)}</td><td class="income">${r.income?won(r.income):'-'}</td><td class="expense">${r.expense?won(r.expense):'-'}</td><td class="${r.net>=0?'balance-pos':'balance-neg'}">${won(r.net)}</td></tr>`).join('');
 
-  const prevStr = prevMonthStr(monthStr);
-  const cur = sumMonth(monthStr);
-  const prev = sumMonth(prevStr);
-  const momHtml = momItem('수입', cur.income, prev.income, true)
-    + momItem('지출', cur.expense, prev.expense, false)
-    + momItem('총합계(순액)', cur.net, prev.net, true, 'net');
-
   const today = new Date().toLocaleDateString('ko-KR', {year:'numeric',month:'long',day:'numeric'});
 
   return `
@@ -2205,10 +2052,6 @@ function buildMonthlyReportHTML(monthStr){
     <h3 style="font-family:'Noto Serif KR',serif;font-size:15px;margin:26px 0 8px;">2. 통장별 잔액 (전체 기간 누적)</h3>
     <table><thead><tr><th style="text-align:left;">통장</th><th></th><th>수입 합계</th><th>지출 합계</th><th>잔액</th></tr></thead>
     <tbody>${accRowsHtml}</tbody></table>
-
-    <h3 style="font-family:'Noto Serif KR',serif;font-size:15px;margin:26px 0 8px;">3. 전월대비 증감</h3>
-    <div class="mom-grid">${momHtml}</div>
-
     <div style="margin-top:60px;font-size:13px;text-align:right;">작성일: ${today}</div>
     <div style="margin-top:26px;display:flex;justify-content:flex-end;gap:50px;font-size:13px;">
       <div>담당&nbsp;&nbsp;: ______________ (인)</div>
@@ -2228,7 +2071,7 @@ function printMonthlyReport(){
   window.print();
 }
 
-document.getElementById('monthlyReportBtn').addEventListener('click', printMonthlyReport);
+document.getElementById('monthlyReportBtn').addEventListener('click', ()=> printMonthlyReport());
 
 /* ---------- 엑셀 다운로드 ---------- */
 function excelFilename(prefix){
@@ -2302,29 +2145,6 @@ function downloadGroupExcel(field, sheetName, prefix){
   writeSingleSheetWorkbook(summaryToSheetRows(headerLabel, rows, grandIncome, grandExpense), SUMMARY4_COL_WIDTHS, sheetName, prefix);
 }
 
-function downloadMomExcel(){
-  const monthStr = document.getElementById('momMonth').value;
-  if(!monthStr){ alert('기준월을 선택해 주세요.'); return; }
-  const prevStr = prevMonthStr(monthStr);
-  const cur = sumMonth(monthStr);
-  const prev = sumMonth(prevStr);
-  if(cur.income === 0 && cur.expense === 0 && prev.income === 0 && prev.expense === 0){
-    alert('내보낼 내역이 없습니다.'); return;
-  }
-  function momRow(label, c, p){
-    const diff = c - p;
-    const rate = p === 0 ? '' : Number(((diff / Math.abs(p)) * 100).toFixed(1));
-    return [label, c, p, diff, rate];
-  }
-  const sheetRows = [
-    ['구분','당월','전월','증감액','증감률(%)'],
-    momRow('수입', cur.income, prev.income),
-    momRow('지출', cur.expense, prev.expense),
-    momRow('총합계(순액)', cur.net, prev.net)
-  ];
-  writeSingleSheetWorkbook(sheetRows, [{wch:16},{wch:14},{wch:14},{wch:14},{wch:12}], '전월대비증감', `${monthStr}_전월대비증감`);
-}
-
 function yearlySummaryRows(){
   const years = getYears().sort((a,b)=>a-b);
   const groups = {};
@@ -2356,7 +2176,6 @@ function downloadFullExcelBackup(){
 document.getElementById('ledgerExcelBtn').addEventListener('click', downloadLedgerExcel);
 document.getElementById('aggExcelBtn').addEventListener('click', downloadAggExcel);
 document.getElementById('accountExcelBtn').addEventListener('click', ()=> downloadGroupExcel('account','통장별잔액','통장별잔액'));
-document.getElementById('momExcelBtn').addEventListener('click', downloadMomExcel);
 document.getElementById('exportFullExcelBtn').addEventListener('click', downloadFullExcelBackup);
 
 /* ---------- 백업 / 복원 (JSON) ---------- */
@@ -2420,7 +2239,6 @@ document.getElementById('importJsonInput').addEventListener('change', async (e)=
     }
 
     await saveData();
-    resetFormToAddMode();
     render();
     alert('백업을 불러왔습니다.');
   }catch(err){
@@ -2439,10 +2257,8 @@ document.getElementById('entryModeTabs').addEventListener('click', (e)=>{
   const mode = e.target.dataset.entrymode;
   document.querySelectorAll('#entryModeTabs button').forEach(b=>b.classList.remove('active'));
   e.target.classList.add('active');
-  document.getElementById('singleEntryWrap').style.display = mode === 'single' ? 'block' : 'none';
   document.getElementById('bulkEntryWrap').style.display = mode === 'bulk' ? 'block' : 'none';
   document.getElementById('autoEntryWrap').style.display = mode === 'auto' ? 'block' : 'none';
-  if(mode === 'single') resetFormToAddMode();
 });
 
 function updateBulkEmptyState(){
@@ -2783,9 +2599,7 @@ document.getElementById('bulkSaveBtn').addEventListener('click', async ()=>{
         let colMap = { date: -1, memo: -1, income: -1, expense: -1, amount: -1, type: -1 };
 
         const dateKeys = ['거래일', '일자', '거래일자', '날짜', 'date', '일시'];
-        // 보내는이/받는이(입금자·출금자·거래상대방) 이름 컬럼을 최우선으로 사용
         const nameKeys = ['보낸분', '받는분', '보낸사람', '받은사람', '보내는이', '받는이', '입금자명', '출금자명', '거래상대방', '상대계좌예금주', '예금주', '송금인', '수취인', '입금자', '출금자'];
-        // 이름 컬럼이 없을 때만 사용하는 보조(적요/내용) 컬럼
         const memoKeys = ['적요', '내용', '거래내용', '취급점', '기증자', '비고', '상호', '기름', '적요/내용'];
         const incomeKeys = ['입금원금', '입금', '입금액', '수입', '수입액', '받은금액'];
         const expenseKeys = ['출금원금', '출금', '출금액', '지출', '지출액', '보낸금액'];
@@ -2813,7 +2627,6 @@ document.getElementById('bulkSaveBtn').addEventListener('click', async ()=>{
 
           if(dCol !== -1 && (iCol !== -1 || eCol !== -1 || aCol !== -1)){
             headerIdx = r;
-            // 보내는이/받는이 이름 컬럼이 있으면 그것을, 없으면 적요/내용 컬럼을 사용
             colMap = { date: dCol, memo: (nCol !== -1 ? nCol : mCol), income: iCol, expense: eCol, amount: aCol, type: tCol };
             break;
           }
@@ -2976,7 +2789,6 @@ document.getElementById('bulkSaveBtn').addEventListener('click', async ()=>{
       memo = memo.replace(/^[\s\-·.,;:]+|[\s\-·.,;:]+$/g, '').trim();
       if(!memo) memo = '거래내역';
 
-      // 적요 전체 문구 대신, 남은 텍스트에서 보내는이/받는이로 보이는 한글 이름(2~4자)을 우선 채택
       const nameStopwords = ['입금','출금','이체','결제','인출','카드','수수료','이용료','납부','지급','구매','배송','주문',
         '이자','급여','수입','환급','보조금','배당','지원금','감사헌금','선교헌금','헌금','봉헌','거래내역','통장','계좌',
         '잔액','합계','현금','자동이체','타행','농협','국민','신한','우리','하나','기업','카카오뱅크','토스뱅크',
