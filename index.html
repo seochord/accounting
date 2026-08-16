@@ -387,6 +387,10 @@ color:var(--ink-soft);font-size:11px;margin-top:30px;display:flex;flex-direction
         <select id="filterYear"><option value="">전체</option></select>
       </div>
       <div class="f-item">
+        <label>월</label>
+        <select id="filterMonth"><option value="">전체</option></select>
+      </div>
+      <div class="f-item">
         <label>통장</label>
         <select id="filterAccount"><option value="">전체</option></select>
       </div>
@@ -523,6 +527,7 @@ let currentMode = 'month';
 let currentYear = new Date().getFullYear();
 let filterAccount = '';
 let filterYear = '';
+let filterMonth = '';
 let editingId = null;
 
 document.getElementById('todayStr').textContent = new Date().toLocaleDateString('ko-KR', {year:'numeric',month:'long',day:'numeric'});
@@ -1759,8 +1764,9 @@ function populateDatalists(){
 function populateFilters(){
   const accSel = document.getElementById('filterAccount');
   const yearSel = document.getElementById('filterYear');
+  const monthSel = document.getElementById('filterMonth');
   const moveFromSel = document.getElementById('moveFromAccount');
-  const accPrev = filterAccount, yearPrev = filterYear, moveFromPrev = moveFromSel.value;
+  const accPrev = filterAccount, yearPrev = filterYear, monthPrev = filterMonth, moveFromPrev = moveFromSel.value;
 
   const accountOptionsHtml = getAccountList().map(a=>`<option value="${escapeHtml(a)}">${escapeHtml(a)}</option>`).join('');
   accSel.innerHTML = '<option value="">전체</option>' + accountOptionsHtml;
@@ -1769,14 +1775,21 @@ function populateFilters(){
   const years = getYears();
   yearSel.innerHTML = '<option value="">전체</option>' + years.map(y=>`<option value="${y}">${y}년</option>`).join('');
 
+  const monthOptionsHtml = Array.from({length:12}, (_,i)=>i+1)
+    .map(m=>`<option value="${String(m).padStart(2,'0')}">${m}월</option>`).join('');
+  monthSel.innerHTML = '<option value="">전체</option>' + monthOptionsHtml;
+
   accSel.value = accPrev;
   moveFromSel.value = moveFromPrev;
   yearSel.value = years.includes(parseInt(yearPrev,10)) ? yearPrev : '';
   filterYear = yearSel.value;
+  monthSel.value = monthPrev;
+  filterMonth = monthSel.value;
 }
 
 document.getElementById('filterAccount').addEventListener('change', (e)=>{ filterAccount = e.target.value; renderLedger(); });
 document.getElementById('filterYear').addEventListener('change', (e)=>{ filterYear = e.target.value; renderLedger(); });
+document.getElementById('filterMonth').addEventListener('change', (e)=>{ filterMonth = e.target.value; renderLedger(); });
 
 document.getElementById('moveAccountBtn').addEventListener('click', async ()=>{
   const from = document.getElementById('moveFromAccount').value;
@@ -1805,6 +1818,7 @@ function renderLedger(){
   body.innerHTML = '';
   let list = sortedTx();
   if(filterYear) list = list.filter(t => t.date.slice(0,4) === String(filterYear));
+  if(filterMonth) list = list.filter(t => t.date.slice(5,7) === String(filterMonth).padStart(2,'0'));
   if(filterAccount) list = list.filter(t => t.account === filterAccount);
 
   if(list.length === 0){
@@ -1838,7 +1852,7 @@ function renderLedger(){
 
   const totalRow = document.createElement('tr');
   totalRow.className = 'total-row';
-  const activeFilters = [filterYear, filterAccount].some(Boolean);
+  const activeFilters = [filterYear, filterMonth, filterAccount].some(Boolean);
   totalRow.innerHTML = `
     <td colspan="3">합계${activeFilters ? ' (필터 적용됨)' : ''}</td>
     <td class="income">${won(totalIncome)}</td>
@@ -2240,6 +2254,7 @@ const SUMMARY4_COL_WIDTHS = [{wch:14},{wch:14},{wch:14},{wch:14}];
 function downloadLedgerExcel(){
   let list = sortedTx();
   if(filterYear) list = list.filter(t => t.date.slice(0,4) === String(filterYear));
+  if(filterMonth) list = list.filter(t => t.date.slice(5,7) === String(filterMonth).padStart(2,'0'));
   if(filterAccount) list = list.filter(t => t.account === filterAccount);
   if(list.length === 0){ alert('내보낼 거래 내역이 없습니다.'); return; }
   writeSingleSheetWorkbook(buildLedgerSheetRows(list), LEDGER_COL_WIDTHS, '거래내역', '거래내역');
@@ -2742,7 +2757,10 @@ document.getElementById('bulkSaveBtn').addEventListener('click', async ()=>{
         let colMap = { date: -1, memo: -1, income: -1, expense: -1, amount: -1, type: -1 };
 
         const dateKeys = ['거래일', '일자', '거래일자', '날짜', 'date', '일시'];
-        const memoKeys = ['적요', '내용', '거래내용', '취급점', '기증자', '비고', '상호', '기름', '적요/내용', '입금자'];
+        // 보내는이/받는이(입금자·출금자·거래상대방) 이름 컬럼을 최우선으로 사용
+        const nameKeys = ['보낸분', '받는분', '보낸사람', '받은사람', '보내는이', '받는이', '입금자명', '출금자명', '거래상대방', '상대계좌예금주', '예금주', '송금인', '수취인', '입금자', '출금자'];
+        // 이름 컬럼이 없을 때만 사용하는 보조(적요/내용) 컬럼
+        const memoKeys = ['적요', '내용', '거래내용', '취급점', '기증자', '비고', '상호', '기름', '적요/내용'];
         const incomeKeys = ['입금원금', '입금', '입금액', '수입', '수입액', '받은금액'];
         const expenseKeys = ['출금원금', '출금', '출금액', '지출', '지출액', '보낸금액'];
         const amountKeys = ['거래금액', '금액', '잔액', '금 액'];
@@ -2752,13 +2770,14 @@ document.getElementById('bulkSaveBtn').addEventListener('click', async ()=>{
           const row = rows[r];
           if(!Array.isArray(row)) continue;
           
-          let dCol = -1, mCol = -1, iCol = -1, eCol = -1, aCol = -1, tCol = -1;
+          let dCol = -1, mCol = -1, nCol = -1, iCol = -1, eCol = -1, aCol = -1, tCol = -1;
 
           row.forEach((cell, c) => {
             if(!cell) return;
             const text = String(cell).replace(/\s/g, '').toLowerCase();
 
             if(dCol === -1 && dateKeys.some(k => text.includes(k))) dCol = c;
+            if(nCol === -1 && nameKeys.some(k => text.includes(k))) nCol = c;
             if(mCol === -1 && memoKeys.some(k => text.includes(k))) mCol = c;
             if(iCol === -1 && incomeKeys.some(k => text.includes(k))) iCol = c;
             if(eCol === -1 && expenseKeys.some(k => text.includes(k))) eCol = c;
@@ -2768,7 +2787,8 @@ document.getElementById('bulkSaveBtn').addEventListener('click', async ()=>{
 
           if(dCol !== -1 && (iCol !== -1 || eCol !== -1 || aCol !== -1)){
             headerIdx = r;
-            colMap = { date: dCol, memo: mCol, income: iCol, expense: eCol, amount: aCol, type: tCol };
+            // 보내는이/받는이 이름 컬럼이 있으면 그것을, 없으면 적요/내용 컬럼을 사용
+            colMap = { date: dCol, memo: (nCol !== -1 ? nCol : mCol), income: iCol, expense: eCol, amount: aCol, type: tCol };
             break;
           }
         }
@@ -2929,6 +2949,15 @@ document.getElementById('bulkSaveBtn').addEventListener('click', async ()=>{
       memo = memo.replace(/[|│┃\[\]()（）]/g, ' ').replace(/\s+/g, ' ').trim();
       memo = memo.replace(/^[\s\-·.,;:]+|[\s\-·.,;:]+$/g, '').trim();
       if(!memo) memo = '거래내역';
+
+      // 적요 전체 문구 대신, 남은 텍스트에서 보내는이/받는이로 보이는 한글 이름(2~4자)을 우선 채택
+      const nameStopwords = ['입금','출금','이체','결제','인출','카드','수수료','이용료','납부','지급','구매','배송','주문',
+        '이자','급여','수입','환급','보조금','배당','지원금','감사헌금','선교헌금','헌금','봉헌','거래내역','통장','계좌',
+        '잔액','합계','현금','자동이체','타행','농협','국민','신한','우리','하나','기업','카카오뱅크','토스뱅크',
+        '새마을금고','신협','우체국','수협','씨티','저축은행'];
+      const nameCandidates = memo.match(/[가-힣]{2,4}/g) || [];
+      const nameOnly = nameCandidates.find(w => !nameStopwords.some(sw => w.includes(sw)));
+      if(nameOnly) memo = nameOnly;
 
       let type = 'income';
       let amount = amounts[0];
