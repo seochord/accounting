@@ -92,7 +92,6 @@
   .bulk-toolbar label{font-size:12px;color:var(--ink-soft);}
   .bulk-toolbar input{padding:7px 9px;border:1px solid var(--paper-line);border-radius:3px;font-size:13px;font-family:'Pretendard';}
   .bulk-toolbar select{padding:7px 9px;border:1px solid var(--paper-line);border-radius:3px;font-size:13px;font-family:'Pretendard';background:#fff;}
-  .account-move-tool{padding:10px 12px;background:var(--row-alt);border:1px solid var(--paper-line);border-radius:4px;margin-bottom:16px;}
   #bulkRowsBody td{padding:4px 6px;text-align:left;}
   #bulkRowsBody input, #bulkRowsBody select{
     width:100%;padding:6px 7px;border:1px solid var(--paper-line);border-radius:3px;
@@ -398,17 +397,6 @@ color:var(--ink-soft);font-size:11px;margin-top:30px;display:flex;flex-direction
         <label>통장</label>
         <select id="filterAccount"><option value="">전체</option></select>
       </div>
-    </div>
-    <div class="bulk-toolbar no-print account-move-tool">
-      <div class="f-item">
-        <label>통장 일괄 변경 · 원래 통장</label>
-        <select id="moveFromAccount"><option value="">선택</option></select>
-      </div>
-      <div class="f-item">
-        <label>→ 바꿀 통장</label>
-        <input type="text" id="moveToAccount" list="accountOptions" placeholder="예: 국민 감사헌금">
-      </div>
-      <button type="button" class="tool-btn" id="moveAccountBtn">일괄 변경</button>
     </div>
     <div class="table-scroll">
       <table>
@@ -1769,12 +1757,10 @@ function populateFilters(){
   const accSel = document.getElementById('filterAccount');
   const yearSel = document.getElementById('filterYear');
   const monthSel = document.getElementById('filterMonth');
-  const moveFromSel = document.getElementById('moveFromAccount');
-  const accPrev = filterAccount, yearPrev = filterYear, monthPrev = filterMonth, moveFromPrev = moveFromSel.value;
+  const accPrev = filterAccount, yearPrev = filterYear, monthPrev = filterMonth;
 
   const accountOptionsHtml = getAccountList().map(a=>`<option value="${escapeHtml(a)}">${escapeHtml(a)}</option>`).join('');
   accSel.innerHTML = '<option value="">전체</option>' + accountOptionsHtml;
-  moveFromSel.innerHTML = '<option value="">선택</option>' + accountOptionsHtml;
 
   const years = getYears();
   yearSel.innerHTML = '<option value="">전체</option>' + years.map(y=>`<option value="${y}">${y}년</option>`).join('');
@@ -1784,7 +1770,6 @@ function populateFilters(){
   monthSel.innerHTML = '<option value="">전체</option>' + monthOptionsHtml;
 
   accSel.value = accPrev;
-  moveFromSel.value = moveFromPrev;
   yearSel.value = years.includes(parseInt(yearPrev,10)) ? yearPrev : '';
   filterYear = yearSel.value;
   monthSel.value = monthPrev;
@@ -1794,27 +1779,6 @@ function populateFilters(){
 document.getElementById('filterAccount').addEventListener('change', (e)=>{ filterAccount = e.target.value; renderLedger(); });
 document.getElementById('filterYear').addEventListener('change', (e)=>{ filterYear = e.target.value; renderLedger(); });
 document.getElementById('filterMonth').addEventListener('change', (e)=>{ filterMonth = e.target.value; renderLedger(); });
-
-document.getElementById('moveAccountBtn').addEventListener('click', async ()=>{
-  const from = document.getElementById('moveFromAccount').value;
-  const to = document.getElementById('moveToAccount').value.trim();
-
-  if(!from){ alert('원래 통장을 선택해 주세요.'); return; }
-  if(!to){ alert('바꿀 통장 이름을 입력해 주세요.'); return; }
-  if(from === to){ alert('원래 통장과 바꿀 통장이 같습니다.'); return; }
-
-  const affected = transactions.filter(t => t.account === from);
-  if(affected.length === 0){ alert(`"${from}" 통장으로 된 거래가 없습니다.`); return; }
-
-  if(!confirm(`"${from}" 통장의 거래 ${affected.length}건을 모두 "${to}" 통장으로 바꿀까요?\n\n이 작업은 되돌릴 수 없습니다 (백업을 미리 받아두면 안전합니다).`)) return;
-
-  transactions.forEach(t=>{ if(t.account === from) t.account = to; });
-  await saveData();
-  document.getElementById('moveFromAccount').value = '';
-  document.getElementById('moveToAccount').value = '';
-  render();
-  alert(`${affected.length}건을 "${to}" 통장으로 옮겼습니다.`);
-});
 
 function renderLedger(){
   const body = document.getElementById('ledgerBody');
