@@ -16,14 +16,14 @@
   @import url('https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@500;700&family=Pretendard:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap');
 
   :root{
-    --paper: #FAF7F0;
-    --paper-line: #D8D0BC;
-    --ink: #1F2A38;
-    --ink-soft: #5B6472;
-    --income: #1E4E8C;
+    --paper: #F4F8FC;
+    --paper-line: #C3D7EA;
+    --ink: #10263F;
+    --ink-soft: #4F6D8C;
+    --income: #1B5FAE;
     --expense: #A3273C;
-    --accent: #8A6D3B;
-    --row-alt: #F2EEE2;
+    --accent: #1D6FB8;
+    --row-alt: #E7F0FA;
   }
   *{box-sizing:border-box;}
   body{
@@ -41,11 +41,11 @@
     padding-bottom:16px;margin-bottom:24px;
   }
   header.top h1{
-    font-family:'Noto Serif KR',serif;font-weight:700;font-size:26px;margin:0;
+    font-family:'Noto Serif KR',serif;font-weight:700;font-size:30px;margin:0;
     letter-spacing:-0.5px;cursor:pointer;
   }
   header.top h1:hover{opacity:0.75;}
-  header.top .today{font-family:'JetBrains Mono',monospace;font-size:13px;color:var(--ink-soft);}
+  header.top .today{font-family:'JetBrains Mono',monospace;font-size:15px;color:var(--ink-soft);}
 
   .card{
     background:#fff;
@@ -56,33 +56,33 @@
     box-shadow:0 1px 2px rgba(0,0,0,0.03);
   }
   .card h2{
-    font-family:'Noto Serif KR',serif;font-size:16px;font-weight:700;
+    font-family:'Noto Serif KR',serif;font-size:18.5px;font-weight:700;
     margin:0 0 14px;padding-bottom:8px;border-bottom:1px solid var(--paper-line);
     display:flex;align-items:center;gap:8px;flex-wrap:wrap;
   }
-  .card h2 .idx{font-family:'JetBrains Mono',monospace;color:var(--accent);font-size:13px;}
+  .card h2 .idx{font-family:'JetBrains Mono',monospace;color:var(--accent);font-size:15px;}
   .print-title{display:none;}
-  .card-caption{font-size:12px;color:var(--ink-soft);margin:-8px 0 14px;}
+  .card-caption{font-size:14px;color:var(--ink-soft);margin:-8px 0 14px;}
 
   /* form */
   form.entry{display:grid;grid-template-columns: 128px 84px 130px 1fr 110px 90px;gap:10px;align-items:end;}
-  form.entry label{display:block;font-size:12px;color:var(--ink-soft);margin-bottom:4px;}
+  form.entry label{display:block;font-size:14px;color:var(--ink-soft);margin-bottom:4px;}
   form.entry input, form.entry select{
     width:100%;padding:8px 9px;border:1px solid var(--paper-line);border-radius:3px;
-    font-family:'Pretendard';font-size:14px;background:#fff;color:var(--ink);
+    font-family:'Pretendard';font-size:16px;background:#fff;color:var(--ink);
   }
   form.entry input:focus, form.entry select:focus{outline:2px solid var(--accent);outline-offset:1px;}
   form.entry .btn-row{display:flex;gap:6px;}
   form.entry button{
     padding:9px 10px;border:none;border-radius:3px;background:var(--ink);color:#fff;
-    font-weight:600;cursor:pointer;font-size:14px;flex:1;white-space:nowrap;
+    font-weight:600;cursor:pointer;font-size:16px;flex:1;white-space:nowrap;
   }
   form.entry button:hover{background:var(--accent);}
   form.entry button.cancel-btn{background:#fff;color:var(--ink-soft);border:1px solid var(--paper-line);display:none;}
   form.entry button.cancel-btn:hover{color:var(--expense);border-color:var(--expense);}
   .edit-banner{
     display:none;background:#FFF6E0;border:1px solid var(--accent);color:var(--accent);
-    font-size:12.5px;font-weight:600;padding:7px 10px;border-radius:3px;margin-bottom:12px;
+    font-size:14.5px;font-weight:600;padding:7px 10px;border-radius:3px;margin-bottom:12px;
   }
   @media (max-width:720px){
     form.entry{grid-template-columns:1fr 1fr;}
@@ -90,18 +90,18 @@
 
   .bulk-toolbar{display:flex;gap:10px;flex-wrap:wrap;align-items:end;margin-bottom:14px;}
   .bulk-toolbar .f-item{display:flex;flex-direction:column;gap:4px;}
-  .bulk-toolbar label{font-size:12px;color:var(--ink-soft);}
-  .bulk-toolbar input{padding:7px 9px;border:1px solid var(--paper-line);border-radius:3px;font-size:13px;font-family:'Pretendard';}
-  .bulk-toolbar select{padding:7px 9px;border:1px solid var(--paper-line);border-radius:3px;font-size:13px;font-family:'Pretendard';background:#fff;}
+  .bulk-toolbar label{font-size:14px;color:var(--ink-soft);}
+  .bulk-toolbar input{padding:7px 9px;border:1px solid var(--paper-line);border-radius:3px;font-size:15px;font-family:'Pretendard';}
+  .bulk-toolbar select{padding:7px 9px;border:1px solid var(--paper-line);border-radius:3px;font-size:15px;font-family:'Pretendard';background:#fff;}
   #bulkRowsBody td{padding:4px 6px;text-align:left;}
   #bulkRowsBody input, #bulkRowsBody select{
     width:100%;padding:6px 7px;border:1px solid var(--paper-line);border-radius:3px;
-    font-family:'Pretendard';font-size:13px;background:#fff;color:var(--ink);
+    font-family:'Pretendard';font-size:15px;background:#fff;color:var(--ink);
   }
   #bulkRowsBody input[type="number"]{text-align:right;font-family:'JetBrains Mono',monospace;}
   .bulk-save-btn{
     margin-top:14px;padding:10px 22px;border:none;border-radius:3px;background:var(--ink);color:#fff;
-    font-weight:700;cursor:pointer;font-size:14px;
+    font-weight:700;cursor:pointer;font-size:16px;
   }
   .bulk-save-btn:hover{background:var(--accent);}
 
@@ -109,13 +109,13 @@
   .tabs{display:flex;gap:6px;margin-bottom:16px;flex-wrap:wrap;}
   .tabs button{
     padding:8px 16px;border:1px solid var(--paper-line);background:#fff;border-radius:20px;
-    font-size:13px;font-weight:600;cursor:pointer;color:var(--ink-soft);
+    font-size:15px;font-weight:600;cursor:pointer;color:var(--ink-soft);
   }
   .tabs button.active{background:var(--ink);color:#fff;border-color:var(--ink);}
 
-  table{width:100%;border-collapse:collapse;font-size:13.5px;}
+  table{width:100%;border-collapse:collapse;font-size:15.5px;}
   thead th{
-    text-align:right;font-weight:600;color:var(--ink-soft);font-size:12px;
+    text-align:right;font-weight:600;color:var(--ink-soft);font-size:14px;
     padding:8px 6px;border-bottom:2px solid var(--ink);white-space:nowrap;
   }
   thead th:first-child, thead th:nth-child(2){text-align:left;}
@@ -140,22 +140,22 @@
   td.balance-neg{color:var(--expense);}
   td.row-actions{white-space:nowrap;}
   .del-btn, .edit-btn{
-    font-family:'Pretendard';font-size:11px;color:var(--ink-soft);background:none;border:none;
+    font-family:'Pretendard';font-size:12.5px;color:var(--ink-soft);background:none;border:none;
     cursor:pointer;text-decoration:underline;padding:0;margin-left:8px;
   }
   .edit-btn{margin-left:0;color:var(--accent);}
   .del-btn:hover{color:var(--expense);}
   .edit-btn:hover{color:var(--ink);}
 
-  .empty{padding:30px 0;text-align:center;color:var(--ink-soft);font-size:13px;}
+  .empty{padding:30px 0;text-align:center;color:var(--ink-soft);font-size:15px;}
 
   .year-select{display:flex;align-items:center;gap:8px;margin-bottom:12px;}
   .year-select select{padding:6px 10px;border:1px solid var(--paper-line);border-radius:3px;font-family:'JetBrains Mono',monospace;}
 
   .filter-row{display:flex;gap:16px;margin-bottom:14px;flex-wrap:wrap;}
   .filter-row .f-item{display:flex;align-items:center;gap:6px;}
-  .filter-row label{font-size:12px;color:var(--ink-soft);}
-  .filter-row select{padding:6px 10px;border:1px solid var(--paper-line);border-radius:3px;font-size:13px;background:#fff;}
+  .filter-row label{font-size:14px;color:var(--ink-soft);}
+  .filter-row select{padding:6px 10px;border:1px solid var(--paper-line);border-radius:3px;font-size:15px;background:#fff;}
 
   .table-scroll{overflow-x:auto;}
 
@@ -164,29 +164,29 @@
   .mom-box{
     border:1px solid var(--paper-line);border-radius:6px;padding:16px 18px;background:#fff;
   }
-  .mom-box .mom-label{font-size:12.5px;color:var(--ink-soft);font-weight:600;margin-bottom:6px;}
-  .mom-box .mom-cur{font-family:'JetBrains Mono',monospace;font-size:20px;font-weight:700;margin-bottom:4px;}
-  .mom-box .mom-prev{font-size:12px;color:var(--ink-soft);margin-bottom:10px;}
+  .mom-box .mom-label{font-size:14.5px;color:var(--ink-soft);font-weight:600;margin-bottom:6px;}
+  .mom-box .mom-cur{font-family:'JetBrains Mono',monospace;font-size:23px;font-weight:700;margin-bottom:4px;}
+  .mom-box .mom-prev{font-size:14px;color:var(--ink-soft);margin-bottom:10px;}
   .mom-box .mom-delta{
     display:inline-flex;align-items:center;gap:5px;font-family:'JetBrains Mono',monospace;
-    font-size:13.5px;font-weight:700;padding:3px 9px;border-radius:12px;
+    font-size:15.5px;font-weight:700;padding:3px 9px;border-radius:12px;
   }
   .mom-box .mom-delta.up{color:var(--income);background:rgba(30,78,140,0.08);}
   .mom-box .mom-delta.down{color:var(--expense);background:rgba(163,39,60,0.08);}
   .mom-box .mom-delta.flat{color:var(--ink-soft);background:var(--row-alt);}
   footer{text-align:center;
-color:var(--ink-soft);font-size:11px;margin-top:30px;display:flex;flex-direction:column;gap:10px;align-items:center;}
+color:var(--ink-soft);font-size:12.5px;margin-top:30px;display:flex;flex-direction:column;gap:10px;align-items:center;}
   footer .backup-row{display:flex;gap:8px;}
   footer .backup-btn{
     padding:6px 14px;border:1px solid var(--paper-line);background:#fff;border-radius:14px;
-    font-size:12px;font-weight:600;color:var(--ink-soft);cursor:pointer;
+    font-size:14px;font-weight:600;color:var(--ink-soft);cursor:pointer;
   }
   footer .backup-btn:hover{border-color:var(--accent);color:var(--accent);}
 
   .card-tools{display:flex;gap:8px;margin-left:auto;}
   .tool-btn{
     padding:5px 12px;border:1px solid var(--paper-line);background:#fff;border-radius:14px;
-    font-size:12px;font-weight:600;color:var(--ink-soft);cursor:pointer;white-space:nowrap;
+    font-size:14px;font-weight:600;color:var(--ink-soft);cursor:pointer;white-space:nowrap;
   }
   .tool-btn:hover{border-color:var(--accent);color:var(--accent);}
 
@@ -198,14 +198,14 @@ color:var(--ink-soft);font-size:11px;margin-top:30px;display:flex;flex-direction
     body.printing .card{display:none !important;}
     body.printing .card.print-target{display:block !important;}
     .print-title{display:none;}
-    body.printing .print-title.print-target-title{display:block;font-family:'Noto Serif KR',serif;font-size:18px;font-weight:700;margin-bottom:14px;}
+    body.printing .print-title.print-target-title{display:block;font-family:'Noto Serif KR',serif;font-size:20.5px;font-weight:700;margin-bottom:14px;}
   }
 
   /* OCR & Excel & PDF Upload */
   .ocr-toolbar, .excel-toolbar, .pdf-toolbar{display:flex;gap:10px;flex-wrap:wrap;align-items:end;margin-bottom:14px;}
   .ocr-toolbar .f-item, .excel-toolbar .f-item, .pdf-toolbar .f-item{display:flex;flex-direction:column;gap:4px;}
-  .ocr-toolbar label, .excel-toolbar label, .pdf-toolbar label{font-size:12px;color:var(--ink-soft);}
-  .ocr-toolbar input,.ocr-toolbar select, .excel-toolbar input, .excel-toolbar select, .pdf-toolbar input, .pdf-toolbar select{padding:7px 9px;border:1px solid var(--paper-line);border-radius:3px;font-size:13px;font-family:'Pretendard';background:#fff;}
+  .ocr-toolbar label, .excel-toolbar label, .pdf-toolbar label{font-size:14px;color:var(--ink-soft);}
+  .ocr-toolbar input,.ocr-toolbar select, .excel-toolbar input, .excel-toolbar select, .pdf-toolbar input, .pdf-toolbar select{padding:7px 9px;border:1px solid var(--paper-line);border-radius:3px;font-size:15px;font-family:'Pretendard';background:#fff;}
 
   .ocr-drop-zone, .excel-drop-zone, .pdf-drop-zone{
     border:2px dashed var(--paper-line);border-radius:8px;padding:44px 20px;
@@ -215,40 +215,40 @@ color:var(--ink-soft);font-size:11px;margin-top:30px;display:flex;flex-direction
   .ocr-drop-zone:hover,.ocr-drop-zone.drag-over, .excel-drop-zone:hover,.excel-drop-zone.drag-over, .pdf-drop-zone:hover,.pdf-drop-zone.drag-over{
     border-color:var(--accent);background:rgba(138,109,59,0.06);
   }
-  .ocr-drop-zone .drop-icon, .excel-drop-zone .drop-icon, .pdf-drop-zone .drop-icon{font-size:42px;margin-bottom:10px;display:block;}
-  .ocr-drop-zone .drop-text, .excel-drop-zone .drop-text, .pdf-drop-zone .drop-text{font-size:14px;color:var(--ink-soft);font-weight:500;}
-  .ocr-drop-zone .drop-sub, .excel-drop-zone .drop-sub, .pdf-drop-zone .drop-sub{font-size:12px;color:var(--ink-soft);margin-top:6px;opacity:0.7;}
+  .ocr-drop-zone .drop-icon, .excel-drop-zone .drop-icon, .pdf-drop-zone .drop-icon{font-size:48.5px;margin-bottom:10px;display:block;}
+  .ocr-drop-zone .drop-text, .excel-drop-zone .drop-text, .pdf-drop-zone .drop-text{font-size:16px;color:var(--ink-soft);font-weight:500;}
+  .ocr-drop-zone .drop-sub, .excel-drop-zone .drop-sub, .pdf-drop-zone .drop-sub{font-size:14px;color:var(--ink-soft);margin-top:6px;opacity:0.7;}
   .ocr-drop-zone input[type="file"], .excel-drop-zone input[type="file"], .pdf-drop-zone input[type="file"]{display:none;}
 
   .ocr-preview-wrap, .excel-preview-wrap, .pdf-preview-wrap{margin:14px 0;display:flex;gap:16px;flex-wrap:wrap;align-items:flex-start;}
   .ocr-preview-img{max-width:300px;max-height:220px;border:1px solid var(--paper-line);border-radius:4px;object-fit:contain;background:#fff;}
-  .ocr-preview-info, .excel-preview-info, .pdf-preview-info{font-size:12px;color:var(--ink-soft);display:flex;flex-direction:column;gap:6px;}
+  .ocr-preview-info, .excel-preview-info, .pdf-preview-info{font-size:14px;color:var(--ink-soft);display:flex;flex-direction:column;gap:6px;}
 
   .ocr-progress-wrap, .excel-progress-wrap, .pdf-progress-wrap{margin:16px 0;display:none;}
   .ocr-progress-bar, .excel-progress-bar, .pdf-progress-bar{width:100%;height:8px;background:var(--row-alt);border-radius:4px;overflow:hidden;}
   .ocr-progress-fill, .excel-progress-fill, .pdf-progress-fill{height:100%;background:linear-gradient(90deg,var(--accent),#b8956a);border-radius:4px;transition:width 0.3s;width:0%;}
-  .ocr-progress-text, .excel-progress-text, .pdf-progress-text{font-size:12px;color:var(--ink-soft);margin-top:6px;font-family:'JetBrains Mono',monospace;}
+  .ocr-progress-text, .excel-progress-text, .pdf-progress-text{font-size:14px;color:var(--ink-soft);margin-top:6px;font-family:'JetBrains Mono',monospace;}
 
-  .ocr-result-info, .excel-result-info, .pdf-result-info{font-size:13px;color:var(--ink-soft);margin-bottom:10px;padding:8px 12px;background:var(--row-alt);border-radius:4px;}
+  .ocr-result-info, .excel-result-info, .pdf-result-info{font-size:15px;color:var(--ink-soft);margin-bottom:10px;padding:8px 12px;background:var(--row-alt);border-radius:4px;}
   .ocr-result-info strong, .excel-result-info strong, .pdf-result-info strong{color:var(--ink);}
   #ocrRowsBody td, #excelRowsBody td, #pdfRowsBody td{padding:4px 6px;text-align:left;}
   #ocrRowsBody input,#ocrRowsBody select, #excelRowsBody input,#excelRowsBody select, #pdfRowsBody input,#pdfRowsBody select{
     width:100%;padding:6px 7px;border:1px solid var(--paper-line);border-radius:3px;
-    font-family:'Pretendard';font-size:13px;background:#fff;color:var(--ink);
+    font-family:'Pretendard';font-size:15px;background:#fff;color:var(--ink);
   }
   #ocrRowsBody input[type="number"], #excelRowsBody input[type="number"], #pdfRowsBody input[type="number"]{text-align:right;font-family:'JetBrains Mono',monospace;}
   .ocr-save-btn, .excel-save-btn, .pdf-save-btn{
     padding:10px 22px;border:none;border-radius:3px;background:var(--ink);color:#fff;
-    font-weight:700;cursor:pointer;font-size:14px;
+    font-weight:700;cursor:pointer;font-size:16px;
   }
   .ocr-save-btn:hover, .excel-save-btn:hover, .pdf-save-btn:hover{background:var(--accent);}
   .ocr-raw-toggle, .pdf-raw-toggle{
-    font-size:12px;color:var(--accent);cursor:pointer;text-decoration:underline;
+    font-size:14px;color:var(--accent);cursor:pointer;text-decoration:underline;
     background:none;border:none;margin-top:10px;padding:0;display:inline-block;
   }
   .ocr-raw-text, .pdf-raw-text{
     display:none;margin-top:8px;padding:12px;background:var(--row-alt);border:1px solid var(--paper-line);
-    border-radius:4px;font-family:'JetBrains Mono',monospace;font-size:11px;white-space:pre-wrap;
+    border-radius:4px;font-family:'JetBrains Mono',monospace;font-size:12.5px;white-space:pre-wrap;
     max-height:200px;overflow-y:auto;color:var(--ink-soft);
   }
 </style>
@@ -427,8 +427,12 @@ color:var(--ink-soft);font-size:11px;margin-top:30px;display:flex;flex-direction
       <button data-mode="year">연도별</button>
     </div>
     <div class="year-select" id="yearSelectWrap">
-      <label style="font-size:12px;color:var(--ink-soft);">연도</label>
+      <label style="font-size:14px;color:var(--ink-soft);">연도</label>
       <select id="yearSelect"></select>
+    </div>
+    <div class="year-select" id="aggAccountWrap">
+      <label style="font-size:14px;color:var(--ink-soft);">통장</label>
+      <select id="aggAccount"><option value="">전체</option></select>
     </div>
     <div class="table-scroll">
       <table>
@@ -527,7 +531,7 @@ color:var(--ink-soft);font-size:11px;margin-top:30px;display:flex;flex-direction
     </div>
   </footer>
 </div>
-<div id="storageWarning" style="display:none;position:fixed;top:0;left:0;right:0;background:#A3273C;color:#fff;text-align:center;padding:10px;font-size:13px;font-weight:600;z-index:999;"></div>
+<div id="storageWarning" style="display:none;position:fixed;top:0;left:0;right:0;background:#A3273C;color:#fff;text-align:center;padding:10px;font-size:15px;font-weight:600;z-index:999;"></div>
 
 <script>
 const STORAGE_KEY = 'ledger:transactions';       // 로컬 캐시(오프라인 폴백)용
@@ -552,6 +556,7 @@ async function ensurePasscode(){
 }
 let currentMode = 'month';
 let currentYear = new Date().getFullYear();
+let aggAccount = '';
 let filterAccount = '';
 // 거래 내역 카드는 항상 오늘 날짜 기준 연/월로 시작한다
 let filterYear = String(new Date().getFullYear());
@@ -1963,6 +1968,12 @@ function populateYearSelect(){
   sel.innerHTML = years.map(y => `<option value="${y}">${y}년</option>`).join('');
   currentYear = years.includes(prev) ? prev : years[0];
   sel.value = currentYear;
+
+  const accSel = document.getElementById('aggAccount');
+  const accPrev = aggAccount;
+  accSel.innerHTML = '<option value="">전체</option>' + getAccountList().map(a=>`<option value="${escapeHtml(a)}">${escapeHtml(a)}</option>`).join('');
+  accSel.value = accPrev;
+  aggAccount = accSel.value;
 }
 
 function quarterOf(month){ return Math.ceil(month/3); }
@@ -1971,7 +1982,8 @@ function halfOf(month){ return month <= 6 ? '상반기' : '하반기'; }
 const AGG_LABELS = {month:'월', quarter:'분기', half:'반기', year:'연도'};
 
 function computeAgg(){
-  const yearTx = transactions.filter(t => currentMode === 'year' || parseInt(t.date.slice(0,4),10) === currentYear);
+  const matchAcc = t => !aggAccount || t.account === aggAccount;
+  const yearTx = transactions.filter(t => matchAcc(t) && (currentMode === 'year' || parseInt(t.date.slice(0,4),10) === currentYear));
   let groups = {};
   let order = [];
 
@@ -1988,6 +2000,7 @@ function computeAgg(){
     const years = getYears().sort((a,b)=>a-b);
     years.forEach(y=>{ order.push(y); groups[y] = {label:`${y}년`, income:0, expense:0}; });
     transactions.forEach(t=>{
+      if(!matchAcc(t)) return;
       const y = parseInt(t.date.slice(0,4),10);
       if(groups[y]) groups[y][t.type] += t.amount;
     });
@@ -2014,7 +2027,8 @@ function renderAgg(){
   const colLabel = AGG_LABELS[currentMode];
 
   const titleSuffix = currentMode === 'year' ? '연도별' : `${currentYear}년 ${{month:'월별',quarter:'분기별',half:'반기별'}[currentMode]}`;
-  document.getElementById('aggPrintTitle').textContent = `기간별 집계 - ${titleSuffix}`;
+  const accSuffix = aggAccount ? ` · ${aggAccount}` : '';
+  document.getElementById('aggPrintTitle').textContent = `기간별 집계 - ${titleSuffix}${accSuffix}`;
 
   head.innerHTML = `<tr><th>${colLabel}</th><th></th><th>수입 합계</th><th>지출 합계</th><th>소계(순액)</th></tr>`;
 
@@ -2326,6 +2340,11 @@ document.getElementById('yearSelect').addEventListener('change', (e)=>{
   renderAgg();
 });
 
+document.getElementById('aggAccount').addEventListener('change', (e)=>{
+  aggAccount = e.target.value;
+  renderAgg();
+});
+
 function render(){
   populateDatalists();
   populateFilters();
@@ -2386,7 +2405,7 @@ function buildMonthlyReportHTML(monthStr, includeMoM = true){
       + momItem('지출', cur.expense, prev.expense, false)
       + momItem('총합계(순액)', cur.net, prev.net, true, 'net');
     momSectionHtml = `
-    <h3 style="font-family:'Noto Serif KR',serif;font-size:15px;margin:26px 0 8px;">3. 전월대비 증감</h3>
+    <h3 style="font-family:'Noto Serif KR',serif;font-size:17px;margin:26px 0 8px;">3. 전월대비 증감</h3>
     <div class="mom-grid">${momHtml}</div>
     `;
   }
@@ -2396,7 +2415,7 @@ function buildMonthlyReportHTML(monthStr, includeMoM = true){
   return `
     <div class="print-title print-target-title">진리침례교회 재정보고서 — ${monthLabel}</div>
 
-    <h3 style="font-family:'Noto Serif KR',serif;font-size:15px;margin:20px 0 8px;">1. ${monthLabel} 거래 내역</h3>
+    <h3 style="font-family:'Noto Serif KR',serif;font-size:17px;margin:20px 0 8px;">1. ${monthLabel} 거래 내역</h3>
     <table><thead><tr><th style="text-align:left;">거래일</th><th style="text-align:left;">통장</th><th style="text-align:left;">내용</th><th>수입</th><th>지출</th><th>소계</th></tr></thead>
     <tbody>
       ${openingRowHtml}
@@ -2404,15 +2423,23 @@ function buildMonthlyReportHTML(monthStr, includeMoM = true){
       <tr class="total-row"><td colspan="3">합계</td><td class="income">${won(totalIncome)}</td><td class="expense">${won(totalExpense)}</td><td>${won(balance)}</td></tr>
     </tbody></table>
 
-    <h3 style="font-family:'Noto Serif KR',serif;font-size:15px;margin:26px 0 8px;">2. 통장별 잔액 (전체 기간 누적)</h3>
+    <h3 style="font-family:'Noto Serif KR',serif;font-size:17px;margin:26px 0 8px;">2. 통장별 잔액 (전체 기간 누적)</h3>
     <table><thead><tr><th style="text-align:left;">통장</th><th></th><th>수입 합계</th><th>지출 합계</th><th>잔액</th></tr></thead>
     <tbody>${accRowsHtml}</tbody></table>
     ${momSectionHtml}
-    <div style="margin-top:60px;font-size:13px;text-align:right;">작성일: ${today}</div>
-    <div style="margin-top:26px;display:flex;justify-content:flex-end;gap:50px;font-size:13px;">
-      <div>담당&nbsp;&nbsp;: ______________ (인)</div>
-      <div>확인&nbsp;&nbsp;: ______________ (인)</div>
-    </div>
+    <div style="margin-top:60px;font-size:15px;text-align:right;">작성일: ${today}</div>
+    <table style="margin-top:22px;width:auto;margin-left:auto;font-size:15px;">
+      <thead><tr>
+        <th style="width:70px;">구분</th>
+        <th style="width:150px;">이름</th>
+        <th style="width:150px;">서명</th>
+      </tr></thead>
+      <tbody>
+        <tr><td>담당</td><td style="height:40px;">&nbsp;</td><td style="height:40px;">&nbsp;</td></tr>
+        <tr><td>회계</td><td style="height:40px;">&nbsp;</td><td style="height:40px;">&nbsp;</td></tr>
+        <tr><td>확인</td><td style="height:40px;">&nbsp;</td><td style="height:40px;">&nbsp;</td></tr>
+      </tbody>
+    </table>
   `;
 }
 
@@ -2490,7 +2517,8 @@ function downloadAggExcel(){
   if(isEmpty){ alert('내보낼 집계 내역이 없습니다.'); return; }
   const colLabel = AGG_LABELS[currentMode];
   const sheetName = {month:'월별집계',quarter:'분기별집계',half:'반기별집계',year:'연도별집계'}[currentMode];
-  const prefix = currentMode === 'year' ? '연도별집계' : `${currentYear}년_${sheetName}`;
+  const accSuffix = aggAccount ? `_${aggAccount}` : '';
+  const prefix = (currentMode === 'year' ? '연도별집계' : `${currentYear}년_${sheetName}`) + accSuffix;
   writeSingleSheetWorkbook(summaryToSheetRows(colLabel, rows, grandIncome, grandExpense), SUMMARY4_COL_WIDTHS, sheetName, prefix);
 }
 
