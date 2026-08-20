@@ -1838,7 +1838,13 @@ function populateFilters(){
 }
 
 document.getElementById('filterAccount').addEventListener('change', (e)=>{ filterAccount = e.target.value; renderLedger(); });
-document.getElementById('filterYear').addEventListener('change', (e)=>{ filterYear = e.target.value; renderLedger(); });
+document.getElementById('filterYear').addEventListener('change', (e)=>{
+  filterYear = e.target.value;
+  // 연도를 바꾸면 월 필터는 "전체"로 초기화 — 그래야 전년도 잔액이 새 연도의 이월금으로 온전히 표시됨
+  filterMonth = '';
+  document.getElementById('filterMonth').value = '';
+  renderLedger();
+});
 document.getElementById('filterMonth').addEventListener('change', (e)=>{ filterMonth = e.target.value; renderLedger(); });
 
 function renderLedger(){
