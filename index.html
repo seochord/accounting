@@ -16,14 +16,14 @@
   @import url('https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@500;700&family=Pretendard:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap');
 
   :root{
-    --paper: #F4F7FB;
-    --paper-line: #D3DEEC;
-    --ink: #0F2A4A;
-    --ink-soft: #5B7290;
-    --income: #1565C0;
-    --expense: #C0392B;
-    --accent: #1E6FD9;
-    --row-alt: #EAF1FB;
+    --paper: #FAF7F0;
+    --paper-line: #D8D0BC;
+    --ink: #1F2A38;
+    --ink-soft: #5B6472;
+    --income: #1E4E8C;
+    --expense: #A3273C;
+    --accent: #8A6D3B;
+    --row-alt: #F2EEE2;
   }
   *{box-sizing:border-box;}
   body{
@@ -37,12 +37,12 @@
 
   header.top{
     display:flex;align-items:baseline;justify-content:space-between;
-    border-bottom:2px solid var(--accent);
+    border-bottom:3px double var(--ink);
     padding-bottom:16px;margin-bottom:24px;
   }
   header.top h1{
     font-family:'Noto Serif KR',serif;font-weight:700;font-size:26px;margin:0;
-    letter-spacing:-0.5px;cursor:pointer;color:var(--ink);
+    letter-spacing:-0.5px;cursor:pointer;
   }
   header.top h1:hover{opacity:0.75;}
   header.top .today{font-family:'JetBrains Mono',monospace;font-size:13px;color:var(--ink-soft);}
@@ -50,17 +50,17 @@
   .card{
     background:#fff;
     border:1px solid var(--paper-line);
-    border-radius:10px;
-    padding:22px;
+    border-radius:4px;
+    padding:20px;
     margin-bottom:20px;
-    box-shadow:0 2px 10px rgba(15,42,74,0.05);
+    box-shadow:0 1px 2px rgba(0,0,0,0.03);
   }
   .card h2{
     font-family:'Noto Serif KR',serif;font-size:16px;font-weight:700;
-    margin:0 0 14px;padding-bottom:10px;border-bottom:1px solid var(--paper-line);
-    display:flex;align-items:center;gap:8px;flex-wrap:wrap;color:var(--ink);
+    margin:0 0 14px;padding-bottom:8px;border-bottom:1px solid var(--paper-line);
+    display:flex;align-items:center;gap:8px;flex-wrap:wrap;
   }
-  .card h2 .idx{font-family:'JetBrains Mono',monospace;color:var(--accent);font-size:13px;font-weight:600;}
+  .card h2 .idx{font-family:'JetBrains Mono',monospace;color:var(--accent);font-size:13px;}
   .print-title{display:none;}
   .card-caption{font-size:12px;color:var(--ink-soft);margin:-8px 0 14px;}
 
@@ -268,12 +268,45 @@ color:var(--ink-soft);font-size:11px;margin-top:30px;display:flex;flex-direction
       <button type="button" data-entrymode="auto">📁 파일로 자동 입력 (이미지 · PDF · 엑셀)</button>
     </div>
 
+    <div id="singleEntryWrap" style="display:none;">
+      <div class="edit-banner" id="editBanner">✎ 거래를 수정하는 중입니다. 저장하려면 "수정 완료"를 누르세요.</div>
+      <form class="entry" id="entryForm">
+        <div>
+          <label>거래일</label>
+          <input type="date" id="f-date" required>
+        </div>
+        <div>
+          <label>구분</label>
+          <select id="f-type">
+            <option value="income">수입</option>
+            <option value="expense">지출</option>
+          </select>
+        </div>
+        <div>
+          <label>통장</label>
+          <input type="text" id="f-account" list="accountOptions" placeholder="예: 국민 감사헌금" required>
+          <datalist id="accountOptions"></datalist>
+        </div>
+        <div>
+          <label>내용</label>
+          <input type="text" id="f-memo" placeholder="예: 홍길동 감사헌금, 선교사 지원비" required>
+        </div>
+        <div>
+          <label>금액 (마이너스 지출은 -금액 입력)</label>
+          <input type="number" id="f-amount" step="1" placeholder="0" required>
+        </div>
+        <div class="btn-row">
+          <button type="submit" id="submitBtn">추가</button>
+          <button type="button" id="cancelEditBtn" class="cancel-btn">취소</button>
+        </div>
+      </form>
+    </div>
+
     <div id="bulkEntryWrap">
       <div class="bulk-toolbar no-print">
         <div class="f-item">
           <label>통장 (전체 행 공통)</label>
           <input type="text" id="bulk-account" list="accountOptions" placeholder="예: 국민 감사헌금">
-          <datalist id="accountOptions"></datalist>
         </div>
         <div class="f-item">
           <label>연월</label>
@@ -425,11 +458,49 @@ color:var(--ink-soft);font-size:11px;margin-top:30px;display:flex;flex-direction
     <div id="accountEmpty" class="empty" style="display:none;">등록된 거래가 없습니다.</div>
   </div>
 
+  <div class="card" id="nameSearchCard">
+    <h2>
+      <span class="idx">05</span> 이름별 연도별 집계
+      <span class="print-title print-target-title" id="nameSearchPrintTitle"></span>
+      <div class="card-tools no-print">
+        <button class="tool-btn" id="nameSearchPrintBtn">인쇄</button>
+        <button class="tool-btn" id="nameSearchExcelBtn">엑셀 다운로드</button>
+      </div>
+    </h2>
+    <div class="card-caption no-print">보낸이 · 받는이 이름(내용 항목)으로 검색해 연도별 수입/지출을 확인합니다. 부분 일치 검색됩니다.</div>
+    <div class="filter-row no-print">
+      <div class="f-item">
+        <label>이름 검색</label>
+        <input type="text" id="nameSearchInput" list="memoOptions" placeholder="예: 홍길동">
+      </div>
+    </div>
+    <datalist id="memoOptions"></datalist>
+    <div class="card-caption" id="nameSearchCaption"></div>
+
+    <div class="table-scroll">
+      <table>
+        <thead><tr><th style="text-align:left;">연도</th><th>수입</th><th>지출</th><th>순액</th><th>건수</th></tr></thead>
+        <tbody id="nameYearBody"></tbody>
+      </table>
+    </div>
+    <div id="nameYearEmpty" class="empty">이름을 입력하면 연도별 집계가 표시됩니다.</div>
+
+    <div class="table-scroll" style="margin-top:18px;" id="nameDetailWrap">
+      <table>
+        <thead><tr><th style="text-align:left;">거래일</th><th style="text-align:left;">통장</th><th style="text-align:left;">내용</th><th>수입</th><th>지출</th></tr></thead>
+        <tbody id="nameDetailBody"></tbody>
+      </table>
+    </div>
+  </div>
+
   <div class="card" id="momCard">
     <h2>
-      <span class="idx">05</span> 전월대비 증감
+      <span class="idx">06</span> 전월대비 증감
+      <span class="print-title print-target-title" id="momPrintTitle">전월대비 증감</span>
       <div class="card-tools no-print">
-        <button class="tool-btn" id="monthlyReportBtn">월간 재정보고서 출력</button>
+        <button class="tool-btn" id="momPrintBtn">인쇄</button>
+        <button class="tool-btn" id="momExcelBtn">엑셀 다운로드</button>
+        <button class="tool-btn" id="churchReportBtn">월간재정보고서 출력 (증감 제외)</button>
       </div>
     </h2>
     <div class="filter-row no-print">
@@ -439,8 +510,8 @@ color:var(--ink-soft);font-size:11px;margin-top:30px;display:flex;flex-direction
       </div>
     </div>
     <div class="card-caption" id="momCaption"></div>
-    <div class="mom-grid no-print" id="momGrid"></div>
-    <div id="momEmpty" class="empty no-print" style="display:none;">비교할 거래 내역이 없습니다.</div>
+    <div class="mom-grid" id="momGrid"></div>
+    <div id="momEmpty" class="empty" style="display:none;">비교할 거래 내역이 없습니다.</div>
   </div>
 
   <div class="card" id="reportPrintArea" style="display:none;"></div>
@@ -493,6 +564,7 @@ document.getElementById('appTitle').addEventListener('click', ()=> window.locati
 document.getElementById('appTitle').addEventListener('keydown', (e)=>{
   if(e.key === 'Enter' || e.key === ' '){ e.preventDefault(); window.location.reload(); }
 });
+document.getElementById('f-date').value = new Date().toISOString().slice(0,10);
 document.getElementById('momMonth').value = new Date().toISOString().slice(0,7);
 
 function won(n){
@@ -1576,6 +1648,7 @@ function saveLocalCache(){
 }
 
 async function loadData(){
+  // 우선 로컬 캐시로 즉시 화면을 채운 뒤, 서버 데이터가 오면 교체한다.
   transactions = loadLocalCache();
   render();
   updateStorageStatus('로컬 캐시 표시 중 · 서버 확인 중...');
@@ -1609,6 +1682,7 @@ async function loadData(){
 }
 
 async function saveData(){
+  // 로컬 캐시는 항상 즉시 저장(오프라인 대비)
   saveLocalCache();
 
   const pw = getPasscode();
@@ -1640,12 +1714,83 @@ async function saveData(){
   }
 }
 
+let lastEntryMode = 'bulk';
+
+function resetFormToAddMode(){
+  editingId = null;
+  document.getElementById('entryForm').reset();
+  document.getElementById('f-date').value = new Date().toISOString().slice(0,10);
+  document.getElementById('submitBtn').textContent = '추가';
+  document.getElementById('cancelEditBtn').style.display = 'none';
+  document.getElementById('editBanner').style.display = 'none';
+
+  document.getElementById('singleEntryWrap').style.display = 'none';
+  document.querySelectorAll('#entryModeTabs button').forEach(b=>{
+    b.classList.toggle('active', b.dataset.entrymode === lastEntryMode);
+  });
+  document.getElementById('bulkEntryWrap').style.display = lastEntryMode === 'bulk' ? 'block' : 'none';
+  document.getElementById('autoEntryWrap').style.display = lastEntryMode === 'auto' ? 'block' : 'none';
+}
+
+function enterEditMode(tx){
+  editingId = tx.id;
+  document.getElementById('f-date').value = tx.date;
+  document.getElementById('f-type').value = tx.type;
+  document.getElementById('f-account').value = tx.account;
+  document.getElementById('f-memo').value = tx.memo;
+  document.getElementById('f-amount').value = tx.amount;
+  document.getElementById('submitBtn').textContent = '수정 완료';
+  document.getElementById('cancelEditBtn').style.display = 'inline-block';
+  document.getElementById('editBanner').style.display = 'block';
+
+  document.querySelectorAll('#entryModeTabs button').forEach(b=>b.classList.remove('active'));
+  document.getElementById('bulkEntryWrap').style.display = 'none';
+  document.getElementById('autoEntryWrap').style.display = 'none';
+  document.getElementById('singleEntryWrap').style.display = 'block';
+
+  document.getElementById('entryForm').scrollIntoView({behavior:'smooth', block:'center'});
+}
+
+document.getElementById('cancelEditBtn').addEventListener('click', resetFormToAddMode);
+
+document.getElementById('entryForm').addEventListener('submit', async (e)=>{
+  e.preventDefault();
+  const date = document.getElementById('f-date').value;
+  const type = document.getElementById('f-type').value;
+  const account = document.getElementById('f-account').value.trim();
+  const memo = document.getElementById('f-memo').value.trim();
+  const amountRaw = document.getElementById('f-amount').value;
+  const amount = parseFloat(amountRaw);
+
+  if(!date || !account || !memo || isNaN(amount) || amount === 0) return;
+  if(!Number.isInteger(amount)){
+    alert('금액은 원 단위 정수로 입력해 주세요 (소수점 불가).');
+    return;
+  }
+
+  if(editingId){
+    const idx = transactions.findIndex(t => t.id === editingId);
+    if(idx !== -1){
+      transactions[idx] = {...transactions[idx], date, type, account, memo, amount};
+    }
+  } else {
+    transactions.push({
+      id: 'tx_' + Date.now() + '_' + Math.random().toString(36).slice(2,7),
+      date, type, account, memo, amount
+    });
+  }
+  await saveData();
+  resetFormToAddMode();
+  render();
+});
+
 async function deleteTx(id){
   const tx = transactions.find(t => t.id === id);
   if(!tx) return;
   const label = `${tx.date} · ${tx.memo} · ${won(tx.amount)}`;
   if(!confirm(`이 거래를 삭제할까요?\n\n${label}\n\n삭제하면 되돌릴 수 없습니다.`)) return;
   transactions = transactions.filter(t => t.id !== id);
+  if(editingId === id) resetFormToAddMode();
   await saveData();
   render();
 }
@@ -1739,7 +1884,7 @@ function renderLedger(){
       <td class="income">${inc ? won(inc) : ''}</td>
       <td class="expense">${exp ? won(exp) : ''}</td>
       <td class="${balance>=0?'balance-pos':'balance-neg'}">${won(balance)}</td>
-      <td class="row-actions"><button class="del-btn" data-id="${tx.id}">삭제</button></td>
+      <td class="row-actions"><button class="edit-btn" data-id="${tx.id}">수정</button><button class="del-btn" data-id="${tx.id}">삭제</button></td>
     `;
     body.appendChild(tr);
   });
@@ -1759,6 +1904,12 @@ function renderLedger(){
   body.querySelectorAll('.del-btn').forEach(btn=>{
     btn.addEventListener('click', ()=> deleteTx(btn.dataset.id));
   });
+  body.querySelectorAll('.edit-btn').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      const tx = transactions.find(t => t.id === btn.dataset.id);
+      if(tx) enterEditMode(tx);
+    });
+  });
 }
 
 function escapeHtml(s){
@@ -1767,6 +1918,10 @@ function escapeHtml(s){
   return d.innerHTML;
 }
 
+/* 이월금(전월/전년 이전 누적 잔액) 계산
+   - 연도 필터가 걸려 있으면: (연도+월 필터) 해당 월 1일 이전, 또는 (연도만) 해당 연도 1월 1일 이전까지의 누적 잔액
+   - 연도 없이 월만 필터된 경우: 필터된 목록의 최초 거래일 이전까지의 누적 잔액 (거래가 있을 때만)
+   - 통장 필터가 걸려 있으면 해당 통장 거래만으로 계산 */
 function computeOpeningBalance(list){
   let boundary = null;
   let label = '';
@@ -1945,7 +2100,145 @@ function renderGroupTable(field, bodyId, emptyId){
 
 function renderAccountSummary(){ renderGroupTable('account','accountBody','accountEmpty'); }
 
-/* ---------- 05 전월대비 증감 (화면 전용, 인쇄 보고서에는 포함하지 않음) ---------- */
+/* ---------- 05. 이름별 연도별 집계 ---------- */
+function populateMemoOptions(){
+  const names = [...new Set(transactions.map(t => t.memo).filter(Boolean))].sort();
+  document.getElementById('memoOptions').innerHTML = names.map(n => `<option value="${escapeHtml(n)}">`).join('');
+}
+
+function getNameSearchMatches(){
+  const q = document.getElementById('nameSearchInput').value.trim();
+  if(!q) return {q, matches: []};
+  return {q, matches: sortedTx().filter(t => (t.memo || '').includes(q))};
+}
+
+function renderNameSearch(){
+  const yearBody = document.getElementById('nameYearBody');
+  const detailBody = document.getElementById('nameDetailBody');
+  const detailWrap = document.getElementById('nameDetailWrap');
+  const empty = document.getElementById('nameYearEmpty');
+  const caption = document.getElementById('nameSearchCaption');
+  const printTitle = document.getElementById('nameSearchPrintTitle');
+  yearBody.innerHTML = '';
+  detailBody.innerHTML = '';
+
+  const {q, matches} = getNameSearchMatches();
+
+  if(!q){
+    empty.textContent = '이름을 입력하면 연도별 집계가 표시됩니다.';
+    empty.style.display = 'block';
+    detailWrap.style.display = 'none';
+    caption.textContent = '';
+    printTitle.textContent = '';
+    return;
+  }
+
+  if(matches.length === 0){
+    empty.textContent = `"${q}"(으)로 검색된 거래가 없습니다.`;
+    empty.style.display = 'block';
+    detailWrap.style.display = 'none';
+    caption.textContent = '';
+    printTitle.textContent = `"${q}" 검색 결과`;
+    return;
+  }
+  empty.style.display = 'none';
+  detailWrap.style.display = 'block';
+
+  const yearGroups = {};
+  matches.forEach(t=>{
+    const y = t.date.slice(0,4);
+    if(!yearGroups[y]) yearGroups[y] = {income:0, expense:0, count:0};
+    yearGroups[y][t.type] += t.amount;
+    yearGroups[y].count += 1;
+  });
+
+  const years = Object.keys(yearGroups).sort();
+  let grandIncome = 0, grandExpense = 0, grandCount = 0;
+  years.forEach(y=>{
+    const g = yearGroups[y];
+    const net = g.income - g.expense;
+    grandIncome += g.income; grandExpense += g.expense; grandCount += g.count;
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td>${y}년</td>
+      <td class="income">${g.income ? won(g.income) : '-'}</td>
+      <td class="expense">${g.expense ? won(g.expense) : '-'}</td>
+      <td class="${net>=0?'balance-pos':'balance-neg'}">${won(net)}</td>
+      <td>${g.count}건</td>
+    `;
+    yearBody.appendChild(tr);
+  });
+
+  const grandNet = grandIncome - grandExpense;
+  const totalRow = document.createElement('tr');
+  totalRow.className = 'total-row';
+  totalRow.innerHTML = `
+    <td>합계</td>
+    <td class="income">${won(grandIncome)}</td>
+    <td class="expense">${won(grandExpense)}</td>
+    <td class="${grandNet>=0?'balance-pos':'balance-neg'}">${won(grandNet)}</td>
+    <td>${grandCount}건</td>
+  `;
+  yearBody.appendChild(totalRow);
+
+  matches.forEach(tx=>{
+    const inc = tx.type === 'income' ? tx.amount : 0;
+    const exp = tx.type === 'expense' ? tx.amount : 0;
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td>${tx.date}</td>
+      <td class="memo">${escapeHtml(tx.account || '')}</td>
+      <td class="memo">${escapeHtml(tx.memo)}</td>
+      <td class="income">${inc ? won(inc) : ''}</td>
+      <td class="expense">${exp ? won(exp) : ''}</td>
+    `;
+    detailBody.appendChild(tr);
+  });
+
+  caption.textContent = `"${q}" 검색 결과 · 총 ${matches.length}건`;
+  printTitle.textContent = `"${q}" 이름별 연도별 집계`;
+}
+
+function downloadNameSearchExcel(){
+  const {q, matches} = getNameSearchMatches();
+  if(!q){ alert('검색할 이름을 입력해 주세요.'); return; }
+  if(matches.length === 0){ alert('검색된 거래가 없습니다.'); return; }
+
+  const yearGroups = {};
+  matches.forEach(t=>{
+    const y = t.date.slice(0,4);
+    if(!yearGroups[y]) yearGroups[y] = {income:0, expense:0};
+    yearGroups[y][t.type] += t.amount;
+  });
+  const years = Object.keys(yearGroups).sort();
+  const summaryRows = [['연도', '수입 합계', '지출 합계', '소계(순액)']];
+  let gi = 0, ge = 0;
+  years.forEach(y=>{
+    const g = yearGroups[y];
+    summaryRows.push([`${y}년`, g.income, g.expense, g.income - g.expense]);
+    gi += g.income; ge += g.expense;
+  });
+  summaryRows.push(['합계', gi, ge, gi - ge]);
+
+  const detailRows = [['거래일', '통장', '내용', '수입', '지출']];
+  matches.forEach(tx=>{
+    const inc = tx.type === 'income' ? tx.amount : 0;
+    const exp = tx.type === 'expense' ? tx.amount : 0;
+    detailRows.push([tx.date, tx.account || '', tx.memo, inc || 0, exp || 0]);
+  });
+
+  const wb = XLSX.utils.book_new();
+  appendSheet(wb, summaryRows, SUMMARY4_COL_WIDTHS, '연도별집계');
+  appendSheet(wb, detailRows, LEDGER_COL_WIDTHS, '거래상세');
+  XLSX.writeFile(wb, excelFilename(`${q}_이름별집계`));
+}
+
+document.getElementById('nameSearchInput').addEventListener('input', renderNameSearch);
+document.getElementById('nameSearchPrintBtn').addEventListener('click', ()=> printSection('nameSearchCard'));
+document.getElementById('nameSearchExcelBtn').addEventListener('click', downloadNameSearchExcel);
+
+
+/* ---------- 05 전월대비 증감 ---------- */
 function sumMonth(monthStr){
   let income = 0, expense = 0;
   transactions.forEach(t=>{
@@ -1994,7 +2287,7 @@ function renderMoM(){
   const empty = document.getElementById('momEmpty');
   const caption = document.getElementById('momCaption');
 
-  if(!monthStr){ caption.textContent = ''; grid.innerHTML = ''; empty.style.display = 'block'; return; }
+  if(!monthStr){ grid.innerHTML = ''; empty.style.display = 'block'; return; }
 
   const prevStr = prevMonthStr(monthStr);
   const cur = sumMonth(monthStr);
@@ -2003,6 +2296,7 @@ function renderMoM(){
   const [cy, cm] = monthStr.split('-');
   const [py, pm] = prevStr.split('-');
   caption.textContent = `${cy}년 ${parseInt(cm,10)}월 vs ${py}년 ${parseInt(pm,10)}월`;
+  document.getElementById('momPrintTitle').textContent = `전월대비 증감 - ${cy}년 ${parseInt(cm,10)}월 vs ${py}년 ${parseInt(pm,10)}월`;
 
   if(cur.income === 0 && cur.expense === 0 && prev.income === 0 && prev.expense === 0){
     grid.innerHTML = '';
@@ -2035,10 +2329,12 @@ document.getElementById('yearSelect').addEventListener('change', (e)=>{
 function render(){
   populateDatalists();
   populateFilters();
+  populateMemoOptions();
   renderLedger();
   populateYearSelect();
   renderAgg();
   renderAccountSummary();
+  renderNameSearch();
   renderMoM();
 }
 
@@ -2057,9 +2353,10 @@ window.addEventListener('afterprint', ()=>{
 document.getElementById('ledgerPrintBtn').addEventListener('click', ()=> printSection('ledgerCard'));
 document.getElementById('aggPrintBtn').addEventListener('click', ()=> printSection('aggCard'));
 document.getElementById('accountPrintBtn').addEventListener('click', ()=> printSection('accountCard'));
+document.getElementById('momPrintBtn').addEventListener('click', ()=> printSection('momCard'));
 
-/* ---------- 월간 재정보고서 (통합 인쇄, 증감 비교 제외) ---------- */
-function buildMonthlyReportHTML(monthStr){
+/* ---------- 월간 재정보고서 (통합 인쇄) ---------- */
+function buildMonthlyReportHTML(monthStr, includeMoM = true){
   const [y, m] = monthStr.split('-');
   const monthLabel = `${y}년 ${parseInt(m,10)}월`;
 
@@ -2080,6 +2377,20 @@ function buildMonthlyReportHTML(monthStr){
   const {rows: accRows} = computeGroupSummary('account');
   const accRowsHtml = accRows.map(r=>`<tr><td colspan="2">${escapeHtml(r.label)}</td><td class="income">${r.income?won(r.income):'-'}</td><td class="expense">${r.expense?won(r.expense):'-'}</td><td class="${r.net>=0?'balance-pos':'balance-neg'}">${won(r.net)}</td></tr>`).join('');
 
+  let momSectionHtml = '';
+  if(includeMoM){
+    const prevStr = prevMonthStr(monthStr);
+    const cur = sumMonth(monthStr);
+    const prev = sumMonth(prevStr);
+    const momHtml = momItem('수입', cur.income, prev.income, true)
+      + momItem('지출', cur.expense, prev.expense, false)
+      + momItem('총합계(순액)', cur.net, prev.net, true, 'net');
+    momSectionHtml = `
+    <h3 style="font-family:'Noto Serif KR',serif;font-size:15px;margin:26px 0 8px;">3. 전월대비 증감</h3>
+    <div class="mom-grid">${momHtml}</div>
+    `;
+  }
+
   const today = new Date().toLocaleDateString('ko-KR', {year:'numeric',month:'long',day:'numeric'});
 
   return `
@@ -2096,6 +2407,7 @@ function buildMonthlyReportHTML(monthStr){
     <h3 style="font-family:'Noto Serif KR',serif;font-size:15px;margin:26px 0 8px;">2. 통장별 잔액 (전체 기간 누적)</h3>
     <table><thead><tr><th style="text-align:left;">통장</th><th></th><th>수입 합계</th><th>지출 합계</th><th>잔액</th></tr></thead>
     <tbody>${accRowsHtml}</tbody></table>
+    ${momSectionHtml}
     <div style="margin-top:60px;font-size:13px;text-align:right;">작성일: ${today}</div>
     <div style="margin-top:26px;display:flex;justify-content:flex-end;gap:50px;font-size:13px;">
       <div>담당&nbsp;&nbsp;: ______________ (인)</div>
@@ -2104,18 +2416,18 @@ function buildMonthlyReportHTML(monthStr){
   `;
 }
 
-function printMonthlyReport(){
+function printMonthlyReport(includeMoM = true){
   const monthStr = document.getElementById('momMonth').value;
   if(!monthStr){ alert('기준월을 먼저 선택해 주세요.'); return; }
   const area = document.getElementById('reportPrintArea');
-  area.innerHTML = buildMonthlyReportHTML(monthStr);
+  area.innerHTML = buildMonthlyReportHTML(monthStr, includeMoM);
   document.querySelectorAll('.card').forEach(c=>c.classList.remove('print-target'));
   area.classList.add('print-target');
   document.body.classList.add('printing');
   window.print();
 }
 
-document.getElementById('monthlyReportBtn').addEventListener('click', ()=> printMonthlyReport());
+document.getElementById('churchReportBtn').addEventListener('click', ()=> printMonthlyReport(false));
 
 /* ---------- 엑셀 다운로드 ---------- */
 function excelFilename(prefix){
@@ -2189,6 +2501,29 @@ function downloadGroupExcel(field, sheetName, prefix){
   writeSingleSheetWorkbook(summaryToSheetRows(headerLabel, rows, grandIncome, grandExpense), SUMMARY4_COL_WIDTHS, sheetName, prefix);
 }
 
+function downloadMomExcel(){
+  const monthStr = document.getElementById('momMonth').value;
+  if(!monthStr){ alert('기준월을 선택해 주세요.'); return; }
+  const prevStr = prevMonthStr(monthStr);
+  const cur = sumMonth(monthStr);
+  const prev = sumMonth(prevStr);
+  if(cur.income === 0 && cur.expense === 0 && prev.income === 0 && prev.expense === 0){
+    alert('내보낼 내역이 없습니다.'); return;
+  }
+  function momRow(label, c, p){
+    const diff = c - p;
+    const rate = p === 0 ? '' : Number(((diff / Math.abs(p)) * 100).toFixed(1));
+    return [label, c, p, diff, rate];
+  }
+  const sheetRows = [
+    ['구분','당월','전월','증감액','증감률(%)'],
+    momRow('수입', cur.income, prev.income),
+    momRow('지출', cur.expense, prev.expense),
+    momRow('총합계(순액)', cur.net, prev.net)
+  ];
+  writeSingleSheetWorkbook(sheetRows, [{wch:16},{wch:14},{wch:14},{wch:14},{wch:12}], '전월대비증감', `${monthStr}_전월대비증감`);
+}
+
 function yearlySummaryRows(){
   const years = getYears().sort((a,b)=>a-b);
   const groups = {};
@@ -2220,6 +2555,7 @@ function downloadFullExcelBackup(){
 document.getElementById('ledgerExcelBtn').addEventListener('click', downloadLedgerExcel);
 document.getElementById('aggExcelBtn').addEventListener('click', downloadAggExcel);
 document.getElementById('accountExcelBtn').addEventListener('click', ()=> downloadGroupExcel('account','통장별잔액','통장별잔액'));
+document.getElementById('momExcelBtn').addEventListener('click', downloadMomExcel);
 document.getElementById('exportFullExcelBtn').addEventListener('click', downloadFullExcelBackup);
 
 /* ---------- 백업 / 복원 (JSON) ---------- */
@@ -2283,6 +2619,7 @@ document.getElementById('importJsonInput').addEventListener('change', async (e)=
     }
 
     await saveData();
+    resetFormToAddMode();
     render();
     alert('백업을 불러왔습니다.');
   }catch(err){
@@ -2299,8 +2636,11 @@ document.getElementById('bulk-month').value = new Date().toISOString().slice(0,7
 document.getElementById('entryModeTabs').addEventListener('click', (e)=>{
   if(e.target.tagName !== 'BUTTON') return;
   const mode = e.target.dataset.entrymode;
+  lastEntryMode = mode;
+  if(editingId) resetFormToAddMode();
   document.querySelectorAll('#entryModeTabs button').forEach(b=>b.classList.remove('active'));
   e.target.classList.add('active');
+  document.getElementById('singleEntryWrap').style.display = 'none';
   document.getElementById('bulkEntryWrap').style.display = mode === 'bulk' ? 'block' : 'none';
   document.getElementById('autoEntryWrap').style.display = mode === 'auto' ? 'block' : 'none';
 });
@@ -2643,7 +2983,9 @@ document.getElementById('bulkSaveBtn').addEventListener('click', async ()=>{
         let colMap = { date: -1, memo: -1, income: -1, expense: -1, amount: -1, type: -1 };
 
         const dateKeys = ['거래일', '일자', '거래일자', '날짜', 'date', '일시'];
+        // 보내는이/받는이(입금자·출금자·거래상대방) 이름 컬럼을 최우선으로 사용
         const nameKeys = ['보낸분', '받는분', '보낸사람', '받은사람', '보내는이', '받는이', '입금자명', '출금자명', '거래상대방', '상대계좌예금주', '예금주', '송금인', '수취인', '입금자', '출금자'];
+        // 이름 컬럼이 없을 때만 사용하는 보조(적요/내용) 컬럼
         const memoKeys = ['적요', '내용', '거래내용', '취급점', '기증자', '비고', '상호', '기름', '적요/내용'];
         const incomeKeys = ['입금원금', '입금', '입금액', '수입', '수입액', '받은금액'];
         const expenseKeys = ['출금원금', '출금', '출금액', '지출', '지출액', '보낸금액'];
@@ -2671,6 +3013,7 @@ document.getElementById('bulkSaveBtn').addEventListener('click', async ()=>{
 
           if(dCol !== -1 && (iCol !== -1 || eCol !== -1 || aCol !== -1)){
             headerIdx = r;
+            // 보내는이/받는이 이름 컬럼이 있으면 그것을, 없으면 적요/내용 컬럼을 사용
             colMap = { date: dCol, memo: (nCol !== -1 ? nCol : mCol), income: iCol, expense: eCol, amount: aCol, type: tCol };
             break;
           }
@@ -2833,6 +3176,7 @@ document.getElementById('bulkSaveBtn').addEventListener('click', async ()=>{
       memo = memo.replace(/^[\s\-·.,;:]+|[\s\-·.,;:]+$/g, '').trim();
       if(!memo) memo = '거래내역';
 
+      // 적요 전체 문구 대신, 남은 텍스트에서 보내는이/받는이로 보이는 한글 이름(2~4자)을 우선 채택
       const nameStopwords = ['입금','출금','이체','결제','인출','카드','수수료','이용료','납부','지급','구매','배송','주문',
         '이자','급여','수입','환급','보조금','배당','지원금','감사헌금','선교헌금','헌금','봉헌','거래내역','통장','계좌',
         '잔액','합계','현금','자동이체','타행','농협','국민','신한','우리','하나','기업','카카오뱅크','토스뱅크',
@@ -2935,6 +3279,7 @@ document.getElementById('bulkSaveBtn').addEventListener('click', async ()=>{
 })();
 
 loadData();
+resetFormToAddMode();
 </script>
 </body>
 </html>
