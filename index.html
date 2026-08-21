@@ -512,8 +512,6 @@ color:var(--ink-soft);font-size:12.5px;margin-top:30px;display:flex;flex-directi
       <span class="idx">06</span> 전월대비 증감
       <span class="print-title print-target-title" id="momPrintTitle">전월대비 증감</span>
       <div class="card-tools no-print">
-        <button class="tool-btn" id="momPrintBtn">인쇄</button>
-        <button class="tool-btn" id="momExcelBtn">엑셀 다운로드</button>
         <button class="tool-btn" id="churchReportBtn">월간재정보고서 출력 (증감 제외)</button>
       </div>
     </h2>
@@ -2419,7 +2417,6 @@ window.addEventListener('afterprint', ()=>{
 document.getElementById('ledgerPrintBtn').addEventListener('click', ()=> printSection('ledgerCard'));
 document.getElementById('aggPrintBtn').addEventListener('click', ()=> printSection('aggCard'));
 document.getElementById('accountPrintBtn').addEventListener('click', ()=> printSection('accountCard'));
-document.getElementById('momPrintBtn').addEventListener('click', ()=> printSection('momCard'));
 
 /* ---------- 월간 재정보고서 (통합 인쇄) ---------- */
 function buildMonthlyReportHTML(monthStr, includeMoM = true){
@@ -2577,29 +2574,6 @@ function downloadGroupExcel(field, sheetName, prefix, year){
   writeSingleSheetWorkbook(summaryToSheetRows(headerLabel, rows, grandIncome, grandExpense), SUMMARY4_COL_WIDTHS, sheetName, finalPrefix);
 }
 
-function downloadMomExcel(){
-  const monthStr = document.getElementById('momMonth').value;
-  if(!monthStr){ alert('기준월을 선택해 주세요.'); return; }
-  const prevStr = prevMonthStr(monthStr);
-  const cur = sumMonth(monthStr);
-  const prev = sumMonth(prevStr);
-  if(cur.income === 0 && cur.expense === 0 && prev.income === 0 && prev.expense === 0){
-    alert('내보낼 내역이 없습니다.'); return;
-  }
-  function momRow(label, c, p){
-    const diff = c - p;
-    const rate = p === 0 ? '' : Number(((diff / Math.abs(p)) * 100).toFixed(1));
-    return [label, c, p, diff, rate];
-  }
-  const sheetRows = [
-    ['구분','당월','전월','증감액','증감률(%)'],
-    momRow('수입', cur.income, prev.income),
-    momRow('지출', cur.expense, prev.expense),
-    momRow('총합계(순액)', cur.net, prev.net)
-  ];
-  writeSingleSheetWorkbook(sheetRows, [{wch:16},{wch:14},{wch:14},{wch:14},{wch:12}], '전월대비증감', `${monthStr}_전월대비증감`);
-}
-
 function yearlySummaryRows(){
   const years = getYears().sort((a,b)=>a-b);
   const groups = {};
@@ -2632,7 +2606,6 @@ document.getElementById('ledgerExcelBtn').addEventListener('click', downloadLedg
 document.getElementById('aggExcelBtn').addEventListener('click', downloadAggExcel);
 document.getElementById('accountExcelBtn').addEventListener('click', ()=> downloadGroupExcel('account','통장별잔액','통장별잔액', accountYear));
 document.getElementById('accountYear').addEventListener('change', (e)=>{ accountYear = e.target.value; renderAccountSummary(); });
-document.getElementById('momExcelBtn').addEventListener('click', downloadMomExcel);
 document.getElementById('exportFullExcelBtn').addEventListener('click', downloadFullExcelBackup);
 
 /* ---------- 백업 / 복원 (JSON) ---------- */
