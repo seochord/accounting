@@ -446,13 +446,19 @@ color:var(--ink-soft);font-size:12.5px;margin-top:30px;display:flex;flex-directi
   <div class="card" id="accountCard">
     <h2>
       <span class="idx">04</span> 통장별 잔액
-      <span class="print-title print-target-title">통장별 잔액 (전체 기간 누적)</span>
+      <span class="print-title print-target-title" id="accountPrintTitle">통장별 잔액 (전체 기간 누적)</span>
       <div class="card-tools no-print">
         <button class="tool-btn" id="accountPrintBtn">인쇄</button>
         <button class="tool-btn" id="accountExcelBtn">엑셀 다운로드</button>
       </div>
     </h2>
-    <div class="card-caption no-print">연도 구분 없이 전체 기간 누적 기준입니다. 실제 통장 잔고 확인용.</div>
+    <div class="filter-row no-print">
+      <div class="f-item">
+        <label>연도</label>
+        <select id="accountYear"><option value="">전체 (누적)</option></select>
+      </div>
+    </div>
+    <div class="card-caption no-print" id="accountCaption">연도 구분 없이 전체 기간 누적 기준입니다. 실제 통장 잔고 확인용.</div>
     <div class="table-scroll">
       <table>
         <thead><tr><th>통장</th><th></th><th>수입 합계</th><th>지출 합계</th><th>잔액</th></tr></thead>
@@ -476,6 +482,10 @@ color:var(--ink-soft);font-size:12.5px;margin-top:30px;display:flex;flex-directi
       <div class="f-item">
         <label>이름 검색</label>
         <input type="text" id="nameSearchInput" list="memoOptions" placeholder="예: 홍길동">
+      </div>
+      <div class="f-item">
+        <label>연도</label>
+        <select id="nameSearchYear"><option value="">전체</option></select>
       </div>
     </div>
     <datalist id="memoOptions"></datalist>
@@ -557,6 +567,8 @@ async function ensurePasscode(){
 let currentMode = 'month';
 let currentYear = new Date().getFullYear();
 let aggAccount = '';
+let accountYear = '';
+let nameSearchYear = '';
 let filterAccount = '';
 // 거래 내역 카드는 항상 오늘 날짜 기준 연/월로 시작한다
 let filterYear = String(new Date().getFullYear());
@@ -1980,6 +1992,20 @@ function populateYearSelect(){
   accSel.innerHTML = '<option value="">전체</option>' + getAccountList().map(a=>`<option value="${escapeHtml(a)}">${escapeHtml(a)}</option>`).join('');
   accSel.value = accPrev;
   aggAccount = accSel.value;
+
+  const yearOptionsHtml = years.map(y => `<option value="${y}">${y}년</option>`).join('');
+
+  const accountYearSel = document.getElementById('accountYear');
+  const accountYearPrev = accountYear;
+  accountYearSel.innerHTML = '<option value="">전체 (누적)</option>' + yearOptionsHtml;
+  accountYearSel.value = years.includes(parseInt(accountYearPrev,10)) ? accountYearPrev : '';
+  accountYear = accountYearSel.value;
+
+  const nameYearSel = document.getElementById('nameSearchYear');
+  const nameYearPrev = nameSearchYear;
+  nameYearSel.innerHTML = '<option value="">전체</option>' + yearOptionsHtml;
+  nameYearSel.value = years.includes(parseInt(nameYearPrev,10)) ? nameYearPrev : '';
+  nameSearchYear = nameYearSel.value;
 }
 
 function quarterOf(month){ return Math.ceil(month/3); }
@@ -2069,28 +2095,31 @@ function renderAgg(){
   body.appendChild(totalRow);
 }
 
-function computeGroupSummary(field){
+function computeGroupSummary(field, year){
   const list = getAccountList();
   const groups = {};
-  list.forEach(k => groups[k] = {income:0, expense:0});
+  list.forEach(k => groups[k] = {income:0, expense:0, balance:0});
   transactions.forEach(t=>{
     const key = t[field];
     if(!key) return;
-    if(!groups[key]) groups[key] = {income:0, expense:0};
-    groups[key][t.type] += t.amount;
+    if(!groups[key]) groups[key] = {income:0, expense:0, balance:0};
+    const y = t.date.slice(0,4);
+    const delta = t.type === 'income' ? t.amount : -t.amount;
+    if(!year || y <= String(year)) groups[key].balance += delta;
+    if(!year || y === String(year)) groups[key][t.type] += t.amount;
   });
   const rows = Object.keys(groups).map(k=>({
-    label:k, income:groups[k].income, expense:groups[k].expense, net:groups[k].income-groups[k].expense
+    label:k, income:groups[k].income, expense:groups[k].expense, net:groups[k].balance
   }));
   const grandIncome = rows.reduce((s,r)=>s+r.income,0);
   const grandExpense = rows.reduce((s,r)=>s+r.expense,0);
   return {rows, grandIncome, grandExpense, isEmpty: transactions.length === 0};
 }
 
-function renderGroupTable(field, bodyId, emptyId){
+function renderGroupTable(field, bodyId, emptyId, year){
   const body = document.getElementById(bodyId);
   const empty = document.getElementById(emptyId);
-  const {rows, grandIncome, grandExpense, isEmpty} = computeGroupSummary(field);
+  const {rows, grandIncome, grandExpense, isEmpty} = computeGroupSummary(field, year);
   body.innerHTML = '';
   if(isEmpty){ empty.style.display = 'block'; return; }
   empty.style.display = 'none';
@@ -2118,7 +2147,15 @@ function renderGroupTable(field, bodyId, emptyId){
   body.appendChild(totalRow);
 }
 
-function renderAccountSummary(){ renderGroupTable('account','accountBody','accountEmpty'); }
+function renderAccountSummary(){
+  renderGroupTable('account','accountBody','accountEmpty', accountYear);
+  const title = accountYear ? `통장별 잔액 (${accountYear}년 말 기준 누적)` : '통장별 잔액 (전체 기간 누적)';
+  const caption = accountYear
+    ? `${accountYear}년까지의 누적 잔액입니다. 수입·지출 합계는 ${accountYear}년 한 해 기준입니다.`
+    : '연도 구분 없이 전체 기간 누적 기준입니다. 실제 통장 잔고 확인용.';
+  document.getElementById('accountPrintTitle').textContent = title;
+  document.getElementById('accountCaption').textContent = caption;
+}
 
 /* ---------- 05. 이름별 연도별 집계 ---------- */
 function populateMemoOptions(){
@@ -2129,7 +2166,9 @@ function populateMemoOptions(){
 function getNameSearchMatches(){
   const q = document.getElementById('nameSearchInput').value.trim();
   if(!q) return {q, matches: []};
-  return {q, matches: sortedTx().filter(t => (t.memo || '').includes(q))};
+  let matches = sortedTx().filter(t => (t.memo || '').includes(q));
+  if(nameSearchYear) matches = matches.filter(t => t.date.slice(0,4) === String(nameSearchYear));
+  return {q, matches};
 }
 
 function renderNameSearch(){
@@ -2215,8 +2254,8 @@ function renderNameSearch(){
     detailBody.appendChild(tr);
   });
 
-  caption.textContent = `"${q}" 검색 결과 · 총 ${matches.length}건`;
-  printTitle.textContent = `"${q}" 이름별 연도별 집계`;
+  caption.textContent = `"${q}" 검색 결과${nameSearchYear ? ` · ${nameSearchYear}년` : ''} · 총 ${matches.length}건`;
+  printTitle.textContent = `"${q}" 이름별 연도별 집계${nameSearchYear ? ` (${nameSearchYear}년)` : ''}`;
 }
 
 function downloadNameSearchExcel(){
@@ -2250,10 +2289,12 @@ function downloadNameSearchExcel(){
   const wb = XLSX.utils.book_new();
   appendSheet(wb, summaryRows, SUMMARY4_COL_WIDTHS, '연도별집계');
   appendSheet(wb, detailRows, LEDGER_COL_WIDTHS, '거래상세');
-  XLSX.writeFile(wb, excelFilename(`${q}_이름별집계`));
+  const suffix = nameSearchYear ? `_${nameSearchYear}년` : '';
+  XLSX.writeFile(wb, excelFilename(`${q}_이름별집계${suffix}`));
 }
 
 document.getElementById('nameSearchInput').addEventListener('input', renderNameSearch);
+document.getElementById('nameSearchYear').addEventListener('change', (e)=>{ nameSearchYear = e.target.value; renderNameSearch(); });
 document.getElementById('nameSearchPrintBtn').addEventListener('click', ()=> printSection('nameSearchCard'));
 document.getElementById('nameSearchExcelBtn').addEventListener('click', downloadNameSearchExcel);
 
@@ -2528,11 +2569,12 @@ function downloadAggExcel(){
   writeSingleSheetWorkbook(summaryToSheetRows(colLabel, rows, grandIncome, grandExpense), SUMMARY4_COL_WIDTHS, sheetName, prefix);
 }
 
-function downloadGroupExcel(field, sheetName, prefix){
-  const {rows, grandIncome, grandExpense, isEmpty} = computeGroupSummary(field);
+function downloadGroupExcel(field, sheetName, prefix, year){
+  const {rows, grandIncome, grandExpense, isEmpty} = computeGroupSummary(field, year);
   if(isEmpty){ alert('내보낼 내역이 없습니다.'); return; }
   const headerLabel = field === 'account' ? '통장' : '명목';
-  writeSingleSheetWorkbook(summaryToSheetRows(headerLabel, rows, grandIncome, grandExpense), SUMMARY4_COL_WIDTHS, sheetName, prefix);
+  const finalPrefix = year ? `${prefix}_${year}년` : prefix;
+  writeSingleSheetWorkbook(summaryToSheetRows(headerLabel, rows, grandIncome, grandExpense), SUMMARY4_COL_WIDTHS, sheetName, finalPrefix);
 }
 
 function downloadMomExcel(){
@@ -2588,7 +2630,8 @@ function downloadFullExcelBackup(){
 
 document.getElementById('ledgerExcelBtn').addEventListener('click', downloadLedgerExcel);
 document.getElementById('aggExcelBtn').addEventListener('click', downloadAggExcel);
-document.getElementById('accountExcelBtn').addEventListener('click', ()=> downloadGroupExcel('account','통장별잔액','통장별잔액'));
+document.getElementById('accountExcelBtn').addEventListener('click', ()=> downloadGroupExcel('account','통장별잔액','통장별잔액', accountYear));
+document.getElementById('accountYear').addEventListener('change', (e)=>{ accountYear = e.target.value; renderAccountSummary(); });
 document.getElementById('momExcelBtn').addEventListener('click', downloadMomExcel);
 document.getElementById('exportFullExcelBtn').addEventListener('click', downloadFullExcelBackup);
 
