@@ -493,7 +493,7 @@ color:var(--ink-soft);font-size:12.5px;margin-top:30px;display:flex;flex-directi
 
     <div class="table-scroll">
       <table>
-        <thead><tr><th style="text-align:left;">연도</th><th>수입</th><th>지출</th><th>순액</th><th>건수</th></tr></thead>
+        <thead><tr><th style="text-align:left;">연도</th><th>수입</th><th>지출</th><th>건수</th></tr></thead>
         <tbody id="nameYearBody"></tbody>
       </table>
     </div>
@@ -2213,27 +2213,23 @@ function renderNameSearch(){
   let grandIncome = 0, grandExpense = 0, grandCount = 0;
   years.forEach(y=>{
     const g = yearGroups[y];
-    const net = g.income - g.expense;
     grandIncome += g.income; grandExpense += g.expense; grandCount += g.count;
     const tr = document.createElement('tr');
     tr.innerHTML = `
       <td>${y}년</td>
       <td class="income">${g.income ? won(g.income) : '-'}</td>
       <td class="expense">${g.expense ? won(g.expense) : '-'}</td>
-      <td class="${net>=0?'balance-pos':'balance-neg'}">${won(net)}</td>
       <td>${g.count}건</td>
     `;
     yearBody.appendChild(tr);
   });
 
-  const grandNet = grandIncome - grandExpense;
   const totalRow = document.createElement('tr');
   totalRow.className = 'total-row';
   totalRow.innerHTML = `
     <td>합계</td>
     <td class="income">${won(grandIncome)}</td>
     <td class="expense">${won(grandExpense)}</td>
-    <td class="${grandNet>=0?'balance-pos':'balance-neg'}">${won(grandNet)}</td>
     <td>${grandCount}건</td>
   `;
   yearBody.appendChild(totalRow);
@@ -2264,18 +2260,19 @@ function downloadNameSearchExcel(){
   const yearGroups = {};
   matches.forEach(t=>{
     const y = t.date.slice(0,4);
-    if(!yearGroups[y]) yearGroups[y] = {income:0, expense:0};
+    if(!yearGroups[y]) yearGroups[y] = {income:0, expense:0, count:0};
     yearGroups[y][t.type] += t.amount;
+    yearGroups[y].count += 1;
   });
   const years = Object.keys(yearGroups).sort();
-  const summaryRows = [['연도', '수입 합계', '지출 합계', '소계(순액)']];
-  let gi = 0, ge = 0;
+  const summaryRows = [['연도', '수입 합계', '지출 합계', '건수']];
+  let gi = 0, ge = 0, gc = 0;
   years.forEach(y=>{
     const g = yearGroups[y];
-    summaryRows.push([`${y}년`, g.income, g.expense, g.income - g.expense]);
-    gi += g.income; ge += g.expense;
+    summaryRows.push([`${y}년`, g.income, g.expense, g.count]);
+    gi += g.income; ge += g.expense; gc += g.count;
   });
-  summaryRows.push(['합계', gi, ge, gi - ge]);
+  summaryRows.push(['합계', gi, ge, gc]);
 
   const detailRows = [['거래일', '통장', '내용', '수입', '지출']];
   matches.forEach(tx=>{
