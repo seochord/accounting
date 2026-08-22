@@ -3072,12 +3072,12 @@ document.getElementById('bulkSaveBtn').addEventListener('click', async ()=>{
     }
 
     let headerIdx = -1;
-    let colMap = { date: -1, memo: -1, income: -1, expense: -1, amount: -1, type: -1 };
+    let colMap = { date: -1, name: -1, desc: -1, income: -1, expense: -1, amount: -1, type: -1 };
 
     const dateKeys = ['거래일', '일자', '거래일자', '날짜', 'date', '일시'];
-    // 보내는이/받는이(입금자·출금자·거래상대방) 이름 컬럼을 최우선으로 사용
+    // 보내는이/받는이(입금자·출금자·거래상대방) 이름 컬럼
     const nameKeys = ['보낸분', '받는분', '보낸사람', '받은사람', '보내는이', '받는이', '입금자명', '출금자명', '거래상대방', '상대계좌예금주', '예금주', '송금인', '수취인', '입금자', '출금자'];
-    // 이름 컬럼이 없을 때만 사용하는 보조(적요/내용) 컬럼
+    // 적요/내용 컬럼 (이름 컬럼과 별개로 함께 존재하면 "이름-내용" 형식으로 합쳐서 사용)
     const memoKeys = ['적요', '내용', '거래내용', '취급점', '기증자', '비고', '상호', '기름', '적요/내용'];
     const incomeKeys = ['입금원금', '입금', '입금액', '수입', '수입액', '받은금액'];
     const expenseKeys = ['출금원금', '출금', '출금액', '지출', '지출액', '보낸금액'];
@@ -3105,8 +3105,7 @@ document.getElementById('bulkSaveBtn').addEventListener('click', async ()=>{
 
       if(dCol !== -1 && (iCol !== -1 || eCol !== -1 || aCol !== -1)){
         headerIdx = r;
-        // 보내는이/받는이 이름 컬럼이 있으면 그것을, 없으면 적요/내용 컬럼을 사용
-        colMap = { date: dCol, memo: (nCol !== -1 ? nCol : mCol), income: iCol, expense: eCol, amount: aCol, type: tCol };
+        colMap = { date: dCol, name: nCol, desc: mCol, income: iCol, expense: eCol, amount: aCol, type: tCol };
         break;
       }
     }
@@ -3115,8 +3114,8 @@ document.getElementById('bulkSaveBtn').addEventListener('click', async ()=>{
       headerIdx = 0;
       const firstRow = rows[0] || [];
       colMap.date = 0;
-      if(firstRow.length >= 4) { colMap.memo = 1; colMap.income = 2; colMap.expense = 3; }
-      else if(firstRow.length >= 3) { colMap.memo = 1; colMap.amount = 2; }
+      if(firstRow.length >= 4) { colMap.desc = 1; colMap.income = 2; colMap.expense = 3; }
+      else if(firstRow.length >= 3) { colMap.desc = 1; colMap.amount = 2; }
     }
 
     const parsedResults = [];
@@ -3129,8 +3128,20 @@ document.getElementById('bulkSaveBtn').addEventListener('click', async ()=>{
       const date = formatExcelDate(dateRaw);
       if(!date) continue;
 
-      let memo = colMap.memo !== -1 && row[colMap.memo] ? String(row[colMap.memo]).trim() : '';
-      if(!memo) memo = '거래';
+      // 보내는이/받는이 이름과 적요(내용)가 둘 다 있으면 "이름-내용" 형식으로 합치고,
+      // 하나만 있으면 그것만 사용한다.
+      const nameVal = colMap.name !== -1 && row[colMap.name] ? String(row[colMap.name]).trim() : '';
+      const descVal = colMap.desc !== -1 && row[colMap.desc] ? String(row[colMap.desc]).trim() : '';
+      let memo;
+      if(nameVal && descVal && nameVal !== descVal){
+        memo = `${nameVal}-${descVal}`;
+      } else if(nameVal){
+        memo = nameVal;
+      } else if(descVal){
+        memo = descVal;
+      } else {
+        memo = '거래';
+      }
 
       let incomeVal = colMap.income !== -1 ? parseCleanAmount(row[colMap.income]) : 0;
       let expenseVal = colMap.expense !== -1 ? parseCleanAmount(row[colMap.expense]) : 0;
@@ -3260,14 +3271,18 @@ document.getElementById('bulkSaveBtn').addEventListener('click', async ()=>{
       memo = memo.replace(/^[\s\-·.,;:]+|[\s\-·.,;:]+$/g, '').trim();
       if(!memo) memo = '거래내역';
 
-      // 적요 전체 문구 대신, 남은 텍스트에서 보내는이/받는이로 보이는 한글 이름(2~4자)을 우선 채택
+      // 남은 텍스트에서 보내는이/받는이로 보이는 한글 이름(2~4자)을 찾아, 나머지 설명과
+      // "이름-설명" 형식으로 합친다 (이름만 있으면 이름만, 못 찾으면 원래 문구 전체 사용).
       const nameStopwords = ['입금','출금','이체','결제','인출','카드','수수료','이용료','납부','지급','구매','배송','주문',
         '이자','급여','수입','환급','보조금','배당','지원금','감사헌금','선교헌금','헌금','봉헌','거래내역','통장','계좌',
         '잔액','합계','현금','자동이체','타행','농협','국민','신한','우리','하나','기업','카카오뱅크','토스뱅크',
         '새마을금고','신협','우체국','수협','씨티','저축은행'];
       const nameCandidates = memo.match(/[가-힣]{2,4}/g) || [];
       const nameOnly = nameCandidates.find(w => !nameStopwords.some(sw => w.includes(sw)));
-      if(nameOnly) memo = nameOnly;
+      if(nameOnly){
+        const rest = memo.replace(nameOnly, '').replace(/\s+/g, ' ').trim().replace(/^[\s\-·.,;:]+|[\s\-·.,;:]+$/g, '');
+        memo = rest && rest !== nameOnly ? `${nameOnly}-${rest}` : nameOnly;
+      }
 
       let type = 'income';
       let amount = amounts[0];
