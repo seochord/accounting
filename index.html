@@ -337,7 +337,7 @@ color:var(--ink-soft);font-size:12.5px;margin-top:30px;display:flex;flex-directi
         <span class="drop-icon">📁</span>
         <div class="drop-text">통장사본 이미지(JPG/PNG), PDF, 엑셀(.xlsx/.xls/.csv) 파일을 끌어다 놓거나 클릭하세요</div>
         <div class="drop-sub">모든 은행 거래내역서 파일 및 통장 사진을 자동으로 감지하여 읽어옵니다</div>
-        <input type="file" id="autoFileInput" accept="image/*, .pdf, .xlsx, .xls, .csv, application/pdf, application/vnd.openxmlformats-officedocument.spreadsheetml.sheet, application/vnd.ms-excel">
+        <input type="file" id="autoFileInput" accept="image/*, .pdf, .xlsx, .xls, .csv, application/pdf, application/vnd.openxmlformats-officedocument.spreadsheetml.sheet, application/vnd.ms-excel, text/csv">
       </div>
       <div class="ocr-preview-wrap" id="autoPreviewWrap" style="display:none;">
         <img id="autoPreviewImg" class="ocr-preview-img" alt="미리보기" style="display:none;">
@@ -2882,7 +2882,9 @@ document.getElementById('bulkSaveBtn').addEventListener('click', async ()=>{
       await processImageOcr(file);
     } else if(type === 'application/pdf' || ext === 'pdf'){
       await processPdfFile(file);
-    } else if(ext === 'xlsx' || ext === 'xls' || ext === 'csv' || type.includes('excel') || type.includes('spreadsheet')){
+    } else if(ext === 'csv' || type === 'text/csv' || type === 'application/csv'){
+      await processCsvFile(file);
+    } else if(ext === 'xlsx' || ext === 'xls' || type.includes('excel') || type.includes('spreadsheet')){
       await processExcelFile(file);
     } else {
       autoProgressWrap.style.display = 'none';
@@ -3008,122 +3010,14 @@ document.getElementById('bulkSaveBtn').addEventListener('click', async ()=>{
     }
   }
 
-  /* 엑셀 처리 */
+  /* 엑셀 처리 (.xlsx, .xls) */
   async function processExcelFile(file){
     const reader = new FileReader();
     reader.onload = function(e){
       try {
         const data = new Uint8Array(e.target.result);
         const workbook = XLSX.read(data, { type: 'array', cellDates: true });
-        
-        let sheetName = workbook.SheetNames[0];
-        let sheet = workbook.Sheets[sheetName];
-        let rows = XLSX.utils.sheet_to_json(sheet, { header: 1, raw: false, dateNF: 'yyyy-mm-dd' });
-
-        if(!rows || rows.length === 0){
-          autoProgressWrap.style.display = 'none';
-          alert('엑셀 파일에 데이터가 없습니다.');
-          return;
-        }
-
-        let headerIdx = -1;
-        let colMap = { date: -1, memo: -1, income: -1, expense: -1, amount: -1, type: -1 };
-
-        const dateKeys = ['거래일', '일자', '거래일자', '날짜', 'date', '일시'];
-        // 보내는이/받는이(입금자·출금자·거래상대방) 이름 컬럼을 최우선으로 사용
-        const nameKeys = ['보낸분', '받는분', '보낸사람', '받은사람', '보내는이', '받는이', '입금자명', '출금자명', '거래상대방', '상대계좌예금주', '예금주', '송금인', '수취인', '입금자', '출금자'];
-        // 이름 컬럼이 없을 때만 사용하는 보조(적요/내용) 컬럼
-        const memoKeys = ['적요', '내용', '거래내용', '취급점', '기증자', '비고', '상호', '기름', '적요/내용'];
-        const incomeKeys = ['입금원금', '입금', '입금액', '수입', '수입액', '받은금액'];
-        const expenseKeys = ['출금원금', '출금', '출금액', '지출', '지출액', '보낸금액'];
-        const amountKeys = ['거래금액', '금액', '잔액', '금 액'];
-        const typeKeys = ['구분', '입출금', '유형'];
-
-        for(let r = 0; r < Math.min(rows.length, 20); r++){
-          const row = rows[r];
-          if(!Array.isArray(row)) continue;
-          
-          let dCol = -1, mCol = -1, nCol = -1, iCol = -1, eCol = -1, aCol = -1, tCol = -1;
-
-          row.forEach((cell, c) => {
-            if(!cell) return;
-            const text = String(cell).replace(/\s/g, '').toLowerCase();
-
-            if(dCol === -1 && dateKeys.some(k => text.includes(k))) dCol = c;
-            if(nCol === -1 && nameKeys.some(k => text.includes(k))) nCol = c;
-            if(mCol === -1 && memoKeys.some(k => text.includes(k))) mCol = c;
-            if(iCol === -1 && incomeKeys.some(k => text.includes(k))) iCol = c;
-            if(eCol === -1 && expenseKeys.some(k => text.includes(k))) eCol = c;
-            if(aCol === -1 && amountKeys.some(k => text.includes(k))) aCol = c;
-            if(tCol === -1 && typeKeys.some(k => text.includes(k))) tCol = c;
-          });
-
-          if(dCol !== -1 && (iCol !== -1 || eCol !== -1 || aCol !== -1)){
-            headerIdx = r;
-            // 보내는이/받는이 이름 컬럼이 있으면 그것을, 없으면 적요/내용 컬럼을 사용
-            colMap = { date: dCol, memo: (nCol !== -1 ? nCol : mCol), income: iCol, expense: eCol, amount: aCol, type: tCol };
-            break;
-          }
-        }
-
-        if(headerIdx === -1) {
-          headerIdx = 0;
-          const firstRow = rows[0] || [];
-          colMap.date = 0;
-          if(firstRow.length >= 4) { colMap.memo = 1; colMap.income = 2; colMap.expense = 3; }
-          else if(firstRow.length >= 3) { colMap.memo = 1; colMap.amount = 2; }
-        }
-
-        const parsedResults = [];
-
-        for(let r = headerIdx + 1; r < rows.length; r++){
-          const row = rows[r];
-          if(!row || row.length === 0) continue;
-
-          const dateRaw = row[colMap.date];
-          const date = formatExcelDate(dateRaw);
-          if(!date) continue;
-
-          let memo = colMap.memo !== -1 && row[colMap.memo] ? String(row[colMap.memo]).trim() : '';
-          if(!memo) memo = '거래';
-
-          let incomeVal = colMap.income !== -1 ? parseCleanAmount(row[colMap.income]) : 0;
-          let expenseVal = colMap.expense !== -1 ? parseCleanAmount(row[colMap.expense]) : 0;
-          let amountVal = colMap.amount !== -1 ? parseCleanAmount(row[colMap.amount]) : 0;
-          let typeVal = colMap.type !== -1 && row[colMap.type] ? String(row[colMap.type]).trim() : '';
-
-          let finalType = 'income';
-          let finalAmount = 0;
-
-          if(incomeVal !== 0 || expenseVal !== 0){
-            if(incomeVal !== 0 && expenseVal === 0){
-              finalType = 'income'; finalAmount = incomeVal;
-            } else if(expenseVal !== 0 && incomeVal === 0){
-              finalType = 'expense'; finalAmount = expenseVal;
-            } else {
-              finalType = 'income'; finalAmount = incomeVal;
-            }
-          } else if(amountVal !== 0){
-            finalAmount = amountVal;
-            if(typeVal.includes('출금') || typeVal.includes('지출')) {
-              finalType = 'expense';
-            } else if(typeVal.includes('입금') || typeVal.includes('수입')) {
-              finalType = 'income';
-            } else {
-              const rowStr = row.join(' ');
-              if(rowStr.includes('출금') || rowStr.includes('지출')) finalType = 'expense';
-              else finalType = 'income';
-            }
-          }
-
-          if(finalAmount !== 0){
-            parsedResults.push({ date, type: finalType, memo, amount: finalAmount });
-          }
-        }
-
-        autoProgressWrap.style.display = 'none';
-        showParsedResults(parsedResults, '엑셀 파일');
-
+        handleParsedWorkbook(workbook, '엑셀 파일');
       } catch(err) {
         console.error(err);
         autoProgressWrap.style.display = 'none';
@@ -3131,6 +3025,164 @@ document.getElementById('bulkSaveBtn').addEventListener('click', async ()=>{
       }
     };
     reader.readAsArrayBuffer(file);
+  }
+
+  /* CSV 처리: 국내 은행 CSV는 UTF-8이 아닌 EUC-KR(CP949)로 내려받아지는 경우가 많아
+     UTF-8로 먼저 디코딩해 보고, 깨진 것으로 판단되면 EUC-KR로 재시도한다. */
+  async function processCsvFile(file){
+    try {
+      const buffer = await file.arrayBuffer();
+
+      function decodeWith(encoding){
+        try {
+          const text = new TextDecoder(encoding, { fatal: false }).decode(buffer);
+          const replacementCount = (text.match(/\uFFFD/g) || []).length;
+          return { text, replacementCount };
+        } catch(e){
+          return { text: '', replacementCount: Infinity };
+        }
+      }
+
+      const utf8Result = decodeWith('utf-8');
+      let finalText = utf8Result.text;
+
+      // UTF-8로 읽었을 때 치환문자(글자 깨짐)가 나왔다면 EUC-KR로 재시도해 더 나은 쪽을 채택
+      if(utf8Result.replacementCount > 0){
+        const eucKrResult = decodeWith('euc-kr');
+        if(eucKrResult.replacementCount < utf8Result.replacementCount){
+          finalText = eucKrResult.text;
+        }
+      }
+
+      // 엑셀에서 저장한 UTF-8 CSV는 앞에 BOM이 붙는 경우가 있어 제거
+      finalText = finalText.replace(/^\uFEFF/, '');
+
+      const workbook = XLSX.read(finalText, { type: 'string', cellDates: true, raw: false });
+      handleParsedWorkbook(workbook, 'CSV 파일');
+
+    } catch(err) {
+      console.error(err);
+      autoProgressWrap.style.display = 'none';
+      alert('CSV 파일 읽기 오류: ' + err.message);
+    }
+  }
+
+  /* 엑셀/CSV 공통 워크북 파싱 로직 */
+  function handleParsedWorkbook(workbook, sourceLabel){
+    try {
+      let sheetName = workbook.SheetNames[0];
+      let sheet = workbook.Sheets[sheetName];
+      let rows = XLSX.utils.sheet_to_json(sheet, { header: 1, raw: false, dateNF: 'yyyy-mm-dd' });
+
+      if(!rows || rows.length === 0){
+        autoProgressWrap.style.display = 'none';
+        alert((sourceLabel || '파일') + '에 데이터가 없습니다.');
+        return;
+      }
+
+      let headerIdx = -1;
+      let colMap = { date: -1, memo: -1, income: -1, expense: -1, amount: -1, type: -1 };
+
+      const dateKeys = ['거래일', '일자', '거래일자', '날짜', 'date', '일시'];
+      // 보내는이/받는이(입금자·출금자·거래상대방) 이름 컬럼을 최우선으로 사용
+      const nameKeys = ['보낸분', '받는분', '보낸사람', '받은사람', '보내는이', '받는이', '입금자명', '출금자명', '거래상대방', '상대계좌예금주', '예금주', '송금인', '수취인', '입금자', '출금자'];
+      // 이름 컬럼이 없을 때만 사용하는 보조(적요/내용) 컬럼
+      const memoKeys = ['적요', '내용', '거래내용', '취급점', '기증자', '비고', '상호', '기름', '적요/내용'];
+      const incomeKeys = ['입금원금', '입금', '입금액', '수입', '수입액', '받은금액'];
+      const expenseKeys = ['출금원금', '출금', '출금액', '지출', '지출액', '보낸금액'];
+      const amountKeys = ['거래금액', '금액', '잔액', '금 액'];
+      const typeKeys = ['구분', '입출금', '유형'];
+
+      for(let r = 0; r < Math.min(rows.length, 20); r++){
+        const row = rows[r];
+        if(!Array.isArray(row)) continue;
+
+        let dCol = -1, mCol = -1, nCol = -1, iCol = -1, eCol = -1, aCol = -1, tCol = -1;
+
+        row.forEach((cell, c) => {
+          if(!cell) return;
+          const text = String(cell).replace(/\s/g, '').toLowerCase();
+
+          if(dCol === -1 && dateKeys.some(k => text.includes(k))) dCol = c;
+          if(nCol === -1 && nameKeys.some(k => text.includes(k))) nCol = c;
+          if(mCol === -1 && memoKeys.some(k => text.includes(k))) mCol = c;
+          if(iCol === -1 && incomeKeys.some(k => text.includes(k))) iCol = c;
+          if(eCol === -1 && expenseKeys.some(k => text.includes(k))) eCol = c;
+          if(aCol === -1 && amountKeys.some(k => text.includes(k))) aCol = c;
+          if(tCol === -1 && typeKeys.some(k => text.includes(k))) tCol = c;
+        });
+
+        if(dCol !== -1 && (iCol !== -1 || eCol !== -1 || aCol !== -1)){
+          headerIdx = r;
+          // 보내는이/받는이 이름 컬럼이 있으면 그것을, 없으면 적요/내용 컬럼을 사용
+          colMap = { date: dCol, memo: (nCol !== -1 ? nCol : mCol), income: iCol, expense: eCol, amount: aCol, type: tCol };
+          break;
+        }
+      }
+
+      if(headerIdx === -1) {
+        headerIdx = 0;
+        const firstRow = rows[0] || [];
+        colMap.date = 0;
+        if(firstRow.length >= 4) { colMap.memo = 1; colMap.income = 2; colMap.expense = 3; }
+        else if(firstRow.length >= 3) { colMap.memo = 1; colMap.amount = 2; }
+      }
+
+      const parsedResults = [];
+
+      for(let r = headerIdx + 1; r < rows.length; r++){
+        const row = rows[r];
+        if(!row || row.length === 0) continue;
+
+        const dateRaw = row[colMap.date];
+        const date = formatExcelDate(dateRaw);
+        if(!date) continue;
+
+        let memo = colMap.memo !== -1 && row[colMap.memo] ? String(row[colMap.memo]).trim() : '';
+        if(!memo) memo = '거래';
+
+        let incomeVal = colMap.income !== -1 ? parseCleanAmount(row[colMap.income]) : 0;
+        let expenseVal = colMap.expense !== -1 ? parseCleanAmount(row[colMap.expense]) : 0;
+        let amountVal = colMap.amount !== -1 ? parseCleanAmount(row[colMap.amount]) : 0;
+        let typeVal = colMap.type !== -1 && row[colMap.type] ? String(row[colMap.type]).trim() : '';
+
+        let finalType = 'income';
+        let finalAmount = 0;
+
+        if(incomeVal !== 0 || expenseVal !== 0){
+          if(incomeVal !== 0 && expenseVal === 0){
+            finalType = 'income'; finalAmount = incomeVal;
+          } else if(expenseVal !== 0 && incomeVal === 0){
+            finalType = 'expense'; finalAmount = expenseVal;
+          } else {
+            finalType = 'income'; finalAmount = incomeVal;
+          }
+        } else if(amountVal !== 0){
+          finalAmount = amountVal;
+          if(typeVal.includes('출금') || typeVal.includes('지출')) {
+            finalType = 'expense';
+          } else if(typeVal.includes('입금') || typeVal.includes('수입')) {
+            finalType = 'income';
+          } else {
+            const rowStr = row.join(' ');
+            if(rowStr.includes('출금') || rowStr.includes('지출')) finalType = 'expense';
+            else finalType = 'income';
+          }
+        }
+
+        if(finalAmount !== 0){
+          parsedResults.push({ date, type: finalType, memo, amount: finalAmount });
+        }
+      }
+
+      autoProgressWrap.style.display = 'none';
+      showParsedResults(parsedResults, sourceLabel || '엑셀 파일');
+
+    } catch(err) {
+      console.error(err);
+      autoProgressWrap.style.display = 'none';
+      alert('파일 읽기 오류: ' + err.message);
+    }
   }
 
   function formatExcelDate(val) {
