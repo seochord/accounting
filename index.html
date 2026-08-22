@@ -398,6 +398,17 @@ color:var(--ink-soft);font-size:12.5px;margin-top:30px;display:flex;flex-directi
         <select id="filterAccount"><option value="">전체</option></select>
       </div>
     </div>
+    <div class="bulk-toolbar no-print" style="background:var(--row-alt);border:1px solid var(--paper-line);border-radius:4px;padding:10px 12px;">
+      <div class="f-item">
+        <label>연도별 일괄 삭제 · 연도</label>
+        <select id="deleteYear"><option value="">선택</option></select>
+      </div>
+      <div class="f-item">
+        <label>통장 (선택 안 하면 전체)</label>
+        <select id="deleteAccount"><option value="">전체</option></select>
+      </div>
+      <button type="button" class="tool-btn" id="bulkDeleteBtn" style="background:var(--expense);color:#fff;border-color:var(--expense);">일괄 삭제</button>
+    </div>
     <div class="table-scroll">
       <table>
         <thead id="ledgerHead">
@@ -1810,6 +1821,31 @@ async function deleteTx(id){
   render();
 }
 
+document.getElementById('bulkDeleteBtn').addEventListener('click', async ()=>{
+  const year = document.getElementById('deleteYear').value;
+  const account = document.getElementById('deleteAccount').value;
+
+  if(!year){ alert('삭제할 연도를 선택해 주세요.'); return; }
+
+  const matches = transactions.filter(t => t.date.slice(0,4) === year && (!account || t.account === account));
+  const scopeLabel = account ? `${year}년 · ${account}` : `${year}년 전체 통장`;
+
+  if(matches.length === 0){
+    alert(`${scopeLabel}에 해당하는 거래가 없습니다.`);
+    return;
+  }
+
+  if(!confirm(`${scopeLabel}의 거래 ${matches.length}건을 모두 삭제할까요?\n\n삭제하면 되돌릴 수 없습니다. (미리 백업을 받아두면 안전합니다)`)) return;
+  if(!confirm(`정말로 삭제하시겠습니까?\n\n총 ${matches.length}건이 영구적으로 삭제됩니다.`)) return;
+
+  const idsToDelete = new Set(matches.map(t => t.id));
+  transactions = transactions.filter(t => !idsToDelete.has(t.id));
+  if(editingId && idsToDelete.has(editingId)) resetFormToAddMode();
+  await saveData();
+  render();
+  alert(`${scopeLabel}의 거래 ${matches.length}건을 삭제했습니다.`);
+});
+
 function sortedTx(){
   return [...transactions].sort((a,b)=> a.date.localeCompare(b.date) || a.id.localeCompare(b.id));
 }
@@ -1845,6 +1881,14 @@ function populateFilters(){
   filterYear = yearSel.value;
   monthSel.value = monthPrev;
   filterMonth = monthSel.value;
+
+  const delYearSel = document.getElementById('deleteYear');
+  const delAccSel = document.getElementById('deleteAccount');
+  const delYearPrev = delYearSel.value, delAccPrev = delAccSel.value;
+  delYearSel.innerHTML = '<option value="">선택</option>' + years.map(y=>`<option value="${y}">${y}년</option>`).join('');
+  delYearSel.value = years.includes(parseInt(delYearPrev,10)) ? delYearPrev : '';
+  delAccSel.innerHTML = '<option value="">전체</option>' + accountOptionsHtml;
+  delAccSel.value = delAccPrev;
 }
 
 document.getElementById('filterAccount').addEventListener('change', (e)=>{ filterAccount = e.target.value; renderLedger(); });
