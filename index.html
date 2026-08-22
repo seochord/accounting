@@ -3057,8 +3057,8 @@ document.getElementById('bulkSaveBtn').addEventListener('click', async ()=>{
       // 엑셀에서 저장한 UTF-8 CSV는 앞에 BOM이 붙는 경우가 있어 제거
       finalText = finalText.replace(/^\uFEFF/, '');
 
-      const workbook = XLSX.read(finalText, { type: 'string', cellDates: true, raw: false });
-      handleParsedWorkbook(workbook, 'CSV 파일');
+      const workbook = XLSX.read(finalText, { type: 'string', cellDates: false, raw: true });
+      handleParsedWorkbook(workbook, 'CSV 파일', true);
 
     } catch(err) {
       console.error(err);
@@ -3067,12 +3067,16 @@ document.getElementById('bulkSaveBtn').addEventListener('click', async ()=>{
     }
   }
 
-  /* 엑셀/CSV 공통 워크북 파싱 로직 */
-  function handleParsedWorkbook(workbook, sourceLabel){
+  /* 엑셀/CSV 공통 워크북 파싱 로직
+     isCsv=true일 때는 셀 값을 원본 문자열 그대로 유지(raw:true)해서
+     날짜/시간 문자열이 로케일 형식(MM/DD/YY 등)으로 재포맷되어 깨지는 것을 방지한다. */
+  function handleParsedWorkbook(workbook, sourceLabel, isCsv){
     try {
       let sheetName = workbook.SheetNames[0];
       let sheet = workbook.Sheets[sheetName];
-      let rows = XLSX.utils.sheet_to_json(sheet, { header: 1, raw: false, dateNF: 'yyyy-mm-dd' });
+      let rows = isCsv
+        ? XLSX.utils.sheet_to_json(sheet, { header: 1, raw: true })
+        : XLSX.utils.sheet_to_json(sheet, { header: 1, raw: false, dateNF: 'yyyy-mm-dd' });
 
       if(!rows || rows.length === 0){
         autoProgressWrap.style.display = 'none';
@@ -3081,13 +3085,15 @@ document.getElementById('bulkSaveBtn').addEventListener('click', async ()=>{
       }
 
       let headerIdx = -1;
-      let colMap = { date: -1, memo: -1, income: -1, expense: -1, amount: -1, type: -1 };
+      let colMap = { date: -1, memo: -1, note: -1, income: -1, expense: -1, amount: -1, type: -1 };
 
       const dateKeys = ['거래일', '일자', '거래일자', '날짜', 'date', '일시'];
       // 보내는이/받는이(입금자·출금자·거래상대방) 이름 컬럼을 최우선으로 사용
       const nameKeys = ['보낸분', '받는분', '보낸사람', '받은사람', '보내는이', '받는이', '입금자명', '출금자명', '거래상대방', '상대계좌예금주', '예금주', '송금인', '수취인', '입금자', '출금자'];
       // 이름 컬럼이 없을 때만 사용하는 보조(적요/내용) 컬럼
       const memoKeys = ['적요', '내용', '거래내용', '취급점', '기증자', '비고', '상호', '기름', '적요/내용'];
+      // 사용자가 은행 앱 등에서 직접 남긴 개인 메모(내 통장 표시) 컬럼 — 이름과 합쳐서 표시
+      const noteKeys = ['내통장표시', '내통장메모', '통장메모', '나의메모', '개인메모', '메모'];
       const incomeKeys = ['입금원금', '입금', '입금액', '수입', '수입액', '받은금액'];
       const expenseKeys = ['출금원금', '출금', '출금액', '지출', '지출액', '보낸금액'];
       const amountKeys = ['거래금액', '금액', '잔액', '금 액'];
@@ -3097,7 +3103,7 @@ document.getElementById('bulkSaveBtn').addEventListener('click', async ()=>{
         const row = rows[r];
         if(!Array.isArray(row)) continue;
 
-        let dCol = -1, mCol = -1, nCol = -1, iCol = -1, eCol = -1, aCol = -1, tCol = -1;
+        let dCol = -1, mCol = -1, nCol = -1, noteCol = -1, iCol = -1, eCol = -1, aCol = -1, tCol = -1;
 
         row.forEach((cell, c) => {
           if(!cell) return;
@@ -3105,6 +3111,7 @@ document.getElementById('bulkSaveBtn').addEventListener('click', async ()=>{
 
           if(dCol === -1 && dateKeys.some(k => text.includes(k))) dCol = c;
           if(nCol === -1 && nameKeys.some(k => text.includes(k))) nCol = c;
+          if(noteCol === -1 && noteKeys.some(k => text.includes(k))) noteCol = c;
           if(mCol === -1 && memoKeys.some(k => text.includes(k))) mCol = c;
           if(iCol === -1 && incomeKeys.some(k => text.includes(k))) iCol = c;
           if(eCol === -1 && expenseKeys.some(k => text.includes(k))) eCol = c;
@@ -3115,7 +3122,7 @@ document.getElementById('bulkSaveBtn').addEventListener('click', async ()=>{
         if(dCol !== -1 && (iCol !== -1 || eCol !== -1 || aCol !== -1)){
           headerIdx = r;
           // 보내는이/받는이 이름 컬럼이 있으면 그것을, 없으면 적요/내용 컬럼을 사용
-          colMap = { date: dCol, memo: (nCol !== -1 ? nCol : mCol), income: iCol, expense: eCol, amount: aCol, type: tCol };
+          colMap = { date: dCol, memo: (nCol !== -1 ? nCol : mCol), note: noteCol, income: iCol, expense: eCol, amount: aCol, type: tCol };
           break;
         }
       }
@@ -3139,6 +3146,13 @@ document.getElementById('bulkSaveBtn').addEventListener('click', async ()=>{
         if(!date) continue;
 
         let memo = colMap.memo !== -1 && row[colMap.memo] ? String(row[colMap.memo]).trim() : '';
+        let note = colMap.note !== -1 && row[colMap.note] ? String(row[colMap.note]).trim() : '';
+        // "내 통장 표시"(개인 메모)가 있으면 "보낸분/받는분 - 메모" 형태로 합쳐서 표시
+        if(note && memo){
+          memo = `${memo} - ${note}`;
+        } else if(note){
+          memo = note;
+        }
         if(!memo) memo = '거래';
 
         let incomeVal = colMap.income !== -1 ? parseCleanAmount(row[colMap.income]) : 0;
