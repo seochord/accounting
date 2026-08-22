@@ -3399,7 +3399,8 @@ document.getElementById('bulkSaveBtn').addEventListener('click', async ()=>{
     }
     if(toAdd.length === 0){ alert('저장할 내용이 없습니다.'); return; }
 
-    // 중복 검사: 같은 통장에 날짜·구분·내용·금액이 모두 같은 거래가 이미 있으면 중복으로 보고 자동 제외
+    // 중복 검사: 같은 통장에 "이미 저장되어 있는" 거래와 날짜·구분·내용·금액이 모두 같으면 중복으로 제외
+    // (같은 파일 안에서 우연히 값이 겹치는 서로 다른 거래는 중복으로 보지 않는다)
     const existingSignatures = new Set(
       transactions.filter(t => t.account === account)
         .map(t => `${t.date}|${t.type}|${t.memo}|${t.amount}`)
@@ -3412,7 +3413,6 @@ document.getElementById('bulkSaveBtn').addEventListener('click', async ()=>{
         dupCount++;
       } else {
         newOnes.push(t);
-        existingSignatures.add(sig); // 이번에 올린 파일 안에서의 중복도 함께 방지
       }
     });
 
