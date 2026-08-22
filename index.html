@@ -159,24 +159,6 @@
 
   .table-scroll{overflow-x:auto;}
 
-  /* 좁은 화면(특히 거래 내역 표)에서는 폰트·여백을 줄여 가로 스크롤 없이 한눈에 보이도록 조정 */
-  @media (max-width:640px){
-    table{font-size:12px;}
-    thead th{font-size:11px;padding:6px 3px;}
-    tbody td{padding:6px 3px;}
-    tbody td.row-actions{white-space:normal;}
-    .del-btn, .edit-btn{font-size:11px;margin-left:5px;}
-    .edit-btn{margin-left:0;}
-    /* 통장·내용 칼럼은 길어지기 쉬우므로 줄바꿈을 허용해 가로 폭을 확보 */
-    tbody td.memo{white-space:normal;word-break:break-all;}
-    #ledgerHead th, #ledgerBody td{padding-left:2px;padding-right:2px;}
-  }
-  @media (max-width:400px){
-    table{font-size:11px;}
-    thead th{font-size:10px;padding:5px 2px;}
-    tbody td{padding:5px 2px;}
-  }
-
   .mom-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;}
   @media (max-width:720px){.mom-grid{grid-template-columns:1fr;}}
   .mom-box{
@@ -207,7 +189,6 @@ color:var(--ink-soft);font-size:12.5px;margin-top:30px;display:flex;flex-directi
     font-size:14px;font-weight:600;color:var(--ink-soft);cursor:pointer;white-space:nowrap;
   }
   .tool-btn:hover{border-color:var(--accent);color:var(--accent);}
-  .tool-btn.danger:hover{border-color:var(--expense);color:var(--expense);background:rgba(163,39,60,0.06);}
 
   @media print{
     body{background:#fff;}
@@ -356,7 +337,7 @@ color:var(--ink-soft);font-size:12.5px;margin-top:30px;display:flex;flex-directi
         <span class="drop-icon">📁</span>
         <div class="drop-text">통장사본 이미지(JPG/PNG), PDF, 엑셀(.xlsx/.xls/.csv) 파일을 끌어다 놓거나 클릭하세요</div>
         <div class="drop-sub">모든 은행 거래내역서 파일 및 통장 사진을 자동으로 감지하여 읽어옵니다</div>
-        <input type="file" id="autoFileInput" accept="image/*, .pdf, .xlsx, .xls, .csv, application/pdf, application/vnd.openxmlformats-officedocument.spreadsheetml.sheet, application/vnd.ms-excel, text/csv">
+        <input type="file" id="autoFileInput" accept="image/*, .pdf, .xlsx, .xls, .csv, application/pdf, application/vnd.openxmlformats-officedocument.spreadsheetml.sheet, application/vnd.ms-excel">
       </div>
       <div class="ocr-preview-wrap" id="autoPreviewWrap" style="display:none;">
         <img id="autoPreviewImg" class="ocr-preview-img" alt="미리보기" style="display:none;">
@@ -401,7 +382,6 @@ color:var(--ink-soft);font-size:12.5px;margin-top:30px;display:flex;flex-directi
       <div class="card-tools no-print">
         <button class="tool-btn" id="ledgerPrintBtn">인쇄</button>
         <button class="tool-btn" id="ledgerExcelBtn">엑셀 다운로드</button>
-        <button class="tool-btn danger" id="ledgerBulkDeleteBtn" style="color:var(--expense);border-color:var(--expense);">선택 연도 삭제</button>
       </div>
     </h2>
     <div class="filter-row no-print">
@@ -422,7 +402,7 @@ color:var(--ink-soft);font-size:12.5px;margin-top:30px;display:flex;flex-directi
       <table>
         <thead id="ledgerHead">
           <tr>
-            <th>거래일</th><th>통장</th><th>내용</th><th>수입(원)</th><th>지출(원)</th><th>소계(원)</th><th></th>
+            <th>거래일</th><th>통장</th><th>내용</th><th>수입</th><th>지출</th><th>소계(잔액)</th><th></th>
           </tr>
         </thead>
         <tbody id="ledgerBody"></tbody>
@@ -605,12 +585,6 @@ document.getElementById('momMonth').value = new Date().toISOString().slice(0,7);
 function won(n){
   const sign = n < 0 ? '-' : '';
   return sign + Math.abs(Math.round(n)).toLocaleString('ko-KR') + '원';
-}
-/* 거래 내역 표(02번 카드)는 컬럼이 많아 좁은 화면에서 가로 스크롤이 생기므로
-   '원' 단위를 생략하고 숫자+쉼표만 표시해 폭을 줄인다 */
-function wonNum(n){
-  const sign = n < 0 ? '-' : '';
-  return sign + Math.abs(Math.round(n)).toLocaleString('ko-KR');
 }
 
 /* ---------- 저장소 자가진단 ---------- */
@@ -1836,50 +1810,6 @@ async function deleteTx(id){
   render();
 }
 
-/* 거래 내역 표의 현재 필터(연도·월·통장)에 해당하는 거래를 한 번에 삭제.
-   실수로 전체 데이터를 지우는 것을 막기 위해 연도 선택이 반드시 필요하다. */
-async function bulkDeleteByFilter(){
-  if(!filterYear){
-    alert('연도를 먼저 선택해 주세요.\n(전체 삭제 실수를 막기 위해 연도를 선택해야만 일괄 삭제할 수 있습니다.)');
-    return;
-  }
-
-  const target = transactions.filter(t=>{
-    if(t.date.slice(0,4) !== String(filterYear)) return false;
-    if(filterMonth && t.date.slice(5,7) !== String(filterMonth).padStart(2,'0')) return false;
-    if(filterAccount && t.account !== filterAccount) return false;
-    return true;
-  });
-
-  if(target.length === 0){
-    alert('선택한 조건에 해당하는 거래가 없습니다.');
-    return;
-  }
-
-  const condParts = [`${filterYear}년`];
-  if(filterMonth) condParts.push(`${parseInt(filterMonth,10)}월`);
-  if(filterAccount) condParts.push(filterAccount);
-  const condLabel = condParts.join(' · ');
-
-  const firstConfirm = confirm(
-    `${condLabel} 조건에 해당하는 거래 ${target.length}건을 모두 삭제할까요?\n\n삭제하면 되돌릴 수 없습니다.`
-  );
-  if(!firstConfirm) return;
-
-  const typed = prompt(`정말로 삭제하려면 "삭제"라고 입력해 주세요.\n\n대상: ${condLabel} · ${target.length}건`);
-  if(typed !== '삭제'){
-    alert('입력값이 일치하지 않아 삭제를 취소했습니다.');
-    return;
-  }
-
-  const targetIds = new Set(target.map(t=>t.id));
-  transactions = transactions.filter(t => !targetIds.has(t.id));
-  if(editingId && targetIds.has(editingId)) resetFormToAddMode();
-  await saveData();
-  render();
-  alert(`${target.length}건이 삭제되었습니다.`);
-}
-
 function sortedTx(){
   return [...transactions].sort((a,b)=> a.date.localeCompare(b.date) || a.id.localeCompare(b.id));
 }
@@ -1954,7 +1884,7 @@ function renderLedger(){
       <td colspan="3">${escapeHtml(openingLabel)}</td>
       <td class="income"></td>
       <td class="expense"></td>
-      <td class="${balance>=0?'balance-pos':'balance-neg'}">${wonNum(balance)}</td>
+      <td class="${balance>=0?'balance-pos':'balance-neg'}">${won(balance)}</td>
       <td></td>
     `;
     body.appendChild(openRow);
@@ -1972,9 +1902,9 @@ function renderLedger(){
       <td>${tx.date}</td>
       <td class="memo">${escapeHtml(tx.account || '')}</td>
       <td class="memo">${escapeHtml(tx.memo)}</td>
-      <td class="income">${inc ? wonNum(inc) : ''}</td>
-      <td class="expense">${exp ? wonNum(exp) : ''}</td>
-      <td class="${balance>=0?'balance-pos':'balance-neg'}">${wonNum(balance)}</td>
+      <td class="income">${inc ? won(inc) : ''}</td>
+      <td class="expense">${exp ? won(exp) : ''}</td>
+      <td class="${balance>=0?'balance-pos':'balance-neg'}">${won(balance)}</td>
       <td class="row-actions"><button class="edit-btn" data-id="${tx.id}">수정</button><button class="del-btn" data-id="${tx.id}">삭제</button></td>
     `;
     body.appendChild(tr);
@@ -1985,9 +1915,9 @@ function renderLedger(){
   const activeFilters = [filterYear, filterMonth, filterAccount].some(Boolean);
   totalRow.innerHTML = `
     <td colspan="3">합계${activeFilters ? ' (필터 적용됨)' : ''}</td>
-    <td class="income">${wonNum(totalIncome)}</td>
-    <td class="expense">${wonNum(totalExpense)}</td>
-    <td class="${balance>=0?'balance-pos':'balance-neg'}">${wonNum(balance)}</td>
+    <td class="income">${won(totalIncome)}</td>
+    <td class="expense">${won(totalExpense)}</td>
+    <td class="${balance>=0?'balance-pos':'balance-neg'}">${won(balance)}</td>
     <td></td>
   `;
   body.appendChild(totalRow);
@@ -2484,7 +2414,6 @@ window.addEventListener('afterprint', ()=>{
 document.getElementById('ledgerPrintBtn').addEventListener('click', ()=> printSection('ledgerCard'));
 document.getElementById('aggPrintBtn').addEventListener('click', ()=> printSection('aggCard'));
 document.getElementById('accountPrintBtn').addEventListener('click', ()=> printSection('accountCard'));
-document.getElementById('ledgerBulkDeleteBtn').addEventListener('click', bulkDeleteByFilter);
 
 /* ---------- 월간 재정보고서 (통합 인쇄) ---------- */
 function buildMonthlyReportHTML(monthStr, includeMoM = true){
@@ -2953,9 +2882,7 @@ document.getElementById('bulkSaveBtn').addEventListener('click', async ()=>{
       await processImageOcr(file);
     } else if(type === 'application/pdf' || ext === 'pdf'){
       await processPdfFile(file);
-    } else if(ext === 'csv' || type === 'text/csv' || type === 'application/csv'){
-      await processCsvFile(file);
-    } else if(ext === 'xlsx' || ext === 'xls' || type.includes('excel') || type.includes('spreadsheet')){
+    } else if(ext === 'xlsx' || ext === 'xls' || ext === 'csv' || type.includes('excel') || type.includes('spreadsheet')){
       await processExcelFile(file);
     } else {
       autoProgressWrap.style.display = 'none';
@@ -3081,14 +3008,39 @@ document.getElementById('bulkSaveBtn').addEventListener('click', async ()=>{
     }
   }
 
-  /* 엑셀 처리 (.xlsx, .xls) */
+  /* 엑셀 · CSV 처리 */
   async function processExcelFile(file){
+    const ext = file.name.split('.').pop().toLowerCase();
+
+    if(ext === 'csv'){
+      try {
+        const buf = await file.arrayBuffer();
+        const text = decodeCsvText(buf);
+        // cellDates:true는 CSV의 날짜 문자열을 JS Date 객체로 바꿔버려 이후 파싱이 깨지므로 사용하지 않는다.
+        const workbook = XLSX.read(text, { type: 'string' });
+        const sheetName = workbook.SheetNames[0];
+        const sheet = workbook.Sheets[sheetName];
+        // CSV는 셀 서식이 없어 raw:false 시 날짜가 로케일에 따라 엉뚱한 형식(예: 8/5/26)으로
+        // 바뀔 수 있어, raw:true로 원본 값을 그대로 받아 formatExcelDate에서 통일 처리한다.
+        const rows = XLSX.utils.sheet_to_json(sheet, { header: 1, raw: true });
+        parseTabularRows(rows, 'CSV 파일');
+      } catch(err) {
+        console.error(err);
+        autoProgressWrap.style.display = 'none';
+        alert('CSV 파일 읽기 오류: ' + err.message);
+      }
+      return;
+    }
+
     const reader = new FileReader();
     reader.onload = function(e){
       try {
         const data = new Uint8Array(e.target.result);
         const workbook = XLSX.read(data, { type: 'array', cellDates: true });
-        handleParsedWorkbook(workbook, '엑셀 파일');
+        const sheetName = workbook.SheetNames[0];
+        const sheet = workbook.Sheets[sheetName];
+        const rows = XLSX.utils.sheet_to_json(sheet, { header: 1, raw: false, dateNF: 'yyyy-mm-dd' });
+        parseTabularRows(rows, '엑셀 파일');
       } catch(err) {
         console.error(err);
         autoProgressWrap.style.display = 'none';
@@ -3098,176 +3050,124 @@ document.getElementById('bulkSaveBtn').addEventListener('click', async ()=>{
     reader.readAsArrayBuffer(file);
   }
 
-  /* CSV 처리: 국내 은행 CSV는 UTF-8이 아닌 EUC-KR(CP949)로 내려받아지는 경우가 많아
-     UTF-8로 먼저 디코딩해 보고, 깨진 것으로 판단되면 EUC-KR로 재시도한다. */
-  async function processCsvFile(file){
-    try {
-      const buffer = await file.arrayBuffer();
-
-      function decodeWith(encoding){
-        try {
-          const text = new TextDecoder(encoding, { fatal: false }).decode(buffer);
-          const replacementCount = (text.match(/\uFFFD/g) || []).length;
-          return { text, replacementCount };
-        } catch(e){
-          return { text: '', replacementCount: Infinity };
-        }
+  /* CSV 텍스트 인코딩 자동 판별: UTF-8(BOM 포함) 우선 시도, 깨지면 EUC-KR/CP949로 재시도 */
+  function decodeCsvText(buf){
+    let text = new TextDecoder('utf-8', { fatal: false }).decode(buf);
+    if(text.includes('\uFFFD')){
+      try {
+        text = new TextDecoder('euc-kr', { fatal: false }).decode(buf);
+      } catch(e){
+        /* euc-kr 디코더 미지원 브라우저면 utf-8 결과를 그대로 사용 */
       }
-
-      const utf8Result = decodeWith('utf-8');
-      let finalText = utf8Result.text;
-
-      // UTF-8로 읽었을 때 치환문자(글자 깨짐)가 나왔다면 EUC-KR로 재시도해 더 나은 쪽을 채택
-      if(utf8Result.replacementCount > 0){
-        const eucKrResult = decodeWith('euc-kr');
-        if(eucKrResult.replacementCount < utf8Result.replacementCount){
-          finalText = eucKrResult.text;
-        }
-      }
-
-      // 엑셀에서 저장한 UTF-8 CSV는 앞에 BOM이 붙는 경우가 있어 제거
-      finalText = finalText.replace(/^\uFEFF/, '');
-
-      const workbook = XLSX.read(finalText, { type: 'string', cellDates: false, raw: true });
-      handleParsedWorkbook(workbook, 'CSV 파일', true);
-
-    } catch(err) {
-      console.error(err);
-      autoProgressWrap.style.display = 'none';
-      alert('CSV 파일 읽기 오류: ' + err.message);
     }
+    return text.replace(/^\uFEFF/, '');
   }
 
-  /* 엑셀/CSV 공통 워크북 파싱 로직
-     isCsv=true일 때는 셀 값을 원본 문자열 그대로 유지(raw:true)해서
-     날짜/시간 문자열이 로케일 형식(MM/DD/YY 등)으로 재포맷되어 깨지는 것을 방지한다. */
-  function handleParsedWorkbook(workbook, sourceLabel, isCsv){
-    try {
-      let sheetName = workbook.SheetNames[0];
-      let sheet = workbook.Sheets[sheetName];
-      let rows = isCsv
-        ? XLSX.utils.sheet_to_json(sheet, { header: 1, raw: true })
-        : XLSX.utils.sheet_to_json(sheet, { header: 1, raw: false, dateNF: 'yyyy-mm-dd' });
-
-      if(!rows || rows.length === 0){
-        autoProgressWrap.style.display = 'none';
-        alert((sourceLabel || '파일') + '에 데이터가 없습니다.');
-        return;
-      }
-
-      let headerIdx = -1;
-      let colMap = { date: -1, memo: -1, note: -1, income: -1, expense: -1, amount: -1, type: -1 };
-
-      const dateKeys = ['거래일', '일자', '거래일자', '날짜', 'date', '일시'];
-      // 보내는이/받는이(입금자·출금자·거래상대방) 이름 컬럼을 최우선으로 사용
-      const nameKeys = ['보낸분', '받는분', '보낸사람', '받은사람', '보내는이', '받는이', '입금자명', '출금자명', '거래상대방', '상대계좌예금주', '예금주', '송금인', '수취인', '입금자', '출금자'];
-      // 이름 컬럼이 없을 때만 사용하는 보조(적요/내용) 컬럼
-      const memoKeys = ['적요', '내용', '거래내용', '취급점', '기증자', '비고', '상호', '기름', '적요/내용'];
-      // 사용자가 은행 앱 등에서 직접 남긴 개인 메모(내 통장 표시) 컬럼 — 이름과 합쳐서 표시
-      const noteKeys = ['내통장표시', '내통장메모', '통장메모', '나의메모', '개인메모', '메모'];
-      const incomeKeys = ['입금원금', '입금', '입금액', '수입', '수입액', '받은금액'];
-      const expenseKeys = ['출금원금', '출금', '출금액', '지출', '지출액', '보낸금액'];
-      const amountKeys = ['거래금액', '금액', '잔액', '금 액'];
-      const typeKeys = ['구분', '입출금', '유형'];
-
-      for(let r = 0; r < Math.min(rows.length, 20); r++){
-        const row = rows[r];
-        if(!Array.isArray(row)) continue;
-
-        let dCol = -1, mCol = -1, nCol = -1, noteCol = -1, iCol = -1, eCol = -1, aCol = -1, tCol = -1;
-
-        row.forEach((cell, c) => {
-          if(!cell) return;
-          const text = String(cell).replace(/\s/g, '').toLowerCase();
-
-          if(dCol === -1 && dateKeys.some(k => text.includes(k))) dCol = c;
-          if(nCol === -1 && nameKeys.some(k => text.includes(k))) nCol = c;
-          if(noteCol === -1 && noteKeys.some(k => text.includes(k))) noteCol = c;
-          if(mCol === -1 && memoKeys.some(k => text.includes(k))) mCol = c;
-          if(iCol === -1 && incomeKeys.some(k => text.includes(k))) iCol = c;
-          if(eCol === -1 && expenseKeys.some(k => text.includes(k))) eCol = c;
-          if(aCol === -1 && amountKeys.some(k => text.includes(k))) aCol = c;
-          if(tCol === -1 && typeKeys.some(k => text.includes(k))) tCol = c;
-        });
-
-        if(dCol !== -1 && (iCol !== -1 || eCol !== -1 || aCol !== -1)){
-          headerIdx = r;
-          // 보내는이/받는이 이름 컬럼이 있으면 그것을, 없으면 적요/내용 컬럼을 사용
-          colMap = { date: dCol, memo: (nCol !== -1 ? nCol : mCol), note: noteCol, income: iCol, expense: eCol, amount: aCol, type: tCol };
-          break;
-        }
-      }
-
-      if(headerIdx === -1) {
-        headerIdx = 0;
-        const firstRow = rows[0] || [];
-        colMap.date = 0;
-        if(firstRow.length >= 4) { colMap.memo = 1; colMap.income = 2; colMap.expense = 3; }
-        else if(firstRow.length >= 3) { colMap.memo = 1; colMap.amount = 2; }
-      }
-
-      const parsedResults = [];
-
-      for(let r = headerIdx + 1; r < rows.length; r++){
-        const row = rows[r];
-        if(!row || row.length === 0) continue;
-
-        const dateRaw = row[colMap.date];
-        const date = formatExcelDate(dateRaw);
-        if(!date) continue;
-
-        let memo = colMap.memo !== -1 && row[colMap.memo] ? String(row[colMap.memo]).trim() : '';
-        let note = colMap.note !== -1 && row[colMap.note] ? String(row[colMap.note]).trim() : '';
-        // "내 통장 표시"(개인 메모)가 있으면 "보낸분/받는분 - 메모" 형태로 합쳐서 표시
-        if(note && memo){
-          memo = `${memo} - ${note}`;
-        } else if(note){
-          memo = note;
-        }
-        if(!memo) memo = '거래';
-
-        let incomeVal = colMap.income !== -1 ? parseCleanAmount(row[colMap.income]) : 0;
-        let expenseVal = colMap.expense !== -1 ? parseCleanAmount(row[colMap.expense]) : 0;
-        let amountVal = colMap.amount !== -1 ? parseCleanAmount(row[colMap.amount]) : 0;
-        let typeVal = colMap.type !== -1 && row[colMap.type] ? String(row[colMap.type]).trim() : '';
-
-        let finalType = 'income';
-        let finalAmount = 0;
-
-        if(incomeVal !== 0 || expenseVal !== 0){
-          if(incomeVal !== 0 && expenseVal === 0){
-            finalType = 'income'; finalAmount = incomeVal;
-          } else if(expenseVal !== 0 && incomeVal === 0){
-            finalType = 'expense'; finalAmount = expenseVal;
-          } else {
-            finalType = 'income'; finalAmount = incomeVal;
-          }
-        } else if(amountVal !== 0){
-          finalAmount = amountVal;
-          if(typeVal.includes('출금') || typeVal.includes('지출')) {
-            finalType = 'expense';
-          } else if(typeVal.includes('입금') || typeVal.includes('수입')) {
-            finalType = 'income';
-          } else {
-            const rowStr = row.join(' ');
-            if(rowStr.includes('출금') || rowStr.includes('지출')) finalType = 'expense';
-            else finalType = 'income';
-          }
-        }
-
-        if(finalAmount !== 0){
-          parsedResults.push({ date, type: finalType, memo, amount: finalAmount });
-        }
-      }
-
+  /* 엑셀/CSV 공통 행 파싱 */
+  function parseTabularRows(rows, sourceLabel){
+    if(!rows || rows.length === 0){
       autoProgressWrap.style.display = 'none';
-      showParsedResults(parsedResults, sourceLabel || '엑셀 파일');
-
-    } catch(err) {
-      console.error(err);
-      autoProgressWrap.style.display = 'none';
-      alert('파일 읽기 오류: ' + err.message);
+      alert(`${sourceLabel}에 데이터가 없습니다.`);
+      return;
     }
+
+    let headerIdx = -1;
+    let colMap = { date: -1, memo: -1, income: -1, expense: -1, amount: -1, type: -1 };
+
+    const dateKeys = ['거래일', '일자', '거래일자', '날짜', 'date', '일시'];
+    // 보내는이/받는이(입금자·출금자·거래상대방) 이름 컬럼을 최우선으로 사용
+    const nameKeys = ['보낸분', '받는분', '보낸사람', '받은사람', '보내는이', '받는이', '입금자명', '출금자명', '거래상대방', '상대계좌예금주', '예금주', '송금인', '수취인', '입금자', '출금자'];
+    // 이름 컬럼이 없을 때만 사용하는 보조(적요/내용) 컬럼
+    const memoKeys = ['적요', '내용', '거래내용', '취급점', '기증자', '비고', '상호', '기름', '적요/내용'];
+    const incomeKeys = ['입금원금', '입금', '입금액', '수입', '수입액', '받은금액'];
+    const expenseKeys = ['출금원금', '출금', '출금액', '지출', '지출액', '보낸금액'];
+    const amountKeys = ['거래금액', '금액', '잔액', '금 액'];
+    const typeKeys = ['구분', '입출금', '유형'];
+
+    for(let r = 0; r < Math.min(rows.length, 20); r++){
+      const row = rows[r];
+      if(!Array.isArray(row)) continue;
+
+      let dCol = -1, mCol = -1, nCol = -1, iCol = -1, eCol = -1, aCol = -1, tCol = -1;
+
+      row.forEach((cell, c) => {
+        if(!cell) return;
+        const text = String(cell).replace(/\s/g, '').toLowerCase();
+
+        if(dCol === -1 && dateKeys.some(k => text.includes(k))) dCol = c;
+        if(nCol === -1 && nameKeys.some(k => text.includes(k))) nCol = c;
+        if(mCol === -1 && memoKeys.some(k => text.includes(k))) mCol = c;
+        if(iCol === -1 && incomeKeys.some(k => text.includes(k))) iCol = c;
+        if(eCol === -1 && expenseKeys.some(k => text.includes(k))) eCol = c;
+        if(aCol === -1 && amountKeys.some(k => text.includes(k))) aCol = c;
+        if(tCol === -1 && typeKeys.some(k => text.includes(k))) tCol = c;
+      });
+
+      if(dCol !== -1 && (iCol !== -1 || eCol !== -1 || aCol !== -1)){
+        headerIdx = r;
+        // 보내는이/받는이 이름 컬럼이 있으면 그것을, 없으면 적요/내용 컬럼을 사용
+        colMap = { date: dCol, memo: (nCol !== -1 ? nCol : mCol), income: iCol, expense: eCol, amount: aCol, type: tCol };
+        break;
+      }
+    }
+
+    if(headerIdx === -1) {
+      headerIdx = 0;
+      const firstRow = rows[0] || [];
+      colMap.date = 0;
+      if(firstRow.length >= 4) { colMap.memo = 1; colMap.income = 2; colMap.expense = 3; }
+      else if(firstRow.length >= 3) { colMap.memo = 1; colMap.amount = 2; }
+    }
+
+    const parsedResults = [];
+
+    for(let r = headerIdx + 1; r < rows.length; r++){
+      const row = rows[r];
+      if(!row || row.length === 0) continue;
+
+      const dateRaw = row[colMap.date];
+      const date = formatExcelDate(dateRaw);
+      if(!date) continue;
+
+      let memo = colMap.memo !== -1 && row[colMap.memo] ? String(row[colMap.memo]).trim() : '';
+      if(!memo) memo = '거래';
+
+      let incomeVal = colMap.income !== -1 ? parseCleanAmount(row[colMap.income]) : 0;
+      let expenseVal = colMap.expense !== -1 ? parseCleanAmount(row[colMap.expense]) : 0;
+      let amountVal = colMap.amount !== -1 ? parseCleanAmount(row[colMap.amount]) : 0;
+      let typeVal = colMap.type !== -1 && row[colMap.type] ? String(row[colMap.type]).trim() : '';
+
+      let finalType = 'income';
+      let finalAmount = 0;
+
+      if(incomeVal !== 0 || expenseVal !== 0){
+        if(incomeVal !== 0 && expenseVal === 0){
+          finalType = 'income'; finalAmount = incomeVal;
+        } else if(expenseVal !== 0 && incomeVal === 0){
+          finalType = 'expense'; finalAmount = expenseVal;
+        } else {
+          finalType = 'income'; finalAmount = incomeVal;
+        }
+      } else if(amountVal !== 0){
+        finalAmount = amountVal;
+        if(typeVal.includes('출금') || typeVal.includes('지출')) {
+          finalType = 'expense';
+        } else if(typeVal.includes('입금') || typeVal.includes('수입')) {
+          finalType = 'income';
+        } else {
+          const rowStr = row.join(' ');
+          if(rowStr.includes('출금') || rowStr.includes('지출')) finalType = 'expense';
+          else finalType = 'income';
+        }
+      }
+
+      if(finalAmount !== 0){
+        parsedResults.push({ date, type: finalType, memo, amount: finalAmount });
+      }
+    }
+
+    autoProgressWrap.style.display = 'none';
+    showParsedResults(parsedResults, sourceLabel);
   }
 
   function formatExcelDate(val) {
@@ -3439,9 +3339,34 @@ document.getElementById('bulkSaveBtn').addEventListener('click', async ()=>{
       return;
     }
     if(toAdd.length === 0){ alert('저장할 내용이 없습니다.'); return; }
-    if(!confirm('"' + account + '" 통장으로 ' + toAdd.length + '건을 저장할까요?')) return;
 
-    toAdd.forEach(t => {
+    // 중복 검사: 같은 통장에 날짜·구분·내용·금액이 모두 같은 거래가 이미 있으면 중복으로 보고 자동 제외
+    const existingSignatures = new Set(
+      transactions.filter(t => t.account === account)
+        .map(t => `${t.date}|${t.type}|${t.memo}|${t.amount}`)
+    );
+    const newOnes = [];
+    let dupCount = 0;
+    toAdd.forEach(t=>{
+      const sig = `${t.date}|${t.type}|${t.memo}|${t.amount}`;
+      if(existingSignatures.has(sig)){
+        dupCount++;
+      } else {
+        newOnes.push(t);
+        existingSignatures.add(sig); // 이번에 올린 파일 안에서의 중복도 함께 방지
+      }
+    });
+
+    if(newOnes.length === 0){
+      alert(`불러온 ${toAdd.length}건이 모두 "${account}" 통장에 이미 저장되어 있는 거래와 동일합니다 (중복). 새로 저장할 내용이 없습니다.`);
+      return;
+    }
+
+    let confirmMsg = `"${account}" 통장으로 ${newOnes.length}건을 저장할까요?`;
+    if(dupCount > 0) confirmMsg += `\n\n이미 등록된 거래와 동일한 ${dupCount}건은 중복으로 자동 제외됩니다.`;
+    if(!confirm(confirmMsg)) return;
+
+    newOnes.forEach(t => {
       transactions.push({
         id: 'tx_' + Date.now() + '_' + Math.random().toString(36).slice(2,7),
         account: account,
@@ -3458,7 +3383,7 @@ document.getElementById('bulkSaveBtn').addEventListener('click', async ()=>{
     autoDropZone.style.display = 'block';
     autoPreviewWrap.style.display = 'none';
     render();
-    alert(toAdd.length + '건이 저장되었습니다.');
+    alert(`${newOnes.length}건이 저장되었습니다.` + (dupCount > 0 ? ` (중복 ${dupCount}건 제외)` : ''));
   });
 })();
 
