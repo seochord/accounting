@@ -2135,13 +2135,32 @@ function computeAgg(){
     });
   }
 
+  // 이월금(전체 기간 시작부터, 이 집계에서 다루는 첫 구간 이전까지)을 시작 잔액으로 계산.
+  // 통장 필터가 걸려 있으면 그 통장 거래만으로 계산해야 다른 카드의 통장별 잔액과 일치한다.
+  const acctTx = aggAccount ? transactions.filter(t => t.account === aggAccount) : transactions;
+  let openingBalance = 0;
+  if(currentMode === 'year'){
+    // 연도별 집계는 order의 첫 연도 이전 거래가 없으므로(전체 연도를 다 나열) 이월금 0에서 시작
+    openingBalance = 0;
+  } else {
+    // 월/분기/반기 집계는 선택한 연도(currentYear) 1월 1일 이전까지의 누적 잔액을 이월금으로 사용
+    const boundary = `${currentYear}-01-01`;
+    acctTx.forEach(t=>{
+      if(t.date < boundary) openingBalance += (t.type === 'income' ? t.amount : -t.amount);
+    });
+  }
+
+  let runningBalance = openingBalance;
   const rows = order.map(key=>{
     const g = groups[key];
-    return {label:g.label, income:g.income, expense:g.expense, net:g.income-g.expense};
+    runningBalance += (g.income - g.expense);
+    return {label:g.label, income:g.income, expense:g.expense, net:runningBalance};
   });
   const grandIncome = rows.reduce((s,r)=>s+r.income,0);
   const grandExpense = rows.reduce((s,r)=>s+r.expense,0);
-  return {rows, grandIncome, grandExpense, isEmpty: currentMode !== 'year' && yearTx.length === 0};
+  // 합계 행의 잔액은 마지막 구간까지의 최종 누적 잔액(=이월금 + 전체 수입 - 전체 지출)
+  const grandNet = openingBalance + grandIncome - grandExpense;
+  return {rows, grandIncome, grandExpense, grandNet, openingBalance, isEmpty: currentMode !== 'year' && yearTx.length === 0};
 }
 
 function renderAgg(){
@@ -2152,14 +2171,14 @@ function renderAgg(){
 
   yearWrap.style.display = currentMode === 'year' ? 'none' : 'flex';
 
-  const {rows, grandIncome, grandExpense, isEmpty} = computeAgg();
+  const {rows, grandIncome, grandExpense, grandNet, openingBalance, isEmpty} = computeAgg();
   const colLabel = AGG_LABELS[currentMode];
 
   const titleSuffix = currentMode === 'year' ? '연도별' : `${currentYear}년 ${{month:'월별',quarter:'분기별',half:'반기별'}[currentMode]}`;
   const accSuffix = aggAccount ? ` · ${aggAccount}` : '';
   document.getElementById('aggPrintTitle').textContent = `기간별 집계 - ${titleSuffix}${accSuffix}`;
 
-  head.innerHTML = `<tr><th>${colLabel}</th><th></th><th>수입 합계</th><th>지출 합계</th><th>소계(순액)</th></tr>`;
+  head.innerHTML = `<tr><th>${colLabel}</th><th></th><th>수입 합계</th><th>지출 합계</th><th>소계(잔액)</th></tr>`;
 
   if(isEmpty){
     body.innerHTML = '';
@@ -2169,6 +2188,20 @@ function renderAgg(){
   empty.style.display = 'none';
 
   body.innerHTML = '';
+
+  // 월/분기/반기 집계는 선택 연도 이전까지의 이월금이 있으면 첫 행으로 보여준다 (연도별 집계는 이월금 없음)
+  if(currentMode !== 'year' && openingBalance !== 0){
+    const openRow = document.createElement('tr');
+    openRow.className = 'opening-row';
+    openRow.innerHTML = `
+      <td colspan="2">이월금 (${currentYear}년 이전)</td>
+      <td class="income"></td>
+      <td class="expense"></td>
+      <td class="${openingBalance>=0?'balance-pos':'balance-neg'}">${won(openingBalance)}</td>
+    `;
+    body.appendChild(openRow);
+  }
+
   rows.forEach(r=>{
     const tr = document.createElement('tr');
     tr.innerHTML = `
@@ -2180,7 +2213,6 @@ function renderAgg(){
     body.appendChild(tr);
   });
 
-  const grandNet = grandIncome - grandExpense;
   const totalRow = document.createElement('tr');
   totalRow.className = 'total-row';
   totalRow.innerHTML = `
@@ -2733,7 +2765,7 @@ function excelFilename(prefix){
    (기간별 집계는 grandIncome-grandExpense가 곧 순액이지만, 통장별 잔액처럼 net이 누적값인 경우
    grandIncome-grandExpense가 아니라 각 행 net의 합을 합계로 써야 정확하다.) */
 function summaryToSheetRows(headerLabel, rows, grandIncome, grandExpense, netTotal){
-  const sheetRows = [[headerLabel, '수입 합계', '지출 합계', '소계(순액)']];
+  const sheetRows = [[headerLabel, '수입 합계', '지출 합계', '소계(잔액)']];
   rows.forEach(r => sheetRows.push([r.label, r.income, r.expense, r.net]));
   const total = netTotal !== undefined ? netTotal : (grandIncome - grandExpense);
   sheetRows.push(['합계', grandIncome, grandExpense, total]);
@@ -2785,13 +2817,16 @@ function downloadLedgerExcel(){
 }
 
 function downloadAggExcel(){
-  const {rows, grandIncome, grandExpense, isEmpty} = computeAgg();
+  const {rows, grandIncome, grandExpense, grandNet, openingBalance, isEmpty} = computeAgg();
   if(isEmpty){ alert('내보낼 집계 내역이 없습니다.'); return; }
   const colLabel = AGG_LABELS[currentMode];
   const sheetName = {month:'월별집계',quarter:'분기별집계',half:'반기별집계',year:'연도별집계'}[currentMode];
   const accSuffix = aggAccount ? `_${aggAccount}` : '';
   const prefix = (currentMode === 'year' ? '연도별집계' : `${currentYear}년_${sheetName}`) + accSuffix;
-  writeSingleSheetWorkbook(summaryToSheetRows(colLabel, rows, grandIncome, grandExpense), SUMMARY4_COL_WIDTHS, sheetName, prefix);
+  const exportRows = (currentMode !== 'year' && openingBalance !== 0)
+    ? [{label:`이월금 (${currentYear}년 이전)`, income:0, expense:0, net:openingBalance}, ...rows]
+    : rows;
+  writeSingleSheetWorkbook(summaryToSheetRows(colLabel, exportRows, grandIncome, grandExpense, grandNet), SUMMARY4_COL_WIDTHS, sheetName, prefix);
 }
 
 function downloadGroupExcel(field, sheetName, prefix, year){
@@ -2799,9 +2834,12 @@ function downloadGroupExcel(field, sheetName, prefix, year){
   if(isEmpty){ alert('내보낼 내역이 없습니다.'); return; }
   const headerLabel = field === 'account' ? '통장' : '명목';
   const finalPrefix = year ? `${prefix}_${year}년` : prefix;
-  writeSingleSheetWorkbook(summaryToSheetRows(headerLabel, rows, grandIncome, grandExpense), SUMMARY4_COL_WIDTHS, sheetName, finalPrefix);
+  // net은 누적 잔액이므로 합계도 grandIncome-grandExpense가 아니라 각 행 net의 합이어야 정확하다
+  const grandNet = rows.reduce((s,r)=>s+r.net,0);
+  writeSingleSheetWorkbook(summaryToSheetRows(headerLabel, rows, grandIncome, grandExpense, grandNet), SUMMARY4_COL_WIDTHS, sheetName, finalPrefix);
 }
 
+/* 연도별 누적 잔액(이월금 개념 없이 연도별로 다 나열하므로 0에서 시작해 순차 누적) */
 function yearlySummaryRows(){
   const years = getYears().sort((a,b)=>a-b);
   const groups = {};
@@ -2810,7 +2848,11 @@ function yearlySummaryRows(){
     const y = parseInt(t.date.slice(0,4),10);
     if(groups[y]) groups[y][t.type] += t.amount;
   });
-  return years.map(y=>({label:`${y}년`, income:groups[y].income, expense:groups[y].expense, net:groups[y].income-groups[y].expense}));
+  let running = 0;
+  return years.map(y=>{
+    running += groups[y].income - groups[y].expense;
+    return {label:`${y}년`, income:groups[y].income, expense:groups[y].expense, net:running};
+  });
 }
 
 function downloadFullExcelBackup(){
@@ -2822,10 +2864,12 @@ function downloadFullExcelBackup(){
   const yearRows = yearlySummaryRows();
   const yGrandIncome = yearRows.reduce((s,r)=>s+r.income,0);
   const yGrandExpense = yearRows.reduce((s,r)=>s+r.expense,0);
-  appendSheet(wb, summaryToSheetRows('연도', yearRows, yGrandIncome, yGrandExpense), SUMMARY4_COL_WIDTHS, '연도별집계');
+  const yGrandNet = yearRows.length ? yearRows[yearRows.length-1].net : 0;
+  appendSheet(wb, summaryToSheetRows('연도', yearRows, yGrandIncome, yGrandExpense, yGrandNet), SUMMARY4_COL_WIDTHS, '연도별집계');
 
   const {rows: accRows, grandIncome: aGrandIncome, grandExpense: aGrandExpense} = computeGroupSummary('account');
-  appendSheet(wb, summaryToSheetRows('통장', accRows, aGrandIncome, aGrandExpense), SUMMARY4_COL_WIDTHS, '통장별잔액');
+  const aGrandNet = accRows.reduce((s,r)=>s+r.net,0);
+  appendSheet(wb, summaryToSheetRows('통장', accRows, aGrandIncome, aGrandExpense, aGrandNet), SUMMARY4_COL_WIDTHS, '통장별잔액');
 
   XLSX.writeFile(wb, excelFilename('전체데이터_종합백업'));
 }
