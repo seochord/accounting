@@ -415,7 +415,7 @@ color:var(--ink-soft);font-size:12.5px;margin-top:30px;display:flex;flex-directi
       <div class="card-tools no-print">
         <button class="tool-btn" id="ledgerPrintBtn">인쇄</button>
         <button class="tool-btn" id="ledgerExcelBtn">엑셀 다운로드</button>
-        <button class="tool-btn danger" id="ledgerBulkDeleteBtn" style="color:var(--expense);border-color:var(--expense);">선택 연도 삭제</button>
+        <button class="tool-btn danger" id="ledgerBulkDeleteBtn" style="color:var(--expense);border-color:var(--expense);">필터 조건 삭제</button>
       </div>
     </h2>
     <div class="filter-row no-print">
@@ -1867,9 +1867,13 @@ async function deleteTx(id){
 
 /* 거래 내역 표의 현재 필터(연도·월·통장)에 해당하는 거래를 한 번에 삭제.
    실수로 전체 데이터를 지우는 것을 막기 위해 연도 선택이 반드시 필요하다. */
+/* 거래 내역 표의 현재 필터(연도·월·통장)에 해당하는 거래를 한 번에 삭제.
+   연도만 선택 -> 그 연도 전체, 연도+월 -> 그 연도 그 달, 연도+통장 -> 그 연도 그 통장,
+   연도+월+통장을 모두 선택하면 그 조건에 정확히 맞는 거래만 삭제된다.
+   실수로 전체 데이터를 지우는 것을 막기 위해 연도 선택이 반드시 필요하다. */
 async function bulkDeleteByFilter(){
   if(!filterYear){
-    alert('연도를 먼저 선택해 주세요.\n(전체 삭제 실수를 막기 위해 연도를 선택해야만 일괄 삭제할 수 있습니다.)');
+    alert('연도를 먼저 선택해 주세요.\n(전체 삭제 실수를 막기 위해 연도를 선택해야만 필터 조건 삭제를 사용할 수 있습니다.\n필요하면 월·통장 필터도 함께 선택해서 범위를 좁힐 수 있습니다.)');
     return;
   }
 
@@ -1891,7 +1895,7 @@ async function bulkDeleteByFilter(){
   const condLabel = condParts.join(' · ');
 
   const firstConfirm = confirm(
-    `${condLabel} 조건에 해당하는 거래 ${target.length}건을 모두 삭제할까요?\n\n삭제하면 되돌릴 수 없습니다.`
+    `다음 필터 조건에 해당하는 거래 ${target.length}건을 모두 삭제할까요?\n\n조건: ${condLabel}\n\n삭제하면 되돌릴 수 없습니다.`
   );
   if(!firstConfirm) return;
 
