@@ -2508,12 +2508,13 @@ function itemAmount(entry){
 function compareBadge(curAmt, refAmt){
   if(curAmt === 0 && refAmt === 0) return { html: '', isAnomaly: false };
   if(refAmt === 0){
-    // 비교 대상 달에는 없다가 새로 생긴 항목
-    return { html: `<span class="anomaly-badge new">NEW</span>`, isAnomaly: true, rateText: '신규' };
+    // 비교 대상(전월 또는 전년동월)에 거래 자체가 없어 증감률을 계산할 수 없는 경우.
+    // %를 낼 수 없으므로 특이사항으로 판단하지 않고 '비교불가'로만 표시한다.
+    return { html: `<span class="anomaly-badge none">비교불가</span>`, isAnomaly: false, rateText: '비교불가' };
   }
   const diff = curAmt - refAmt;
   const rate = (diff / Math.abs(refAmt)) * 100;
-  const isAnomaly = Math.abs(rate) >= 50;
+  const isAnomaly = Math.abs(rate) >= 20;
   const cls = diff > 0 ? 'up' : (diff < 0 ? 'down' : 'flat');
   const arrow = diff > 0 ? '▲' : (diff < 0 ? '▼' : '');
   const rateText = (diff >= 0 ? '+' : '') + rate.toFixed(0) + '%';
@@ -2550,7 +2551,7 @@ function renderMoM(){
   const [cy, cm] = monthStr.split('-');
   const [py, pm] = prevStr.split('-');
   const [yy, ym] = yearAgoStr.split('-');
-  caption.textContent = `${cy}년 ${parseInt(cm,10)}월 · 전월(${py}년 ${parseInt(pm,10)}월)·전년동월(${yy}년 ${parseInt(ym,10)}월) 대비 ±50% 이상 변동 또는 신규 항목만 표시합니다.`;
+  caption.textContent = `${cy}년 ${parseInt(cm,10)}월 · 전월(${py}년 ${parseInt(pm,10)}월)·전년동월(${yy}년 ${parseInt(ym,10)}월) 대비 ±20% 이상 변동한 항목만 표시합니다. (비교 대상 거래가 없는 항목은 제외)`;
   document.getElementById('momPrintTitle').textContent = `특이사항 분석 - ${cy}년 ${parseInt(cm,10)}월`;
 
   // 이번달에 존재하는 모든 항목 + 전월/전년동월에는 있었지만 이번달엔 사라진 항목까지 후보로 모은다
@@ -2597,7 +2598,7 @@ function renderMoM(){
   if(rows.length === 0){
     wrap.style.display = 'none';
     empty.style.display = 'block';
-    empty.textContent = `${cy}년 ${parseInt(cm,10)}월에는 전월·전년동월 대비 ±50% 이상 변동한 특이 항목이 없습니다.`;
+    empty.textContent = `${cy}년 ${parseInt(cm,10)}월에는 전월·전년동월 대비 ±20% 이상 변동한 특이 항목이 없습니다.`;
     return;
   }
 
