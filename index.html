@@ -565,8 +565,6 @@ color:var(--ink-soft);font-size:12.5px;margin-top:30px;display:flex;flex-directi
             <th>이번달</th>
             <th>전월</th>
             <th>전월대비</th>
-            <th>전년동월</th>
-            <th>전년동월대비</th>
           </tr></thead>
           <tbody id="anomalyBody"></tbody>
         </table>
@@ -2498,11 +2496,6 @@ function sumByItemForMonth(monthStr){
   return groups;
 }
 
-function yearAgoMonthStr(monthStr){
-  const [y, m] = monthStr.split('-').map(Number);
-  return `${y-1}-${String(m).padStart(2,'0')}`;
-}
-
 /* 항목의 수입/지출 중 0이 아닌 쪽의 값을 대표값으로 사용 (한 항목은 보통 수입 또는 지출 한쪽만 발생) */
 function itemAmount(entry){
   if(!entry) return 0;
@@ -2512,7 +2505,7 @@ function itemAmount(entry){
 function compareBadge(curAmt, refAmt){
   if(curAmt === 0 && refAmt === 0) return { html: '', isAnomaly: false };
   if(refAmt === 0){
-    // 비교 대상(전월 또는 전년동월)에 거래 자체가 없어 증감률을 계산할 수 없는 경우.
+    // 비교 대상(전월)에 거래 자체가 없어 증감률을 계산할 수 없는 경우.
     // %를 낼 수 없으므로 특이사항으로 판단하지 않고 '비교불가'로만 표시한다.
     return { html: `<span class="anomaly-badge none">비교불가</span>`, isAnomaly: false, rateText: '비교불가' };
   }
@@ -2541,28 +2534,24 @@ function renderMoM(){
   if(!monthStr){
     wrap.style.display = 'none';
     empty.style.display = 'block';
-    empty.textContent = '기준월을 선택하면 전월·전년동월 대비 특이 항목을 보여줍니다.';
+    empty.textContent = '기준월을 선택하면 전월 대비 특이 항목을 보여줍니다.';
     return;
   }
 
   const prevStr = prevMonthStr(monthStr);
-  const yearAgoStr = yearAgoMonthStr(monthStr);
 
   const curGroups = sumByItemForMonth(monthStr);
   const prevGroups = sumByItemForMonth(prevStr);
-  const yearAgoGroups = sumByItemForMonth(yearAgoStr);
 
   const [cy, cm] = monthStr.split('-');
   const [py, pm] = prevStr.split('-');
-  const [yy, ym] = yearAgoStr.split('-');
-  caption.textContent = `${cy}년 ${parseInt(cm,10)}월 · 전월(${py}년 ${parseInt(pm,10)}월)·전년동월(${yy}년 ${parseInt(ym,10)}월) 대비 ±20% 이상 변동한 항목만 표시합니다. (비교 대상 거래가 없는 항목은 제외)`;
+  caption.textContent = `${cy}년 ${parseInt(cm,10)}월 · 전월(${py}년 ${parseInt(pm,10)}월) 대비 ±20% 이상 변동한 항목만 표시합니다. (비교 대상 거래가 없는 항목은 제외)`;
   document.getElementById('momPrintTitle').textContent = `특이사항 분석 - ${cy}년 ${parseInt(cm,10)}월`;
 
-  // 이번달에 존재하는 모든 항목 + 전월/전년동월에는 있었지만 이번달엔 사라진 항목까지 후보로 모은다
+  // 이번달에 존재하는 모든 항목 + 전월에는 있었지만 이번달엔 사라진 항목까지 후보로 모은다
   const allKeys = new Set([
     ...Object.keys(curGroups),
     ...Object.keys(prevGroups),
-    ...Object.keys(yearAgoGroups),
   ]);
 
   if(allKeys.size === 0){
@@ -2576,33 +2565,27 @@ function renderMoM(){
   allKeys.forEach(key=>{
     const cur = curGroups[key];
     const prev = prevGroups[key];
-    const yearAgo = yearAgoGroups[key];
     const curAmt = itemAmount(cur);
     const prevAmt = itemAmount(prev);
-    const yearAgoAmt = itemAmount(yearAgo);
 
-    // 이번달 거래가 없는데 과거에만 있던 항목은(사라진 항목) 이번 리포트 범위에서는 제외
+    // 이번달 거래가 없는데 전월에만 있던 항목은(사라진 항목) 이번 리포트 범위에서는 제외
     if(!cur) return;
 
     const prevCmp = compareBadge(curAmt, prevAmt);
-    const yearAgoCmp = compareBadge(curAmt, yearAgoAmt);
 
-    if(!prevCmp.isAnomaly && !yearAgoCmp.isAnomaly) return;
+    if(!prevCmp.isAnomaly) return;
 
     rows.push({
       memo: cur.memo, account: cur.account, curAmt,
-      prevAmt, prevCmp, yearAgoAmt, yearAgoCmp,
-      sortKey: Math.max(
-        prevCmp.isAnomaly ? Math.abs(curAmt - prevAmt) : 0,
-        yearAgoCmp.isAnomaly ? Math.abs(curAmt - yearAgoAmt) : 0
-      )
+      prevAmt, prevCmp,
+      sortKey: Math.abs(curAmt - prevAmt)
     });
   });
 
   if(rows.length === 0){
     wrap.style.display = 'none';
     empty.style.display = 'block';
-    empty.textContent = `${cy}년 ${parseInt(cm,10)}월에는 전월·전년동월 대비 ±20% 이상 변동한 특이 항목이 없습니다.`;
+    empty.textContent = `${cy}년 ${parseInt(cm,10)}월에는 전월 대비 ±20% 이상 변동한 특이 항목이 없습니다.`;
     return;
   }
 
@@ -2619,8 +2602,6 @@ function renderMoM(){
       <td>${won(r.curAmt)}</td>
       <td>${r.prevAmt ? won(r.prevAmt) : '-'}</td>
       <td>${r.prevCmp.html || '<span class="anomaly-badge none">-</span>'}</td>
-      <td>${r.yearAgoAmt ? won(r.yearAgoAmt) : '-'}</td>
-      <td>${r.yearAgoCmp.html || '<span class="anomaly-badge none">-</span>'}</td>
     `;
     body.appendChild(tr);
   });
