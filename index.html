@@ -156,6 +156,7 @@
   .filter-row .f-item{display:flex;align-items:center;gap:6px;}
   .filter-row label{font-size:14px;color:var(--ink-soft);}
   .filter-row select{padding:6px 10px;border:1px solid var(--paper-line);border-radius:3px;font-size:15px;background:#fff;}
+  .filter-row select:disabled{background:var(--row-alt);color:var(--ink-soft);cursor:not-allowed;}
 
   .table-scroll{overflow-x:auto;}
 
@@ -491,6 +492,10 @@ color:var(--ink-soft);font-size:12.5px;margin-top:30px;display:flex;flex-directi
         <label>연도</label>
         <select id="accountYear"><option value="">전체 (누적)</option></select>
       </div>
+      <div class="f-item">
+        <label>월 (연도 선택 시)</label>
+        <select id="accountMonth" disabled><option value="">연도 말 기준</option></select>
+      </div>
     </div>
     <div class="card-caption no-print" id="accountCaption">연도 구분 없이 전체 기간 누적 기준입니다. 실제 통장 잔고 확인용.</div>
     <div class="table-scroll">
@@ -613,6 +618,7 @@ let currentMode = 'month';
 let currentYear = new Date().getFullYear();
 let aggAccount = '';
 let accountYear = '';
+let accountMonth = '';
 let nameSearchYear = '';
 let filterAccount = '';
 // 거래 내역 카드는 항상 오늘 날짜 기준 연/월로 시작한다
@@ -2100,6 +2106,16 @@ function populateYearSelect(){
   accountYearSel.value = years.includes(parseInt(accountYearPrev,10)) ? accountYearPrev : '';
   accountYear = accountYearSel.value;
 
+  const accountMonthSel = document.getElementById('accountMonth');
+  const accountMonthPrev = accountMonth;
+  const monthOptionsHtml = Array.from({length:12}, (_,i)=>i+1)
+    .map(m=>`<option value="${String(m).padStart(2,'0')}">${m}월</option>`).join('');
+  accountMonthSel.innerHTML = '<option value="">연도 말 기준</option>' + monthOptionsHtml;
+  accountMonthSel.value = accountYear ? accountMonthPrev : '';
+  accountMonth = accountMonthSel.value;
+  // 연도를 선택하지 않았으면(전체 누적) 월 선택은 의미가 없으므로 비활성화
+  accountMonthSel.disabled = !accountYear;
+
   const nameYearSel = document.getElementById('nameSearchYear');
   const nameYearPrev = nameSearchYear;
   nameYearSel.innerHTML = '<option value="">전체</option>' + yearOptionsHtml;
@@ -2259,10 +2275,10 @@ function computeGroupSummary(field, year, asOfMonth){
   return {rows, grandIncome, grandExpense, isEmpty: transactions.length === 0};
 }
 
-function renderGroupTable(field, bodyId, emptyId, year){
+function renderGroupTable(field, bodyId, emptyId, year, asOfMonth){
   const body = document.getElementById(bodyId);
   const empty = document.getElementById(emptyId);
-  const {rows, grandIncome, grandExpense, isEmpty} = computeGroupSummary(field, year);
+  const {rows, grandIncome, grandExpense, isEmpty} = computeGroupSummary(field, year, asOfMonth);
   body.innerHTML = '';
   if(isEmpty){ empty.style.display = 'block'; return; }
   empty.style.display = 'none';
@@ -2293,11 +2309,21 @@ function renderGroupTable(field, bodyId, emptyId, year){
 }
 
 function renderAccountSummary(){
-  renderGroupTable('account','accountBody','accountEmpty', accountYear);
-  const title = accountYear ? `통장별 잔액 (${accountYear}년 말 기준 누적)` : '통장별 잔액 (전체 기간 누적)';
-  const caption = accountYear
-    ? `${accountYear}년까지의 누적 잔액입니다. 수입·지출 합계는 ${accountYear}년 한 해 기준입니다.`
-    : '연도 구분 없이 전체 기간 누적 기준입니다. 실제 통장 잔고 확인용.';
+  const asOfMonth = (accountYear && accountMonth) ? `${accountYear}-${accountMonth}` : null;
+  renderGroupTable('account','accountBody','accountEmpty', accountYear, asOfMonth);
+
+  let title, caption;
+  if(asOfMonth){
+    const monthLabel = `${accountYear}년 ${parseInt(accountMonth,10)}월`;
+    title = `통장별 잔액 (${monthLabel} 말 기준 누적)`;
+    caption = `${monthLabel} 말까지의 누적 잔액입니다. 월간재정보고서(같은 달)의 통장별 잔액과 동일한 시점입니다.`;
+  } else if(accountYear){
+    title = `통장별 잔액 (${accountYear}년 말 기준 누적)`;
+    caption = `${accountYear}년까지의 누적 잔액입니다. 수입·지출 합계는 ${accountYear}년 한 해 기준입니다.`;
+  } else {
+    title = '통장별 잔액 (전체 기간 누적)';
+    caption = '연도 구분 없이 전체 기간(오늘 현재까지) 누적 기준입니다. 실제 통장 잔고 확인용.';
+  }
   document.getElementById('accountPrintTitle').textContent = title;
   document.getElementById('accountCaption').textContent = caption;
 }
@@ -2815,11 +2841,11 @@ function downloadAggExcel(){
   writeSingleSheetWorkbook(summaryToSheetRows(colLabel, exportRows, grandIncome, grandExpense, grandNet), SUMMARY4_COL_WIDTHS, sheetName, prefix);
 }
 
-function downloadGroupExcel(field, sheetName, prefix, year){
-  const {rows, grandIncome, grandExpense, isEmpty} = computeGroupSummary(field, year);
+function downloadGroupExcel(field, sheetName, prefix, year, asOfMonth){
+  const {rows, grandIncome, grandExpense, isEmpty} = computeGroupSummary(field, year, asOfMonth);
   if(isEmpty){ alert('내보낼 내역이 없습니다.'); return; }
   const headerLabel = field === 'account' ? '통장' : '명목';
-  const finalPrefix = year ? `${prefix}_${year}년` : prefix;
+  const finalPrefix = asOfMonth ? `${prefix}_${asOfMonth}` : (year ? `${prefix}_${year}년` : prefix);
   // net은 누적 잔액이므로 합계도 grandIncome-grandExpense가 아니라 각 행 net의 합이어야 정확하다
   const grandNet = rows.reduce((s,r)=>s+r.net,0);
   writeSingleSheetWorkbook(summaryToSheetRows(headerLabel, rows, grandIncome, grandExpense, grandNet), SUMMARY4_COL_WIDTHS, sheetName, finalPrefix);
@@ -2862,8 +2888,20 @@ function downloadFullExcelBackup(){
 
 document.getElementById('ledgerExcelBtn').addEventListener('click', downloadLedgerExcel);
 document.getElementById('aggExcelBtn').addEventListener('click', downloadAggExcel);
-document.getElementById('accountExcelBtn').addEventListener('click', ()=> downloadGroupExcel('account','통장별잔액','통장별잔액', accountYear));
-document.getElementById('accountYear').addEventListener('change', (e)=>{ accountYear = e.target.value; renderAccountSummary(); });
+document.getElementById('accountExcelBtn').addEventListener('click', ()=> {
+  const asOfMonth = (accountYear && accountMonth) ? `${accountYear}-${accountMonth}` : null;
+  downloadGroupExcel('account','통장별잔액','통장별잔액', accountYear, asOfMonth);
+});
+document.getElementById('accountYear').addEventListener('change', (e)=>{
+  accountYear = e.target.value;
+  // 연도가 바뀌면(특히 '전체'로 돌아가면) 월 선택은 의미가 없어지므로 초기화
+  accountMonth = '';
+  const accountMonthSel = document.getElementById('accountMonth');
+  accountMonthSel.value = '';
+  accountMonthSel.disabled = !accountYear;
+  renderAccountSummary();
+});
+document.getElementById('accountMonth').addEventListener('change', (e)=>{ accountMonth = e.target.value; renderAccountSummary(); });
 document.getElementById('exportFullExcelBtn').addEventListener('click', downloadFullExcelBackup);
 
 /* ---------- 백업 / 복원 (JSON) ---------- */
