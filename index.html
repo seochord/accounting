@@ -65,7 +65,7 @@
   .card-caption{font-size:14px;color:var(--ink-soft);margin:-8px 0 14px;}
 
   /* form */
-  form.entry{display:grid;grid-template-columns: 128px 84px 130px 1fr 110px 90px;gap:10px;align-items:end;}
+  form.entry{display:grid;grid-template-columns: 128px 84px 130px 1fr 130px 110px 90px;gap:10px;align-items:end;}
   form.entry label{display:block;font-size:14px;color:var(--ink-soft);margin-bottom:4px;}
   form.entry input, form.entry select{
     width:100%;padding:8px 9px;border:1px solid var(--paper-line);border-radius:3px;
@@ -125,6 +125,16 @@
     font-family:'JetBrains Mono',monospace;white-space:nowrap;}
   tbody td:first-child{font-family:'Pretendard';text-align:left;color:var(--ink-soft);}
   tbody td.memo{font-family:'Pretendard';text-align:left;color:var(--ink);}
+  .category-badge{
+    display:inline-block;margin-left:6px;padding:1px 7px;border-radius:9px;
+    font-size:11.5px;font-weight:600;color:var(--ink-soft);background:var(--row-alt);
+    cursor:pointer;white-space:nowrap;vertical-align:middle;
+  }
+  .category-badge:hover{background:var(--paper-line);color:var(--ink);}
+  select.category-picker{
+    margin-left:6px;padding:1px 4px;border-radius:6px;border:1px solid var(--accent);
+    font-size:12px;font-family:'Pretendard';background:#fff;color:var(--ink);
+  }
   tbody tr:nth-child(even){background:var(--row-alt);}
   tbody tr.total-row td{
     border-top:2px solid var(--ink);border-bottom:none;font-weight:700;
@@ -326,6 +336,11 @@ color:var(--ink-soft);font-size:12.5px;margin-top:30px;display:flex;flex-directi
           <input type="text" id="f-memo" placeholder="예: 홍길동 감사헌금, 선교사 지원비" required>
         </div>
         <div>
+          <label>계정 (비워두면 자동 분류)</label>
+          <input type="text" id="f-category" list="categoryOptions" placeholder="자동 분류">
+          <datalist id="categoryOptions"></datalist>
+        </div>
+        <div>
           <label>금액 (마이너스 지출은 -금액 입력)</label>
           <input type="number" id="f-amount" step="1" placeholder="0" required>
         </div>
@@ -416,6 +431,7 @@ color:var(--ink-soft);font-size:12.5px;margin-top:30px;display:flex;flex-directi
       <div class="card-tools no-print">
         <button class="tool-btn" id="ledgerPrintBtn">인쇄</button>
         <button class="tool-btn" id="ledgerExcelBtn">엑셀 다운로드</button>
+        <button class="tool-btn" id="reclassifyBtn" title="분류 규칙이 바뀌었거나 처음 만든 계정이 잘 안 맞을 때, 직접 수정하지 않은 거래만 다시 자동 분류합니다.">자동 재분류</button>
         <button class="tool-btn danger" id="ledgerBulkDeleteBtn" style="color:var(--expense);border-color:var(--expense);">필터 조건 삭제</button>
       </div>
     </h2>
@@ -671,6 +687,85 @@ function updateStorageStatus(extra){
   if(!el) return;
   const now = new Date().toLocaleTimeString('ko-KR');
   el.textContent = `현재 주소: ${location.host || '(로컬 파일)'} · 저장된 거래: ${transactions.length}건 · ${extra || ''} ${now}`;
+}
+
+/* ---------- 계정(카테고리) 자동 분류 ---------- */
+const DEFAULT_CATEGORIES = ['헌금','선교헌금','사례비','공공요금','문화비','대출금','월세','운영비','수리유지비','이체','기타'];
+
+// 선교 지원 대상 국가명 패턴 감지용 (예: "26상반기 네팔", "필리핀 배요셉", "네팔 이정엽" 등 국가명이 포함된 지원비)
+const MISSION_COUNTRY_KEYWORDS = ['네팔','필리핀','파키스탄','대만','타사와르'];
+
+// 키워드가 포함되면 해당 계정으로 분류. 배열 순서대로 검사하며 먼저 매칭되는 규칙이 적용된다.
+const CATEGORY_RULES = [
+  { category: '이체', keywords: ['이월금', '계좌로이체', '계좌에서이체', '계좌로 이체', '계좌에서 이체'] },
+  { category: '사례비', keywords: ['사례비'] },
+  { category: '선교헌금', keywords: ['선교', '파송', '사역자', '단기선교', '해외선교'] },
+  { category: '공공요금', keywords: ['전기료', '수도료', '가스', 'KT', 'kt요금', '통신비', '전기요금', '관리비', '인터넷'] },
+  { category: '문화비', keywords: ['서적', '알라딘', '문화비', '도서'] },
+  { category: '월세', keywords: ['임차료', '월세', '임대료'] },
+  { category: '대출금', keywords: ['대출', '원리금', '이자', '대출이자', '상환'] },
+  { category: '수리유지비', keywords: ['수리', '보수', '공사', '시설비', '유지보수'] },
+  { category: '운영비', keywords: ['청소비', '주방봉사', '식사지원', '봉사료', '운영비', '비품'] },
+];
+
+// 사람 이름으로 보이는 패턴(한글 2~4자, 또는 "이름(소속)" 형태)인지 판별
+function looksLikePersonName(text){
+  const trimmed = text.trim();
+  if(!trimmed) return false;
+  // "강근용(엘림)"처럼 괄호가 붙은 이름 패턴
+  const withParen = trimmed.match(/^[가-힣]{2,4}\([가-힣a-zA-Z0-9]{1,10}\)$/);
+  if(withParen) return true;
+  // 순수 한글 2~4자 이름 패턴 (조사나 다른 단어가 섞이지 않은 경우)
+  const pureName = trimmed.match(/^[가-힣]{2,4}$/);
+  return !!pureName;
+}
+
+/* 거래 하나를 계정(카테고리)으로 자동 분류.
+   - 이미 category가 지정돼 있으면 그대로 존중(수동 지정을 덮어쓰지 않음)
+   - 키워드 규칙에 먼저 걸리면 해당 계정
+   - 선교 지원 대상 국가명이 포함되면(예: "26상반기 네팔", "필리핀 배요셉") 선교헌금
+   - 사람 이름처럼 보이면 '헌금'
+   - 그 외에는 애매한 항목이므로 '기타' */
+function autoClassify(tx){
+  if(tx.category) return tx.category;
+  const text = (tx.memo || '').replace(/\s/g, '');
+  for(const rule of CATEGORY_RULES){
+    if(rule.keywords.some(k => text.includes(k))) return rule.category;
+  }
+  if(MISSION_COUNTRY_KEYWORDS.some(k => text.includes(k))) return '선교헌금';
+  if(looksLikePersonName(tx.memo || '')) return '헌금';
+  return '기타';
+}
+
+/* 전체 거래 목록에 대해 category가 없는 거래에만 자동 분류를 채워 넣는다(수동 지정 값은 보존). */
+function classifyAllTransactions(list){
+  return list.map(t => ({ ...t, category: t.category || autoClassify({...t, category: undefined}) }));
+}
+
+/* '자동 재분류' 버튼: 분류 규칙이 바뀌었거나 처음 자동분류가 마음에 들지 않을 때,
+   사용자가 직접 지정(categoryManual)하지 않은 거래만 최신 규칙으로 다시 계산해 덮어쓴다. */
+async function reclassifyAllTransactions(){
+  const targets = transactions.filter(t => !t.categoryManual);
+  if(targets.length === 0){
+    alert('자동 재분류 대상이 없습니다. 모든 거래가 직접 지정한 계정을 갖고 있습니다.');
+    return;
+  }
+  if(!confirm(`자동 분류된 거래 ${targets.length}건을 최신 규칙으로 다시 분류할까요?\n(직접 계정을 지정한 거래는 그대로 유지됩니다.)`)) return;
+
+  transactions = transactions.map(t=>{
+    if(t.categoryManual) return t;
+    return { ...t, category: autoClassify({...t, category: undefined}) };
+  });
+  await saveData();
+  render();
+  alert(`${targets.length}건이 다시 분류되었습니다.`);
+}
+
+/* 사용자가 사용해 온 계정(카테고리) 전체 목록 - 기본 목록 + 실제 데이터에 존재하는 값 */
+function getCategoryList(){
+  const used = new Set(transactions.map(t => t.category).filter(Boolean));
+  DEFAULT_CATEGORIES.forEach(c => used.add(c));
+  return [...used];
 }
 
 const INITIAL_JULY_TRANSACTIONS = [
@@ -1723,7 +1818,7 @@ function saveLocalCache(){
 
 async function loadData(){
   // 우선 로컬 캐시로 즉시 화면을 채운 뒤, 서버 데이터가 오면 교체한다.
-  transactions = loadLocalCache();
+  transactions = classifyAllTransactions(loadLocalCache());
   render();
   updateStorageStatus('로컬 캐시 표시 중 · 서버 확인 중...');
 
@@ -1743,7 +1838,7 @@ async function loadData(){
     }
     if(!res.ok) throw new Error('서버 응답 오류 (' + res.status + ')');
     const data = await res.json();
-    transactions = Array.isArray(data.transactions) ? data.transactions : [];
+    transactions = classifyAllTransactions(Array.isArray(data.transactions) ? data.transactions : []);
     saveLocalCache();
     serverAvailable = true;
     updateStorageStatus('서버에서 불러옴');
@@ -1812,6 +1907,7 @@ function enterEditMode(tx){
   document.getElementById('f-type').value = tx.type;
   document.getElementById('f-account').value = tx.account;
   document.getElementById('f-memo').value = tx.memo;
+  document.getElementById('f-category').value = tx.category || '';
   document.getElementById('f-amount').value = tx.amount;
   document.getElementById('submitBtn').textContent = '수정 완료';
   document.getElementById('cancelEditBtn').style.display = 'inline-block';
@@ -1833,6 +1929,7 @@ document.getElementById('entryForm').addEventListener('submit', async (e)=>{
   const type = document.getElementById('f-type').value;
   const account = document.getElementById('f-account').value.trim();
   const memo = document.getElementById('f-memo').value.trim();
+  const categoryInput = document.getElementById('f-category').value.trim();
   const amountRaw = document.getElementById('f-amount').value;
   const amount = parseFloat(amountRaw);
 
@@ -1842,15 +1939,19 @@ document.getElementById('entryForm').addEventListener('submit', async (e)=>{
     return;
   }
 
+  // 계정을 직접 입력했으면 그 값을 수동 지정으로 저장(재분류 시 보존), 비워두면 자동 분류에 맡긴다
+  const category = categoryInput || autoClassify({memo});
+  const categoryManual = !!categoryInput;
+
   if(editingId){
     const idx = transactions.findIndex(t => t.id === editingId);
     if(idx !== -1){
-      transactions[idx] = {...transactions[idx], date, type, account, memo, amount};
+      transactions[idx] = {...transactions[idx], date, type, account, memo, category, categoryManual, amount};
     }
   } else {
     transactions.push({
       id: 'tx_' + Date.now() + '_' + Math.random().toString(36).slice(2,7),
-      date, type, account, memo, amount
+      date, type, account, memo, category, categoryManual, amount
     });
   }
   await saveData();
@@ -1929,6 +2030,7 @@ function getAccountList(){
 
 function populateDatalists(){
   document.getElementById('accountOptions').innerHTML = getAccountList().map(a=>`<option value="${escapeHtml(a)}">`).join('');
+  document.getElementById('categoryOptions').innerHTML = getCategoryList().map(c=>`<option value="${escapeHtml(c)}">`).join('');
 }
 
 function populateFilters(){
@@ -2005,10 +2107,14 @@ function renderLedger(){
     totalExpense += exp;
 
     const tr = document.createElement('tr');
+    const category = tx.category || autoClassify(tx);
     tr.innerHTML = `
       <td>${tx.date}</td>
       <td class="memo">${escapeHtml(tx.account || '')}</td>
-      <td class="memo">${escapeHtml(tx.memo)}</td>
+      <td class="memo">
+        ${escapeHtml(tx.memo)}
+        <span class="category-badge" data-id="${tx.id}" title="클릭해서 계정 변경">${escapeHtml(category)}</span>
+      </td>
       <td class="income">${inc ? wonNum(inc) : ''}</td>
       <td class="expense">${exp ? wonNum(exp) : ''}</td>
       <td class="${balance>=0?'balance-pos':'balance-neg'}">${wonNum(balance)}</td>
@@ -2038,6 +2144,48 @@ function renderLedger(){
       if(tx) enterEditMode(tx);
     });
   });
+  body.querySelectorAll('.category-badge').forEach(badge=>{
+    badge.addEventListener('click', ()=> openCategoryPicker(badge));
+  });
+}
+
+/* 거래내역 표에서 계정 배지를 클릭하면 그 자리에 select를 띄워 바로 계정을 바꿀 수 있게 한다. */
+function openCategoryPicker(badge){
+  const id = badge.dataset.id;
+  const tx = transactions.find(t => t.id === id);
+  if(!tx) return;
+
+  const current = tx.category || autoClassify(tx);
+  const select = document.createElement('select');
+  select.className = 'category-picker';
+  getCategoryList().forEach(c=>{
+    const opt = document.createElement('option');
+    opt.value = c;
+    opt.textContent = c;
+    if(c === current) opt.selected = true;
+    select.appendChild(opt);
+  });
+
+  badge.replaceWith(select);
+  select.focus();
+
+  let done = false;
+  const finish = async (commit)=>{
+    if(done) return;
+    done = true;
+    if(commit && select.value !== current){
+      const idx = transactions.findIndex(t => t.id === id);
+      if(idx !== -1){
+        // categoryManual: true로 표시해두면 '자동 재분류' 실행 시 이 거래는 건드리지 않는다(사용자가 직접 고른 값 보존).
+        transactions[idx] = {...transactions[idx], category: select.value, categoryManual: true};
+        await saveData();
+      }
+    }
+    render();
+  };
+
+  select.addEventListener('change', ()=> finish(true));
+  select.addEventListener('blur', ()=> finish(false));
 }
 
 function escapeHtml(s){
@@ -2680,6 +2828,7 @@ window.addEventListener('afterprint', ()=>{
 document.getElementById('ledgerPrintBtn').addEventListener('click', ()=> printSection('ledgerCard'));
 document.getElementById('aggPrintBtn').addEventListener('click', ()=> printSection('aggCard'));
 document.getElementById('accountPrintBtn').addEventListener('click', ()=> printSection('accountCard'));
+document.getElementById('reclassifyBtn').addEventListener('click', reclassifyAllTransactions);
 document.getElementById('ledgerBulkDeleteBtn').addEventListener('click', bulkDeleteByFilter);
 
 /* ---------- 월간 재정보고서 (통합 인쇄) ---------- */
@@ -2955,13 +3104,13 @@ document.getElementById('importJsonInput').addEventListener('change', async (e)=
     if(mode){
       const map = new Map(transactions.map(t => [t.id, t]));
       incoming.forEach(t => map.set(t.id, t));
-      transactions = [...map.values()];
+      transactions = classifyAllTransactions([...map.values()]);
     } else {
       if(!confirm('정말로 기존 데이터를 모두 삭제하고 백업으로 교체할까요?')) {
         e.target.value = '';
         return;
       }
-      transactions = incoming;
+      transactions = classifyAllTransactions(incoming);
     }
 
     await saveData();
@@ -3081,7 +3230,7 @@ document.getElementById('bulkSaveBtn').addEventListener('click', async ()=>{
   toAdd.forEach(t=>{
     transactions.push({
       id: 'tx_' + Date.now() + '_' + Math.random().toString(36).slice(2,7),
-      account, ...t
+      account, ...t, category: autoClassify(t)
     });
   });
 
@@ -3676,6 +3825,7 @@ document.getElementById('bulkSaveBtn').addEventListener('click', async ()=>{
         date: t.date,
         type: t.type,
         memo: t.memo,
+        category: autoClassify(t),
         amount: t.amount
       });
     });
