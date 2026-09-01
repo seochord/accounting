@@ -229,6 +229,41 @@ color:var(--ink-soft);font-size:12.5px;margin-top:30px;display:flex;flex-directi
   .tool-btn:hover{border-color:var(--accent);color:var(--accent);}
   .tool-btn.danger:hover{border-color:var(--expense);color:var(--expense);background:rgba(163,39,60,0.06);}
 
+  /* 월간 재정보고서 전용 */
+  .monthly-report-title{
+    font-family:'Noto Serif KR',serif;font-size:24px;font-weight:700;
+    margin-bottom:22px;border-bottom:3px double var(--ink);padding-bottom:12px;
+  }
+  .monthly-report-section{margin-top:20px;}
+  .monthly-report-section h3{
+    font-family:'Noto Serif KR',serif;font-size:17px;font-weight:700;
+    margin:0 0 8px;padding-bottom:6px;border-bottom:1px solid var(--paper-line);
+  }
+  .monthly-report-opening{
+    font-family:'JetBrains Mono',monospace;font-size:22px;font-weight:700;
+    text-align:right;padding:10px 8px;background:var(--row-alt);border-radius:4px;
+  }
+  .monthly-report-note{font-size:12.5px;color:var(--ink-soft);margin-top:6px;}
+  .monthly-report-category-table,
+  .monthly-report-summary-table,
+  .monthly-report-account-table{font-size:15px;}
+  .monthly-report-category-table td:first-child,
+  .monthly-report-summary-table td:first-child,
+  .monthly-report-account-table td:first-child{font-family:'Pretendard';text-align:left;}
+  .monthly-report-category-table td,
+  .monthly-report-summary-table td,
+  .monthly-report-account-table td{padding:6px 7px;}
+  .monthly-report-category-table .total-row td,
+  .monthly-report-summary-table .total-row td,
+  .monthly-report-account-table .total-row td{padding-top:8px;}
+  .monthly-report-date{margin-top:30px;font-size:13px;text-align:right;color:var(--ink-soft);}
+  .monthly-report-signature-table{
+    width:330px;margin:14px 0 0 auto;font-size:13px;border-collapse:collapse;
+  }
+  .monthly-report-signature-table th,
+  .monthly-report-signature-table td{padding:5px 8px;border:1px solid var(--paper-line);text-align:center;}
+  .monthly-report-signature-table td{height:30px;font-family:'Pretendard';}
+
   @media print{
     body{background:#fff;}
     header.top, footer, .no-print{display:none !important;}
@@ -2701,152 +2736,123 @@ document.getElementById('reclassifyBtn').addEventListener('click', reclassifyAll
 document.getElementById('ledgerBulkDeleteBtn').addEventListener('click', bulkDeleteByFilter);
 
 /* ---------- 월간 재정보고서 (통합 인쇄) ---------- */
-function buildMonthlyReportHTML(monthStr, includeMoM = true){
+function buildMonthlyReportHTML(monthStr, includeMoM = false){
   const [y, m] = monthStr.split('-');
   const monthLabel = `${y}년 ${parseInt(m,10)}월`;
   const monthTx = sortedTx().filter(t => t.date.slice(0,7) === monthStr);
 
-  // 회계 원칙:
-  // 1) 거래내역/통장잔액 = 실제 은행 거래이므로 이체 포함
-  // 2) 교회 전체 순수입/순지출 = 계좌간 이체 제외
-  // 3) 이월금 = 수입이 아닌 전월 말 잔액
-
+  // 월간 재정보고서 원칙
+  // 1) 전월 이월금은 수입이 아니라 해당 월 1일 이전의 누적 잔액이다.
+  // 2) 수입·지출 계정별 집계에서는 계좌간 이체를 제외한다.
+  // 3) 통장별 잔액은 실제 통장 흐름을 기준으로 계산하므로 계좌간 이체를 포함한다.
   const openingBalance = transactions.reduce((sum, t) => {
     return t.date < `${monthStr}-01`
       ? sum + (t.type === 'income' ? t.amount : -t.amount)
       : sum;
   }, 0);
 
-  // 1. 실제 거래내역: 이체 포함
-  let balance = openingBalance;
-  let totalIncome = 0, totalExpense = 0;
+  // 계정별 월간 집계: 이체 제외
+  const incomeGroups = {};
+  const expenseGroups = {};
+  monthTx.forEach(t=>{
+    if(reportIsTransferTx(t)) return;
+    const category = t.category || autoClassify(t) || '기타';
+    const target = t.type === 'income' ? incomeGroups : expenseGroups;
+    target[category] = (target[category] || 0) + t.amount;
+  });
 
-  const openingRowHtml = `<tr class="opening-row">
-    <td colspan="3">전월 이월금 (${monthLabel} 이전)</td>
-    <td class="income"></td><td class="expense"></td><td>${won(balance)}</td>
-  </tr>`;
+  const incomeRows = Object.entries(incomeGroups)
+    .filter(([, amount]) => amount !== 0)
+    .sort((a,b)=>b[1]-a[1]);
+  const expenseRows = Object.entries(expenseGroups)
+    .filter(([, amount]) => amount !== 0)
+    .sort((a,b)=>b[1]-a[1]);
 
-  const ledgerRowsHtml = monthTx.map(tx=>{
-    const inc = tx.type === 'income' ? tx.amount : 0;
-    const exp = tx.type === 'expense' ? tx.amount : 0;
-    balance += inc - exp;
-    totalIncome += inc;
-    totalExpense += exp;
+  const netIncome = incomeRows.reduce((s,[,amount])=>s+amount,0);
+  const netExpense = expenseRows.reduce((s,[,amount])=>s+amount,0);
+  const netTotal = netIncome - netExpense;
+  const endingBalance = openingBalance + netTotal;
 
-    const transferBadge = reportIsTransferTx(tx)
-      ? ` <span class="account-badge" title="계좌간 이체">이체</span>` : '';
+  const categoryTable = (rows, emptyText, totalLabel, totalAmount, typeClass) => `
+    <table class="monthly-report-category-table">
+      <thead><tr><th style="text-align:left;">계정</th><th>금액</th></tr></thead>
+      <tbody>
+        ${rows.length ? rows.map(([category, amount])=>`
+          <tr><td>${escapeHtml(category)}</td><td class="${typeClass}">${won(amount)}</td></tr>
+        `).join('') : `<tr><td colspan="2" style="text-align:center;font-family:'Pretendard';color:var(--ink-soft);">${emptyText}</td></tr>`}
+        <tr class="total-row"><td>${totalLabel}</td><td class="${typeClass}">${won(totalAmount)}</td></tr>
+      </tbody>
+    </table>`;
 
-    return `<tr>
-      <td>${tx.date}</td>
-      <td class="memo">${escapeHtml(tx.account||'')}</td>
-      <td class="memo">${escapeHtml(tx.memo)}${transferBadge}</td>
-      <td class="income">${inc?won(inc):''}</td>
-      <td class="expense">${exp?won(exp):''}</td>
-      <td>${won(balance)}</td>
-    </tr>`;
-  }).join('') || `<tr><td colspan="6" style="text-align:center;font-family:'Pretendard';color:var(--ink-soft);">해당 월 거래 내역이 없습니다.</td></tr>`;
-
-  // 2. 통장별 잔액: 이체 포함
+  // 통장별 현재 잔액: 선택한 월 말 기준 누적, 이체 포함
   const {rows: accRows, grandIncome: accGrandIncome, grandExpense: accGrandExpense}
     = computeGroupSummary('account', null, monthStr);
   const accGrandNet = accRows.reduce((s,r)=>s+r.net,0);
 
   const accRowsHtml = accRows.map(r=>`<tr>
-    <td colspan="2">${escapeHtml(r.label)}</td>
-    <td class="income">${r.income?won(r.income):'-'}</td>
-    <td class="expense">${r.expense?won(r.expense):'-'}</td>
-    <td class="${r.net>=0?'balance-pos':'balance-neg'}">${won(r.net)}</td>
+    <td>${escapeHtml(r.label)}</td>
+    <td class="balance-cell ${r.net>=0?'balance-pos':'balance-neg'}">${won(r.net)}</td>
   </tr>`).join('') + `<tr class="total-row">
-    <td colspan="2">합계</td>
-    <td class="income">${won(accGrandIncome)}</td>
-    <td class="expense">${won(accGrandExpense)}</td>
+    <td>총잔액</td>
     <td class="${accGrandNet>=0?'balance-pos':'balance-neg'}">${won(accGrandNet)}</td>
   </tr>`;
-
-  // 3. 교회 전체의 순수입/순지출: 이체 제외
-  let netIncome = 0, netExpense = 0;
-  monthTx.forEach(t=>{
-    if(reportIsTransferTx(t)) return;
-    if(t.type === 'income') netIncome += t.amount;
-    else if(t.type === 'expense') netExpense += t.amount;
-  });
-
-  const netTotal = netIncome - netExpense;
-  const endingBalance = openingBalance + netTotal;
-
-  const netSummaryHtml = `
-    <h3 style="font-family:'Noto Serif KR',serif;font-size:17px;margin:26px 0 8px;">3. 월간 재정 요약</h3>
-    <table>
-      <thead><tr><th style="text-align:left;">구분</th><th>금액</th></tr></thead>
-      <tbody>
-        <tr><td>전월 이월금</td><td>${won(openingBalance)}</td></tr>
-        <tr><td>순수입 (이체 제외)</td><td class="income">${won(netIncome)}</td></tr>
-        <tr><td>순지출 (이체 제외)</td><td class="expense">${won(netExpense)}</td></tr>
-        <tr><td>당월 순액</td><td class="${netTotal>=0?'balance-pos':'balance-neg'}">${won(netTotal)}</td></tr>
-        <tr class="total-row"><td>당월 말 총잔액</td><td class="${endingBalance>=0?'balance-pos':'balance-neg'}">${won(endingBalance)}</td></tr>
-      </tbody>
-    </table>
-    <div class="card-caption" style="margin-top:8px;">
-      계좌간 이체는 통장별 거래와 잔액에는 포함하지만 교회 전체의 순수입·순지출에서는 제외합니다.
-      이월금은 수입이 아닌 전월 말 잔액입니다.
-    </div>`;
-
-  // 4. 선택적 전월대비: 교회 전체 재정 기준으로 이체 제외
-  let momSectionHtml = '';
-  if(includeMoM){
-    const prevStr = prevMonthStr(monthStr);
-    const curTx = transactions.filter(t => t.date.slice(0,7) === monthStr && !reportIsTransferTx(t));
-    const prevTx = transactions.filter(t => t.date.slice(0,7) === prevStr && !reportIsTransferTx(t));
-
-    const curIncome = curTx.filter(t=>t.type==='income').reduce((s,t)=>s+t.amount,0);
-    const curExpense = curTx.filter(t=>t.type==='expense').reduce((s,t)=>s+t.amount,0);
-    const prevIncome = prevTx.filter(t=>t.type==='income').reduce((s,t)=>s+t.amount,0);
-    const prevExpense = prevTx.filter(t=>t.type==='expense').reduce((s,t)=>s+t.amount,0);
-
-    const momHtml = momItem('순수입', curIncome, prevIncome, true)
-      + momItem('순지출', curExpense, prevExpense, false)
-      + momItem('순액', curIncome-curExpense, prevIncome-prevExpense, true, 'net');
-
-    momSectionHtml = `<h3 style="font-family:'Noto Serif KR',serif;font-size:17px;margin:26px 0 8px;">4. 전월대비 증감 (이체 제외)</h3>
-      <div class="mom-grid">${momHtml}</div>`;
-  }
 
   const today = new Date().toLocaleDateString('ko-KR',{year:'numeric',month:'long',day:'numeric'});
 
   return `
-    <div class="print-title print-target-title">진리침례교회 재정보고서 — ${monthLabel}</div>
+    <div class="monthly-report">
+      <div class="print-title print-target-title monthly-report-title">진리침례교회 월간 재정보고서 — ${monthLabel}</div>
 
-    <h3 style="font-family:'Noto Serif KR',serif;font-size:17px;margin:20px 0 8px;">1. ${monthLabel} 거래 내역</h3>
-    <table><thead><tr>
-      <th style="text-align:left;">거래일</th><th style="text-align:left;">통장</th><th style="text-align:left;">내용</th>
-      <th>수입</th><th>지출</th><th>소계</th>
-    </tr></thead><tbody>
-      ${openingRowHtml}
-      ${ledgerRowsHtml}
-      <tr class="total-row">
-        <td colspan="3">실제 거래 합계 (이체 포함)</td>
-        <td class="income">${won(totalIncome)}</td><td class="expense">${won(totalExpense)}</td><td>${won(balance)}</td>
-      </tr>
-    </tbody></table>
+      <section class="monthly-report-section">
+        <h3>1. 전월 이월금</h3>
+        <div class="monthly-report-opening">${won(openingBalance)}</div>
+        <div class="monthly-report-note">${monthLabel} 1일 이전까지의 누적 잔액입니다.</div>
+      </section>
 
-    <h3 style="font-family:'Noto Serif KR',serif;font-size:17px;margin:26px 0 8px;">2. 통장별 잔액 (${monthLabel} 말 기준 누적)</h3>
-    <table><thead><tr>
-      <th style="text-align:left;">통장</th><th></th><th>실제 수입 합계</th><th>실제 지출 합계</th><th>잔액</th>
-    </tr></thead><tbody>${accRowsHtml}</tbody></table>
-    <div class="card-caption" style="margin-top:8px;">통장별 수입·지출 및 잔액은 실제 통장 흐름을 표시하므로 계좌간 이체를 포함합니다.</div>
+      <section class="monthly-report-section">
+        <h3>2. 당월 수입</h3>
+        ${categoryTable(incomeRows, '당월 수입이 없습니다.', '수입 합계', netIncome, 'income')}
+      </section>
 
-    ${netSummaryHtml}
-    ${momSectionHtml}
+      <section class="monthly-report-section">
+        <h3>3. 당월 지출</h3>
+        ${categoryTable(expenseRows, '당월 지출이 없습니다.', '지출 합계', netExpense, 'expense')}
+      </section>
 
-    <div style="margin-top:60px;font-size:15px;text-align:right;">작성일: ${today}</div>
-    <table style="margin-top:22px;width:auto;margin-left:auto;font-size:15px;">
-      <thead><tr><th style="width:70px;">구분</th><th style="width:150px;">이름</th><th style="width:150px;">서명</th></tr></thead>
-      <tbody>
-        <tr><td>담당</td><td style="height:40px;">&nbsp;</td><td style="height:40px;">&nbsp;</td></tr>
-        <tr><td>회계</td><td style="height:40px;">&nbsp;</td><td style="height:40px;">&nbsp;</td></tr>
-        <tr><td>확인</td><td style="height:40px;">&nbsp;</td><td style="height:40px;">&nbsp;</td></tr>
-      </tbody>
-    </table>`;
+      <section class="monthly-report-section">
+        <h3>4. 당월 수입·지출 요약</h3>
+        <table class="monthly-report-summary-table">
+          <thead><tr><th style="text-align:left;">구분</th><th>금액</th></tr></thead>
+          <tbody>
+            <tr><td>전월 이월금</td><td>${won(openingBalance)}</td></tr>
+            <tr><td>당월 순수입</td><td class="income">${won(netIncome)}</td></tr>
+            <tr><td>당월 순지출</td><td class="expense">${won(netExpense)}</td></tr>
+            <tr><td>당월 순증감</td><td class="${netTotal>=0?'balance-pos':'balance-neg'}">${won(netTotal)}</td></tr>
+            <tr class="total-row"><td><strong>당월 말 잔액</strong></td><td class="${endingBalance>=0?'balance-pos':'balance-neg'}"><strong>${won(endingBalance)}</strong></td></tr>
+          </tbody>
+        </table>
+        <div class="monthly-report-note">계좌간 이체는 교회 전체의 순수입·순지출에서 제외했습니다.</div>
+      </section>
+
+      <section class="monthly-report-section">
+        <h3>5. 통장별 현재 잔액</h3>
+        <table class="monthly-report-account-table">
+          <thead><tr><th style="text-align:left;">통장</th><th>잔액</th></tr></thead>
+          <tbody>${accRowsHtml}</tbody>
+        </table>
+        <div class="monthly-report-note">${monthLabel} 말 기준 실제 통장 잔액입니다. 계좌간 이체는 실제 통장 흐름에 포함됩니다.</div>
+      </section>
+
+      <div class="monthly-report-date">작성일: ${today}</div>
+      <table class="monthly-report-signature-table">
+        <thead><tr><th>구분</th><th>이름</th><th>서명</th></tr></thead>
+        <tbody>
+          <tr><td>담당</td><td>&nbsp;</td><td>&nbsp;</td></tr>
+          <tr><td>회계</td><td>&nbsp;</td><td>&nbsp;</td></tr>
+          <tr><td>확인</td><td>&nbsp;</td><td>&nbsp;</td></tr>
+        </tbody>
+      </table>
+    </div>`;
 }
 
 function printMonthlyReport(includeMoM = false){
