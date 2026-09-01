@@ -125,6 +125,16 @@
     font-family:'JetBrains Mono',monospace;white-space:nowrap;}
   tbody td:first-child{font-family:'Pretendard';text-align:left;color:var(--ink-soft);}
   tbody td.memo{font-family:'Pretendard';text-align:left;color:var(--ink);}
+  .category-badge{
+    display:inline-block;margin-left:6px;padding:1px 7px;border-radius:9px;
+    font-size:11.5px;font-weight:600;color:var(--ink-soft);background:var(--row-alt);
+    cursor:pointer;white-space:nowrap;vertical-align:middle;
+  }
+  .category-badge:hover{background:var(--paper-line);color:var(--ink);}
+  select.category-picker{
+    margin-left:6px;padding:1px 4px;border-radius:6px;border:1px solid var(--accent);
+    font-size:12px;font-family:'Pretendard';background:#fff;color:var(--ink);
+  }
   tbody tr:nth-child(even){background:var(--row-alt);}
   tbody tr.total-row td{
     border-top:2px solid var(--ink);border-bottom:none;font-weight:700;
@@ -235,15 +245,6 @@ color:var(--ink-soft);font-size:12.5px;margin-top:30px;display:flex;flex-directi
   .monthly-report-category-table td,
   .monthly-report-summary-table td,
   .monthly-report-account-table td{padding:6px 7px;}
-  .monthly-report-period-table,
-  .monthly-report-ledger-table{font-size:14px;width:100%;border-collapse:collapse;}
-  .monthly-report-period-table th,.monthly-report-period-table td,
-  .monthly-report-ledger-table th,.monthly-report-ledger-table td{padding:6px 7px;border:1px solid var(--paper-line);}
-  .monthly-report-period-table th,.monthly-report-ledger-table th{text-align:center;background:var(--paper-soft);}
-  .monthly-report-period-table td:not(:first-child),.monthly-report-ledger-table td.amount-cell{text-align:right;}
-  .monthly-report-ledger-table td:nth-child(1),.monthly-report-ledger-table td:nth-child(2){text-align:center;white-space:nowrap;}
-  .monthly-report-ledger-section{page-break-before:auto;}
-
   .monthly-report-category-table .total-row td,
   .monthly-report-summary-table .total-row td,
   .monthly-report-account-table .total-row td{padding-top:8px;}
@@ -365,6 +366,11 @@ table { min-width:100%; }
           <input type="text" id="f-memo" placeholder="예: 홍길동 감사헌금, 선교사 지원비" required>
         </div>
         <div>
+          <label>계정 (비워두면 자동 분류)</label>
+          <input type="text" id="f-category" list="categoryOptions" placeholder="자동 분류">
+          <datalist id="categoryOptions"></datalist>
+        </div>
+        <div>
           <label>금액 (마이너스 지출은 -금액 입력)</label>
           <input type="number" id="f-amount" step="1" placeholder="0" required>
         </div>
@@ -455,6 +461,7 @@ table { min-width:100%; }
       <div class="card-tools no-print">
         <button class="tool-btn" id="ledgerPrintBtn">인쇄</button>
         <button class="tool-btn" id="ledgerExcelBtn">엑셀 다운로드</button>
+        <button class="tool-btn" id="reclassifyBtn" title="분류 규칙이 바뀌었거나 처음 만든 계정이 잘 안 맞을 때, 직접 수정하지 않은 거래만 다시 자동 분류합니다.">자동 재분류</button>
         <button class="tool-btn danger" id="ledgerBulkDeleteBtn" style="color:var(--expense);border-color:var(--expense);">필터 조건 삭제</button>
       </div>
     </h2>
@@ -702,7 +709,109 @@ function updateStorageStatus(extra){
   el.textContent = `현재 주소: ${location.host || '(로컬 파일)'} · 저장된 거래: ${transactions.length}건 · ${extra || ''} ${now}`;
 }
 
-/* 계정(카테고리) 분류 기능은 사용하지 않습니다. 거래내역은 원문 그대로 표시합니다. */
+/* ---------- 계정(카테고리) 자동 분류 ---------- */
+const DEFAULT_CATEGORIES = ['헌금','선교헌금','사례비','선교비','공공요금','문화비','운영비','월세','수리유지비','대출금','이체','기타'];
+
+// 선교 지원 대상 국가명 패턴 감지용 (예: "26상반기 네팔", "필리핀 배요셉", "네팔 이정엽" 등 국가명이 포함된 지원비)
+const MISSION_COUNTRY_KEYWORDS = ['네팔','필리핀','파키스탄','대만','타사와르'];
+
+// 키워드가 포함되면 해당 계정으로 분류. 배열 순서대로 검사하며 먼저 매칭되는 규칙이 적용된다.
+const CATEGORY_RULES = [
+  { category: '이체', keywords: ['이체', '계좌간이체', '계좌로이체', '계좌에서이체'] },
+  { category: '이월금', keywords: ['이월금'] },
+  { category: '사례비', keywords: ['사례비'] },
+  { category: '선교비', keywords: ['쏘어tv','쏘어티비','건강과생명','네팔','필리핀','파키스탄','대만','타사와르','선교사','선교지원','해외선교','국내외선교후원'] },
+  { category: '전도비', keywords: ['전도지','거리설교','전도'] },
+  { category: '교육비', keywords: ['유치부','유년부','초등부','중등부','중고등부','교육부'] },
+  { category: '공공요금', keywords: ['전기료','수도료','가스','KT','kt요금','통신비','전기요금','관리비','인터넷'] },
+  { category: '문화비', keywords: ['서적','알라딘','문화비','도서'] },
+  { category: '월세', keywords: ['임차료','월세','임대료'] },
+  { category: '대출금', keywords: ['대출연동','대출','원리금','이자','대출이자','상환'] },
+  { category: '법무비', keywords: ['이전및설정비','인지세','인도명령비용','인증수수료','법무','등기'] },
+  { category: '건물구입비', keywords: ['건물잔금','건물구입','건물매입'] },
+  { category: '수리유지비', keywords: ['수리','보수','공사','시설비','유지보수'] },
+  { category: '운영비', keywords: ['청소비','주방봉사','식사지원','봉사료','운영비','비품'] },
+  { category: '선교헌금', keywords: ['선교헌금'] },
+  { category: '헌금', keywords: ['헌금','감사','주일헌금'] },
+];
+
+// 사람 이름으로 보이는 패턴(한글 2~4자, 또는 "이름(소속)" 형태)인지 판별
+function looksLikePersonName(text){
+  const trimmed = text.trim();
+  if(!trimmed) return false;
+  // "강근용(엘림)"처럼 괄호가 붙은 이름 패턴
+  const withParen = trimmed.match(/^[가-힣]{2,4}\([가-힣a-zA-Z0-9]{1,10}\)$/);
+  if(withParen) return true;
+  // 순수 한글 2~4자 이름 패턴 (조사나 다른 단어가 섞이지 않은 경우)
+  const pureName = trimmed.match(/^[가-힣]{2,4}$/);
+  return !!pureName;
+}
+
+/* 거래 하나를 계정(카테고리)으로 자동 분류.
+   - 이미 category가 지정돼 있으면 그대로 존중(수동 지정을 덮어쓰지 않음)
+   - 키워드 규칙에 먼저 걸리면 해당 계정
+   - 선교 지원 대상 국가명이 포함되면(예: "26상반기 네팔", "필리핀 배요셉") 선교헌금
+   - 사람 이름처럼 보이면 '헌금'
+   - 그 외에는 애매한 항목이므로 '기타' */
+function autoClassify(tx){
+  if(tx.category) return tx.category;
+  const text = (tx.memo || '').replace(/\s/g, '').toLowerCase();
+  const account = String(tx.account || '').replace(/\s/g, '').toLowerCase();
+  const isMissionAccount = account.includes('선교헌금');
+  const isOfferingAccount = account.includes('감사헌금');
+  // 통장 성격을 우선 적용하되, 지출은 실제 지출 목적을 우선한다.
+  if(tx.type === 'income' && isMissionAccount && !/이체|이월금/.test(text)) return '선교헌금';
+  if(tx.type === 'income' && isOfferingAccount && !/이체|이월금/.test(text)) return '헌금';
+  for(const rule of CATEGORY_RULES){
+    if(rule.keywords.some(k => text.includes(k.toLowerCase()))) return rule.category;
+  }
+  if(looksLikePersonName(tx.memo || '')) return tx.type === 'income' ? (isMissionAccount ? '선교헌금' : '헌금') : '기타';
+  return '기타';
+}
+
+/* 계좌간 이체(또는 이월금) 거래인지 판별. 통장별로는 실제 수입/지출이 맞지만,
+   여러 통장을 합친 '전체 합계'에서는 돈이 옮겨간 것뿐이라 실질적인 교회 수입/지출이 아니므로
+   해당 곳(통장별 잔액 합계 행, 재정보고서 전월대비 증감)에서 걸러낼 때 사용한다. */
+function reportIsTransferTx(t){
+  const account = String(t.account || '').trim();
+  const memo = String(t.memo || '');
+  return account === '이체' ||
+    account.includes('이체') ||
+    /계좌간\s*이체|계좌\s*이체|통장\s*이체|이체/.test(memo);
+}
+
+function isTransferTx(tx){
+  return (tx.category || autoClassify(tx)) === '이체';
+}
+
+/* 전체 거래 목록에 대해 category가 없는 거래에만 자동 분류를 채워 넣는다(수동 지정 값은 보존). */
+function classifyAllTransactions(list){
+  return list.map(t => ({ ...t, category: t.category || autoClassify({...t, category: undefined}) }));
+}
+
+/* '자동 재분류' 버튼: 분류 규칙이 바뀌었거나 처음 자동분류가 마음에 들지 않을 때,
+   사용자가 직접 지정(categoryManual)하지 않은 거래만 최신 규칙으로 다시 계산해 덮어쓴다. */
+async function reclassifyAllTransactions(){
+  const targets = transactions.filter(t => !t.categoryManual);
+  if(targets.length === 0){
+    alert('자동 재분류 대상이 없습니다. 모든 거래가 직접 지정한 계정을 갖고 있습니다.');
+    return;
+  }
+  if(!confirm(`자동 분류된 거래 ${targets.length}건을 최신 규칙으로 다시 분류할까요?\n(직접 계정을 지정한 거래는 그대로 유지됩니다.)`)) return;
+
+  transactions = transactions.map(t=>{
+    if(t.categoryManual) return t;
+    return { ...t, category: autoClassify({...t, category: undefined}) };
+  });
+  await saveData();
+  render();
+  alert(`${targets.length}건이 다시 분류되었습니다.`);
+}
+
+/* 사용자가 사용해 온 계정(카테고리) 전체 목록 - 기본 목록 + 실제 데이터에 존재하는 값 */
+function getCategoryList(){
+  return [...DEFAULT_CATEGORIES];
+}
 
 const INITIAL_JULY_TRANSACTIONS = [
   {
@@ -1734,19 +1843,13 @@ const INITIAL_JULY_TRANSACTIONS = [
 function loadLocalCache(){
   try{
     const raw = localStorage.getItem(STORAGE_KEY);
-    // 저장된 값이 빈 배열이어도 '실제 저장 데이터'로 인정한다.
-    // 이전 코드처럼 빈 배열을 초기 샘플 데이터로 바꾸면 데이터가 사라진 것처럼 보일 수 있다.
-    if(raw !== null){
+    if(raw){
       const parsed = JSON.parse(raw);
-      if(Array.isArray(parsed)) return parsed;
-      console.warn('로컬 저장 데이터 형식이 배열이 아닙니다. 기존 데이터를 보호하기 위해 비워두지 않습니다.');
-      return [];
+      if(Array.isArray(parsed) && parsed.length > 0) return parsed;
     }
-    // 최초 실행에서만 초기 샘플 데이터를 사용한다.
-    return INITIAL_JULY_TRANSACTIONS.map(t => ({...t}));
+    return INITIAL_JULY_TRANSACTIONS;
   }catch(e){
-    console.error('로컬 저장 데이터 읽기 실패. 기존 데이터를 덮어쓰지 않습니다.', e);
-    return [];
+    return INITIAL_JULY_TRANSACTIONS;
   }
 }
 
@@ -1759,10 +1862,8 @@ function saveLocalCache(){
 }
 
 async function loadData(){
-  // 안전 원칙: 먼저 현재 브라우저 데이터를 화면에 표시하고, 서버 응답 때문에
-  // 로컬 데이터가 줄어들거나 빈 배열로 덮어써지지 않도록 한다.
-  const localData = loadLocalCache();
-  transactions = classifyAllTransactions(localData);
+  // 우선 로컬 캐시로 즉시 화면을 채운 뒤, 서버 데이터가 오면 교체한다.
+  transactions = classifyAllTransactions(loadLocalCache());
   render();
   updateStorageStatus('로컬 캐시 표시 중 · 서버 확인 중...');
 
@@ -1782,32 +1883,11 @@ async function loadData(){
     }
     if(!res.ok) throw new Error('서버 응답 오류 (' + res.status + ')');
     const data = await res.json();
-    const serverData = Array.isArray(data.transactions) ? data.transactions : [];
-
-    // 데이터 손실 방지: 서버가 비어 있거나 로컬보다 적더라도 로컬 데이터를 버리지 않는다.
-    // 두 저장소를 ID 기준으로 합치며, 서버에만 있는 거래도 함께 보존한다.
-    const byId = new Map();
-    localData.forEach(t => byId.set(t.id, t));
-    serverData.forEach(t => {
-      if(!byId.has(t.id)) byId.set(t.id, t);
-    });
-    const merged = [...byId.values()];
-
-    // 둘 다 비어 있을 때만 빈 상태를 확정한다. 빈 서버 응답으로 기존 데이터를 삭제하지 않는다.
-    transactions = classifyAllTransactions(merged);
+    transactions = classifyAllTransactions(Array.isArray(data.transactions) ? data.transactions : []);
     saveLocalCache();
     serverAvailable = true;
-    updateStorageStatus(
-      serverData.length === 0 && localData.length > 0
-        ? '서버가 비어 있어 로컬 데이터를 보호함'
-        : `서버 확인 완료 · ${transactions.length}건 보존`
-    );
+    updateStorageStatus('서버에서 불러옴');
     render();
-
-    // 서버에 데이터가 없었지만 로컬 데이터가 있다면, 보호한 로컬 데이터를 서버에도 저장한다.
-    if(serverData.length === 0 && localData.length > 0){
-      await saveData();
-    }
   }catch(e){
     console.error('서버 불러오기 실패', e);
     serverAvailable = false;
@@ -1816,18 +1896,6 @@ async function loadData(){
 }
 
 async function saveData(){
-  // 중요: 빈 transactions를 서버에 POST하지 않는다.
-  // 잘못된 초기화/로드 상황에서 서버의 기존 회계자료가 통째로 삭제되는 것을 방지한다.
-  if(!Array.isArray(transactions)){
-    console.error('거래 데이터가 배열이 아니므로 저장을 중단합니다.');
-    return;
-  }
-  if(transactions.length === 0){
-    saveLocalCache();
-    updateStorageStatus('거래 0건 · 서버 덮어쓰기 방지');
-    return;
-  }
-
   // 로컬 캐시는 항상 즉시 저장(오프라인 대비)
   saveLocalCache();
 
@@ -1884,6 +1952,7 @@ function enterEditMode(tx){
   document.getElementById('f-type').value = tx.type;
   document.getElementById('f-account').value = tx.account;
   document.getElementById('f-memo').value = tx.memo;
+  document.getElementById('f-category').value = tx.category || '';
   document.getElementById('f-amount').value = tx.amount;
   document.getElementById('submitBtn').textContent = '수정 완료';
   document.getElementById('cancelEditBtn').style.display = 'inline-block';
@@ -1905,6 +1974,7 @@ document.getElementById('entryForm').addEventListener('submit', async (e)=>{
   const type = document.getElementById('f-type').value;
   const account = document.getElementById('f-account').value.trim();
   const memo = document.getElementById('f-memo').value.trim();
+  const categoryInput = document.getElementById('f-category').value.trim();
   const amountRaw = document.getElementById('f-amount').value;
   const amount = parseFloat(amountRaw);
 
@@ -1914,15 +1984,19 @@ document.getElementById('entryForm').addEventListener('submit', async (e)=>{
     return;
   }
 
+  // 계정을 직접 입력했으면 그 값을 수동 지정으로 저장(재분류 시 보존), 비워두면 자동 분류에 맡긴다
+  const category = categoryInput || autoClassify({memo});
+  const categoryManual = !!categoryInput;
+
   if(editingId){
     const idx = transactions.findIndex(t => t.id === editingId);
     if(idx !== -1){
-      transactions[idx] = {...transactions[idx], date, type, account, memo, amount};
+      transactions[idx] = {...transactions[idx], date, type, account, memo, category, categoryManual, amount};
     }
   } else {
     transactions.push({
       id: 'tx_' + Date.now() + '_' + Math.random().toString(36).slice(2,7),
-      date, type, account, memo, amount
+      date, type, account, memo, category, categoryManual, amount
     });
   }
   await saveData();
@@ -2001,6 +2075,7 @@ function getAccountList(){
 
 function populateDatalists(){
   document.getElementById('accountOptions').innerHTML = getAccountList().map(a=>`<option value="${escapeHtml(a)}">`).join('');
+  document.getElementById('categoryOptions').innerHTML = getCategoryList().map(c=>`<option value="${escapeHtml(c)}">`).join('');
 }
 
 function populateFilters(){
@@ -2077,11 +2152,13 @@ function renderLedger(){
     totalExpense += exp;
 
     const tr = document.createElement('tr');
+    const category = tx.category || autoClassify(tx);
     tr.innerHTML = `
       <td>${tx.date}</td>
       <td class="memo">${escapeHtml(tx.account || '')}</td>
       <td class="memo">
         ${escapeHtml(tx.memo)}
+        <span class="category-badge" data-id="${tx.id}" title="클릭해서 계정 변경">${escapeHtml(category)}</span>
       </td>
       <td class="income">${inc ? wonNum(inc) : ''}</td>
       <td class="expense">${exp ? wonNum(exp) : ''}</td>
@@ -2112,6 +2189,48 @@ function renderLedger(){
       if(tx) enterEditMode(tx);
     });
   });
+  body.querySelectorAll('.category-badge').forEach(badge=>{
+    badge.addEventListener('click', ()=> openCategoryPicker(badge));
+  });
+}
+
+/* 거래내역 표에서 계정 배지를 클릭하면 그 자리에 select를 띄워 바로 계정을 바꿀 수 있게 한다. */
+function openCategoryPicker(badge){
+  const id = badge.dataset.id;
+  const tx = transactions.find(t => t.id === id);
+  if(!tx) return;
+
+  const current = tx.category || autoClassify(tx);
+  const select = document.createElement('select');
+  select.className = 'category-picker';
+  getCategoryList().forEach(c=>{
+    const opt = document.createElement('option');
+    opt.value = c;
+    opt.textContent = c;
+    if(c === current) opt.selected = true;
+    select.appendChild(opt);
+  });
+
+  badge.replaceWith(select);
+  select.focus();
+
+  let done = false;
+  const finish = async (commit)=>{
+    if(done) return;
+    done = true;
+    if(commit && select.value !== current){
+      const idx = transactions.findIndex(t => t.id === id);
+      if(idx !== -1){
+        // categoryManual: true로 표시해두면 '자동 재분류' 실행 시 이 거래는 건드리지 않는다(사용자가 직접 고른 값 보존).
+        transactions[idx] = {...transactions[idx], category: select.value, categoryManual: true};
+        await saveData();
+      }
+    }
+    render();
+  };
+
+  select.addEventListener('change', ()=> finish(true));
+  select.addEventListener('blur', ()=> finish(false));
 }
 
 function escapeHtml(s){
@@ -2634,98 +2753,156 @@ window.addEventListener('afterprint', ()=>{
 document.getElementById('ledgerPrintBtn').addEventListener('click', ()=> printSection('ledgerCard'));
 document.getElementById('aggPrintBtn').addEventListener('click', ()=> printSection('aggCard'));
 document.getElementById('accountPrintBtn').addEventListener('click', ()=> printSection('accountCard'));
+document.getElementById('reclassifyBtn').addEventListener('click', reclassifyAllTransactions);
 document.getElementById('ledgerBulkDeleteBtn').addEventListener('click', bulkDeleteByFilter);
 
 /* ---------- 월간 재정보고서 (통합 인쇄) ---------- */
-function buildMonthlyReportHTML(monthStr){
+function reportCategoryName(category){
+  const c = String(category || '').trim();
+  // 재정보고서에서는 세분화 과정에서 제거한 계정을 '기타'로 통합합니다.
+  if(['기타수입','기타지출','전도비','교육비','법무비','건물구입비','이월금'].includes(c)) return '기타';
+  return DEFAULT_CATEGORIES.includes(c) ? c : '기타';
+}
+
+function buildMonthlyReportHTML(monthStr, includeMoM = false){
   const [y, m] = monthStr.split('-');
   const monthLabel = `${y}년 ${parseInt(m,10)}월`;
   const monthTx = sortedTx().filter(t => t.date.slice(0,7) === monthStr);
 
-  // 전체 교회 재정의 전월 이월금. 계정/분류는 사용하지 않습니다.
+  // 월간 재정보고서 원칙
+  // 1) 전월 이월금은 수입이 아니라 해당 월 1일 이전의 누적 잔액이다.
+  // 2) 수입·지출 계정별 집계에서는 계좌간 이체를 제외한다.
+  // 3) 통장별 잔액은 실제 통장 흐름을 기준으로 계산하므로 계좌간 이체를 포함한다.
   const openingBalance = transactions.reduce((sum, t) => {
-    return t.date < `${monthStr}-01` ? sum + (t.type === 'income' ? t.amount : -t.amount) : sum;
+    return t.date < `${monthStr}-01`
+      ? sum + (t.type === 'income' ? t.amount : -t.amount)
+      : sum;
   }, 0);
 
-  // 내부 계좌이체는 교회 전체의 실질적인 수입/지출이 아니므로 요약 합계에서는 제외합니다.
-  let netIncome = 0, netExpense = 0;
-  monthTx.forEach(t => {
+  // 계정별 월간 집계: 이체 제외
+  const incomeGroups = {};
+  const expenseGroups = {};
+  monthTx.forEach(t=>{
     if(reportIsTransferTx(t)) return;
-    if(t.type === 'income') netIncome += t.amount;
-    else netExpense += t.amount;
+    const category = reportCategoryName(t.category || autoClassify(t));
+    const target = t.type === 'income' ? incomeGroups : expenseGroups;
+    target[category] = (target[category] || 0) + t.amount;
   });
+
+  const incomeRows = Object.entries(incomeGroups)
+    .filter(([, amount]) => amount !== 0)
+    .sort((a,b)=>b[1]-a[1]);
+  const expenseRows = Object.entries(expenseGroups)
+    .filter(([, amount]) => amount !== 0)
+    .sort((a,b)=>b[1]-a[1]);
+
+  const netIncome = incomeRows.reduce((s,[,amount])=>s+amount,0);
+  const netExpense = expenseRows.reduce((s,[,amount])=>s+amount,0);
   const netTotal = netIncome - netExpense;
   const endingBalance = openingBalance + netTotal;
 
-  // 기간별 집계: 해당 월을 1주 단위(1~7일, 8~14일, ...)로 나눠 표시합니다.
-  const daysInMonth = new Date(Number(y), Number(m), 0).getDate();
-  const periodRows = [];
-  for(let startDay = 1; startDay <= daysInMonth; startDay += 7){
-    const endDay = Math.min(startDay + 6, daysInMonth);
-    const startDate = `${monthStr}-${String(startDay).padStart(2,'0')}`;
-    const endDate = `${monthStr}-${String(endDay).padStart(2,'0')}`;
-    let income = 0, expense = 0;
-    monthTx.forEach(t => {
-      if(t.date < startDate || t.date > endDate || reportIsTransferTx(t)) return;
-      if(t.type === 'income') income += t.amount;
-      else expense += t.amount;
-    });
-    const net = income - expense;
-    periodRows.push(`<tr>
-      <td>${startDay}일~${endDay}일</td>
-      <td class="income">${won(income)}</td>
-      <td class="expense">${won(expense)}</td>
-      <td class="${net>=0?'income':'expense'}">${net>=0?'+':''}${won(net)}</td>
-    </tr>`);
-  }
-  const periodTable = `<table class="monthly-report-period-table">
-    <thead><tr><th>기간</th><th>수입</th><th>지출</th><th>순증감</th></tr></thead>
-    <tbody>${periodRows.join('')}</tbody>
-    <tfoot><tr class="total-row"><td>합계</td><td class="income">${won(netIncome)}</td><td class="expense">${won(netExpense)}</td><td class="${netTotal>=0?'income':'expense'}">${netTotal>=0?'+':''}${won(netTotal)}</td></tr></tfoot>
-  </table>`;
+  const categoryTable = (rows, emptyText, totalLabel, totalAmount, typeClass) => `
+    <table class="monthly-report-category-table">
+      <thead><tr><th style="text-align:left;">계정</th><th>금액</th></tr></thead>
+      <tbody>
+        ${rows.length ? rows.map(([category, amount])=>`
+          <tr><td>${escapeHtml(category)}</td><td class="${typeClass}">${won(amount)}</td></tr>
+        `).join('') : `<tr><td colspan="2" style="text-align:center;font-family:'Pretendard';color:var(--ink-soft);">${emptyText}</td></tr>`}
+        <tr class="total-row"><td>${totalLabel}</td><td class="${typeClass}">${won(totalAmount)}</td></tr>
+      </tbody>
+    </table>`;
 
-  // 거래내역은 원문 내용을 그대로 보여줍니다. 계정/자동분류는 포함하지 않습니다.
-  const ledgerRows = monthTx.length ? monthTx.map(t => `<tr>
-      <td>${escapeHtml(t.date)}</td>
-      <td class="${t.type==='income'?'income':'expense'}">${t.type==='income'?'수입':'지출'}</td>
-      <td>${escapeHtml(t.account || '')}</td>
-      <td>${escapeHtml(t.memo || '')}</td>
-      <td class="amount-cell ${t.type==='income'?'income':'expense'}">${won(t.amount)}</td>
-    </tr>`).join('') : `<tr><td colspan="5" style="text-align:center;padding:18px;">해당 기간의 거래내역이 없습니다.</td></tr>`;
+  // 통장별 현재 잔액: 선택한 월 말 기준 누적, 이체 포함
+  const {rows: accRows, grandIncome: accGrandIncome, grandExpense: accGrandExpense}
+    = computeGroupSummary('account', null, monthStr);
+  const accGrandNet = accRows.reduce((s,r)=>s+r.net,0);
+
+  const accRowsHtml = accRows.map(r=>`<tr>
+    <td>${escapeHtml(r.label)}</td>
+    <td class="balance-cell ${r.net>=0?'balance-pos':'balance-neg'}">${won(r.net)}</td>
+  </tr>`).join('') + `<tr class="total-row">
+    <td>총잔액</td>
+    <td class="${accGrandNet>=0?'balance-pos':'balance-neg'}">${won(accGrandNet)}</td>
+  </tr>`;
 
   const today = new Date().toLocaleDateString('ko-KR',{year:'numeric',month:'long',day:'numeric'});
+
   return `
     <div class="monthly-report">
       <div class="print-title print-target-title monthly-report-title">진리침례교회 월간 재정보고서 — ${monthLabel}</div>
 
       <section class="monthly-report-section">
-        <h3>1. 재정 요약</h3>
-        <table class="monthly-report-summary-table"><tbody>
-          <tr><td>전월 이월금</td><td>${won(openingBalance)}</td></tr>
-          <tr><td>당월 순수입</td><td class="income">${won(netIncome)}</td></tr>
-          <tr><td>당월 순지출</td><td class="expense">${won(netExpense)}</td></tr>
-          <tr class="total-row"><td>당월 순증감</td><td class="${netTotal>=0?'income':'expense'}">${netTotal>=0?'+':''}${won(netTotal)}</td></tr>
-          <tr class="total-row"><td>당월 말 잔액</td><td class="${endingBalance>=0?'income':'expense'}">${won(endingBalance)}</td></tr>
-        </tbody></table>
-        <div class="monthly-report-note">계좌간 이체는 교회 전체의 수입·지출 합계에서 제외하고 거래내역에는 그대로 표시합니다.</div>
+        <h3>1. 전월 이월금</h3>
+        <div class="monthly-report-opening">${won(openingBalance)}</div>
+        <div class="monthly-report-note">${monthLabel} 1일 이전까지의 누적 잔액입니다.</div>
       </section>
 
       <section class="monthly-report-section">
-        <h3>2. 기간별 집계</h3>
-        ${periodTable}
+        <h3>2. 당월 수입</h3>
+        ${categoryTable(incomeRows, '당월 수입이 없습니다.', '수입 합계', netIncome, 'income')}
       </section>
 
-      <section class="monthly-report-section monthly-report-ledger-section">
-        <h3>3. 거래내역</h3>
-        <table class="monthly-report-ledger-table">
-          <thead><tr><th>날짜</th><th>구분</th><th>통장</th><th>내용</th><th>금액</th></tr></thead>
-          <tbody>${ledgerRows}</tbody>
+      <section class="monthly-report-section">
+        <h3>3. 당월 지출</h3>
+        ${categoryTable(expenseRows, '당월 지출이 없습니다.', '지출 합계', netExpense, 'expense')}
+      </section>
+
+      <section class="monthly-report-section">
+        <h3>4. 당월 수입·지출 요약</h3>
+        <table class="monthly-report-summary-table">
+          <thead><tr><th style="text-align:left;">구분</th><th>금액</th></tr></thead>
+          <tbody>
+            <tr><td>전월 이월금</td><td>${won(openingBalance)}</td></tr>
+            <tr><td>당월 순수입</td><td class="income">${won(netIncome)}</td></tr>
+            <tr><td>당월 순지출</td><td class="expense">${won(netExpense)}</td></tr>
+            <tr><td>당월 순증감</td><td class="${netTotal>=0?'balance-pos':'balance-neg'}">${won(netTotal)}</td></tr>
+            <tr class="total-row"><td><strong>당월 말 잔액</strong></td><td class="${endingBalance>=0?'balance-pos':'balance-neg'}"><strong>${won(endingBalance)}</strong></td></tr>
+          </tbody>
         </table>
+        <div class="monthly-report-note">계좌간 이체는 교회 전체의 순수입·순지출에서 제외했습니다.</div>
       </section>
 
-      <div class="monthly-report-date">${today}</div>
-      <table class="monthly-report-signature-table"><thead><tr><th>구분</th><th>이름</th><th>서명</th></tr></thead><tbody><tr><td>담당</td><td></td><td></td></tr><tr><td>회계</td><td></td><td></td></tr><tr><td>확인</td><td></td><td></td></tr></tbody></table>
+      <section class="monthly-report-section">
+        <h3>5. 통장별 현재 잔액</h3>
+        <table class="monthly-report-account-table">
+          <thead><tr><th style="text-align:left;">통장</th><th>잔액</th></tr></thead>
+          <tbody>${accRowsHtml}</tbody>
+        </table>
+        <div class="monthly-report-note">${monthLabel} 말 기준 실제 통장 잔액입니다. 계좌간 이체는 실제 통장 흐름에 포함됩니다.</div>
+      </section>
+
+      <div class="monthly-report-date">작성일: ${today}</div>
+      <table class="monthly-report-signature-table">
+        <thead><tr><th>구분</th><th>이름</th><th>서명</th></tr></thead>
+        <tbody>
+          <tr><td>담당</td><td>&nbsp;</td><td>&nbsp;</td></tr>
+          <tr><td>회계</td><td>&nbsp;</td><td>&nbsp;</td></tr>
+          <tr><td>확인</td><td>&nbsp;</td><td>&nbsp;</td></tr>
+        </tbody>
+      </table>
     </div>`;
+}
+
+function renderMonthlyReportPreview(includeMoM = false){
+  const monthInput = document.getElementById('reportMonth');
+  const area = document.getElementById('reportPrintArea');
+  const monthStr = monthInput ? monthInput.value : '';
+  if(!monthStr){ alert('기준월을 먼저 선택해 주세요.'); return false; }
+  try{
+    // 미리보기용 상단 도구는 유지하고 보고서 본문만 다시 그립니다.
+    const toolbar = area.querySelector('.no-print');
+    area.innerHTML = (toolbar ? toolbar.outerHTML : '<div class="no-print" style="display:flex;justify-content:flex-end;margin-bottom:12px;gap:8px;"><button class="tool-btn" id="reportPreviewPrintBtn" type="button">이 보고서 인쇄</button><button class="tool-btn" id="reportPreviewCloseBtn" type="button">미리보기 닫기</button></div>') + buildMonthlyReportHTML(monthStr, includeMoM);
+    area.style.display = 'block';
+    area.classList.remove('print-target');
+    document.body.classList.remove('printing');
+    bindReportPreviewButtons();
+    area.scrollIntoView({behavior:'smooth', block:'start'});
+    return true;
+  }catch(err){
+    console.error('월간 재정보고서 미리보기 오류:', err);
+    alert('재정보고서 미리보기를 만드는 중 오류가 발생했습니다.\n' + (err.message || err));
+    return false;
+  }
 }
 
 function printMonthlyReport(includeMoM = false){
@@ -3066,7 +3243,7 @@ document.getElementById('bulkSaveBtn').addEventListener('click', async ()=>{
   toAdd.forEach(t=>{
     transactions.push({
       id: 'tx_' + Date.now() + '_' + Math.random().toString(36).slice(2,7),
-      account, ...t
+      account, ...t, category: autoClassify(t)
     });
   });
 
@@ -3661,6 +3838,7 @@ document.getElementById('bulkSaveBtn').addEventListener('click', async ()=>{
         date: t.date,
         type: t.type,
         memo: t.memo,
+        category: autoClassify(t),
         amount: t.amount
       });
     });
