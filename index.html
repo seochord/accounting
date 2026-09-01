@@ -710,22 +710,29 @@ function updateStorageStatus(extra){
 }
 
 /* ---------- 계정(카테고리) 자동 분류 ---------- */
-const DEFAULT_CATEGORIES = ['헌금','선교헌금','사례비','공공요금','문화비','대출금','월세','운영비','수리유지비','이체','기타'];
+const DEFAULT_CATEGORIES = ['헌금','선교헌금','기타수입','이월금','사례비','선교비','전도비','교육비','공공요금','문화비','운영비','월세','수리유지비','법무비','건물구입비','대출금','기타지출','이체','기타'];
 
 // 선교 지원 대상 국가명 패턴 감지용 (예: "26상반기 네팔", "필리핀 배요셉", "네팔 이정엽" 등 국가명이 포함된 지원비)
 const MISSION_COUNTRY_KEYWORDS = ['네팔','필리핀','파키스탄','대만','타사와르'];
 
 // 키워드가 포함되면 해당 계정으로 분류. 배열 순서대로 검사하며 먼저 매칭되는 규칙이 적용된다.
 const CATEGORY_RULES = [
-  { category: '이체', keywords: ['이월금', '계좌로이체', '계좌에서이체', '계좌로 이체', '계좌에서 이체'] },
+  { category: '이체', keywords: ['이체', '계좌간이체', '계좌로이체', '계좌에서이체'] },
+  { category: '이월금', keywords: ['이월금'] },
   { category: '사례비', keywords: ['사례비'] },
-  { category: '선교헌금', keywords: ['선교', '파송', '사역자', '단기선교', '해외선교'] },
-  { category: '공공요금', keywords: ['전기료', '수도료', '가스', 'KT', 'kt요금', '통신비', '전기요금', '관리비', '인터넷'] },
-  { category: '문화비', keywords: ['서적', '알라딘', '문화비', '도서'] },
-  { category: '월세', keywords: ['임차료', '월세', '임대료'] },
-  { category: '대출금', keywords: ['대출', '원리금', '이자', '대출이자', '상환'] },
-  { category: '수리유지비', keywords: ['수리', '보수', '공사', '시설비', '유지보수'] },
-  { category: '운영비', keywords: ['청소비', '주방봉사', '식사지원', '봉사료', '운영비', '비품'] },
+  { category: '선교비', keywords: ['쏘어tv','쏘어티비','건강과생명','네팔','필리핀','파키스탄','대만','타사와르','선교사','선교지원','해외선교','국내외선교후원'] },
+  { category: '전도비', keywords: ['전도지','거리설교','전도'] },
+  { category: '교육비', keywords: ['유치부','유년부','초등부','중등부','중고등부','교육부'] },
+  { category: '공공요금', keywords: ['전기료','수도료','가스','KT','kt요금','통신비','전기요금','관리비','인터넷'] },
+  { category: '문화비', keywords: ['서적','알라딘','문화비','도서'] },
+  { category: '월세', keywords: ['임차료','월세','임대료'] },
+  { category: '대출금', keywords: ['대출연동','대출','원리금','이자','대출이자','상환'] },
+  { category: '법무비', keywords: ['이전및설정비','인지세','인도명령비용','인증수수료','법무','등기'] },
+  { category: '건물구입비', keywords: ['건물잔금','건물구입','건물매입'] },
+  { category: '수리유지비', keywords: ['수리','보수','공사','시설비','유지보수'] },
+  { category: '운영비', keywords: ['청소비','주방봉사','식사지원','봉사료','운영비','비품'] },
+  { category: '선교헌금', keywords: ['선교헌금'] },
+  { category: '헌금', keywords: ['헌금','감사','주일헌금'] },
 ];
 
 // 사람 이름으로 보이는 패턴(한글 2~4자, 또는 "이름(소속)" 형태)인지 판별
@@ -748,13 +755,19 @@ function looksLikePersonName(text){
    - 그 외에는 애매한 항목이므로 '기타' */
 function autoClassify(tx){
   if(tx.category) return tx.category;
-  const text = (tx.memo || '').replace(/\s/g, '');
+  const text = (tx.memo || '').replace(/\s/g, '').toLowerCase();
+  const account = String(tx.account || '').replace(/\s/g, '').toLowerCase();
+  const isMissionAccount = account.includes('선교헌금');
+  const isOfferingAccount = account.includes('감사헌금');
+  // 통장 성격을 우선 적용하되, 지출은 실제 지출 목적을 우선한다.
+  if(tx.type === 'income' && isMissionAccount && !/이체|이월금/.test(text)) return '선교헌금';
+  if(tx.type === 'income' && isOfferingAccount && !/이체|이월금/.test(text)) return '헌금';
   for(const rule of CATEGORY_RULES){
-    if(rule.keywords.some(k => text.includes(k))) return rule.category;
+    if(rule.keywords.some(k => text.includes(k.toLowerCase()))) return rule.category;
   }
-  if(MISSION_COUNTRY_KEYWORDS.some(k => text.includes(k))) return '선교헌금';
-  if(looksLikePersonName(tx.memo || '')) return '헌금';
-  return '기타';
+  if(tx.type === 'income' && /이름|/.test('')) return '기타수입';
+  if(looksLikePersonName(tx.memo || '')) return tx.type === 'income' ? (isMissionAccount ? '선교헌금' : '헌금') : '기타지출';
+  return tx.type === 'income' ? '기타수입' : '기타지출';
 }
 
 /* 계좌간 이체(또는 이월금) 거래인지 판별. 통장별로는 실제 수입/지출이 맞지만,
