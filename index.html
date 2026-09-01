@@ -204,19 +204,6 @@
   .mom-box .mom-delta.down{color:var(--expense);background:rgba(163,39,60,0.08);}
   .mom-box .mom-delta.flat{color:var(--ink-soft);background:var(--row-alt);}
 
-  /* 06. 특이사항 분석 표 */
-  #anomalyBody td{font-family:'Pretendard';text-align:right;}
-  #anomalyBody td.anomaly-name{text-align:left;font-weight:600;color:var(--ink);}
-  #anomalyBody td.anomaly-account{text-align:left;color:var(--ink-soft);font-size:14px;}
-  .anomaly-badge{
-    display:inline-flex;align-items:center;gap:3px;font-family:'JetBrains Mono',monospace;
-    font-size:13.5px;font-weight:700;padding:2px 8px;border-radius:11px;white-space:nowrap;
-  }
-  .anomaly-badge.up{color:var(--income);background:rgba(30,78,140,0.08);}
-  .anomaly-badge.down{color:var(--expense);background:rgba(163,39,60,0.08);}
-  .anomaly-badge.new{color:var(--accent);background:rgba(29,111,184,0.1);}
-  .anomaly-badge.flat{color:var(--ink-soft);background:var(--row-alt);}
-  .anomaly-badge.none{color:var(--paper-line);}
   footer{text-align:center;
 color:var(--ink-soft);font-size:12.5px;margin-top:30px;display:flex;flex-direction:column;gap:10px;align-items:center;}
   footer .backup-row{display:flex;gap:8px;}
@@ -562,42 +549,20 @@ color:var(--ink-soft);font-size:12.5px;margin-top:30px;display:flex;flex-directi
     </div>
   </div>
 
-  <div class="card" id="momCard">
+  <div class="card" id="reportCard">
     <h2>
-      <span class="idx">06</span> 특이사항 분석
-      <span class="print-title print-target-title" id="momPrintTitle">특이사항 분석</span>
-      <div class="card-tools no-print">
-        <button class="tool-btn" id="churchReportBtn">월간재정보고서 출력 (증감 제외)</button>
-      </div>
+      <span class="idx">06</span> 월간재정보고서
     </h2>
     <div class="filter-row no-print">
       <div class="f-item">
-        <label>기준월</label>
-        <input type="month" id="momMonth">
+        <label>보고서 기준월</label>
+        <input type="month" id="reportMonth">
       </div>
-      <div class="f-item">
-        <label style="display:flex;align-items:center;gap:6px;cursor:pointer;" for="includeTransferToggle">
-          <input type="checkbox" id="includeTransferToggle" style="width:auto;">
-          계좌간 이체 포함
-        </label>
+      <div class="f-item" style="align-self:flex-end;">
+        <button class="tool-btn" id="churchReportBtn">월간재정보고서 출력</button>
       </div>
     </div>
-    <div class="card-caption" id="momCaption"></div>
-    <div id="anomalyWrap">
-      <div class="table-scroll">
-        <table>
-          <thead><tr>
-            <th style="text-align:left;">항목(내용)</th>
-            <th style="text-align:left;">통장</th>
-            <th>이번달</th>
-            <th>전월</th>
-            <th>전월대비</th>
-          </tr></thead>
-          <tbody id="anomalyBody"></tbody>
-        </table>
-      </div>
-    </div>
-    <div id="momEmpty" class="empty" style="display:none;">비교할 거래 내역이 없습니다.</div>
+    <div class="card-caption no-print">선택한 월의 거래 내역, 통장별 잔액, 순수입·순지출을 재정보고서 형식으로 출력합니다.</div>
   </div>
 
   <div class="card" id="reportPrintArea" style="display:none;"></div>
@@ -655,7 +620,7 @@ document.getElementById('appTitle').addEventListener('keydown', (e)=>{
   if(e.key === 'Enter' || e.key === ' '){ e.preventDefault(); window.location.reload(); }
 });
 document.getElementById('f-date').value = new Date().toISOString().slice(0,10);
-document.getElementById('momMonth').value = new Date().toISOString().slice(0,7);
+document.getElementById('reportMonth').value = new Date().toISOString().slice(0,7);
 
 function won(n){
   const sign = n < 0 ? '-' : '';
@@ -2672,139 +2637,6 @@ function momItem(label, cur, prev, biggerIsBetter, extraClass){
   `;
 }
 
-/* 항목(내용) 단위로 월별 합계를 집계. key는 "통장||내용"으로 묶어 같은 이름이라도 통장이 다르면 구분한다. */
-/* includeTransfer가 false(기본값)면 계좌간 이체·이월금 항목은 애초에 집계 대상에서 제외한다.
-   이체 금액은 매달 회계 담당자가 옮기는 금액이 그때그때 달라 ±20% 변동이 거의 항상 발생하고,
-   그게 특이사항 목록을 뒤덮어 정작 봐야 할 실제 특이 지출/수입이 묻히기 때문이다. */
-function sumByItemForMonth(monthStr, includeTransfer){
-  const groups = {};
-  if(!monthStr) return groups;
-  transactions.forEach(t=>{
-    if(t.date.slice(0,7) !== monthStr) return;
-    if(!includeTransfer && isTransferTx(t)) return;
-    const key = (t.account || '') + '||' + t.memo;
-    if(!groups[key]) groups[key] = { account: t.account || '', memo: t.memo, income: 0, expense: 0 };
-    groups[key][t.type] += t.amount;
-  });
-  return groups;
-}
-
-/* 항목의 수입/지출 중 0이 아닌 쪽의 값을 대표값으로 사용 (한 항목은 보통 수입 또는 지출 한쪽만 발생) */
-function itemAmount(entry){
-  if(!entry) return 0;
-  return entry.income !== 0 ? entry.income : entry.expense;
-}
-
-function compareBadge(curAmt, refAmt){
-  if(curAmt === 0 && refAmt === 0) return { html: '', isAnomaly: false };
-  if(refAmt === 0){
-    // 전월에는 없다가 이번달에 갑자기 생긴 지출/수입(신규 항목). 증감률(%)은 낼 수 없지만
-    // '갑자기 생긴 특별 지출/수입'이라는 의미 자체가 특이사항이므로 NEW로 표시한다.
-    return { html: `<span class="anomaly-badge new">NEW</span>`, isAnomaly: true, rateText: '신규' };
-  }
-  const diff = curAmt - refAmt;
-  const rate = (diff / Math.abs(refAmt)) * 100;
-  const isAnomaly = Math.abs(rate) >= 20;
-  const cls = diff > 0 ? 'up' : (diff < 0 ? 'down' : 'flat');
-  const arrow = diff > 0 ? '▲' : (diff < 0 ? '▼' : '');
-  const rateText = (diff >= 0 ? '+' : '') + rate.toFixed(0) + '%';
-  const html = isAnomaly
-    ? `<span class="anomaly-badge ${cls}">${arrow} ${rateText}</span>`
-    : `<span class="anomaly-badge flat">${arrow} ${rateText}</span>`;
-  return { html, isAnomaly, rateText };
-}
-
-function renderMoM(){
-  const monthInput = document.getElementById('momMonth');
-  const monthStr = monthInput.value;
-  const body = document.getElementById('anomalyBody');
-  const empty = document.getElementById('momEmpty');
-  const caption = document.getElementById('momCaption');
-  const wrap = document.getElementById('anomalyWrap');
-
-  body.innerHTML = '';
-
-  if(!monthStr){
-    wrap.style.display = 'none';
-    empty.style.display = 'block';
-    empty.textContent = '기준월을 선택하면 전월 대비 특이 항목을 보여줍니다.';
-    return;
-  }
-
-  const prevStr = prevMonthStr(monthStr);
-
-  const includeTransfer = document.getElementById('includeTransferToggle').checked;
-  const curGroups = sumByItemForMonth(monthStr, includeTransfer);
-  const prevGroups = sumByItemForMonth(prevStr, includeTransfer);
-
-  const [cy, cm] = monthStr.split('-');
-  const [py, pm] = prevStr.split('-');
-  const transferNote = includeTransfer ? ' 계좌간 이체도 포함해 비교합니다.' : ' 계좌간 이체·이월금은 제외하고 비교합니다.';
-  caption.textContent = `${cy}년 ${parseInt(cm,10)}월 · 전월(${py}년 ${parseInt(pm,10)}월) 대비 ±20% 이상 변동했거나, 전월에는 없던 새로운 지출·수입(NEW)만 표시합니다.${transferNote}`;
-  document.getElementById('momPrintTitle').textContent = `특이사항 분석 - ${cy}년 ${parseInt(cm,10)}월`;
-
-  // 이번달에 존재하는 모든 항목 + 전월에는 있었지만 이번달엔 사라진 항목까지 후보로 모은다
-  const allKeys = new Set([
-    ...Object.keys(curGroups),
-    ...Object.keys(prevGroups),
-  ]);
-
-  if(allKeys.size === 0){
-    wrap.style.display = 'none';
-    empty.style.display = 'block';
-    empty.textContent = '비교할 거래 내역이 없습니다.';
-    return;
-  }
-
-  const rows = [];
-  allKeys.forEach(key=>{
-    const cur = curGroups[key];
-    const prev = prevGroups[key];
-    const curAmt = itemAmount(cur);
-    const prevAmt = itemAmount(prev);
-
-    // 이번달 거래가 없는데 전월에만 있던 항목은(사라진 항목) 이번 리포트 범위에서는 제외
-    if(!cur) return;
-
-    const prevCmp = compareBadge(curAmt, prevAmt);
-
-    if(!prevCmp.isAnomaly) return;
-
-    rows.push({
-      memo: cur.memo, account: cur.account, curAmt,
-      prevAmt, prevCmp,
-      sortKey: Math.abs(curAmt - prevAmt)
-    });
-  });
-
-  if(rows.length === 0){
-    wrap.style.display = 'none';
-    empty.style.display = 'block';
-    empty.textContent = `${cy}년 ${parseInt(cm,10)}월에는 전월 대비 ±20% 이상 변동했거나 새로 생긴 지출·수입이 없습니다.`;
-    return;
-  }
-
-  empty.style.display = 'none';
-  wrap.style.display = 'block';
-
-  rows.sort((a,b)=> b.sortKey - a.sortKey);
-
-  rows.forEach(r=>{
-    const tr = document.createElement('tr');
-    tr.innerHTML = `
-      <td class="anomaly-name">${escapeHtml(r.memo)}</td>
-      <td class="anomaly-account">${escapeHtml(r.account)}</td>
-      <td>${won(r.curAmt)}</td>
-      <td>${r.prevAmt ? won(r.prevAmt) : '-'}</td>
-      <td>${r.prevCmp.html || '<span class="anomaly-badge none">-</span>'}</td>
-    `;
-    body.appendChild(tr);
-  });
-}
-
-document.getElementById('momMonth').addEventListener('change', renderMoM);
-document.getElementById('includeTransferToggle').addEventListener('change', renderMoM);
-
 document.getElementById('periodTabs').addEventListener('click', (e)=>{
   if(e.target.tagName !== 'BUTTON') return;
   currentMode = e.target.dataset.mode;
@@ -2832,7 +2664,6 @@ function render(){
   renderAgg();
   renderAccountSummary();
   renderNameSearch();
-  renderMoM();
 }
 
 /* ---------- 인쇄 ---------- */
@@ -2946,8 +2777,8 @@ function buildMonthlyReportHTML(monthStr, includeMoM = true){
   `;
 }
 
-function printMonthlyReport(includeMoM = true){
-  const monthStr = document.getElementById('momMonth').value;
+function printMonthlyReport(includeMoM = false){
+  const monthStr = document.getElementById('reportMonth').value;
   if(!monthStr){ alert('기준월을 먼저 선택해 주세요.'); return; }
   const area = document.getElementById('reportPrintArea');
   area.innerHTML = buildMonthlyReportHTML(monthStr, includeMoM);
