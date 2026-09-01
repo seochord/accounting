@@ -2694,12 +2694,18 @@ function buildMonthlyReportHTML(monthStr, includeMoM = true){
     return t.date < `${monthStr}-01` ? sum + (t.type === 'income' ? t.amount : -t.amount) : sum;
   }, 0);
   let balance = openingBalance, totalIncome = 0, totalExpense = 0;
+  // 재정보고서의 순수입·순지출은 계좌간 이체를 제외한다.
+  let netIncome = 0, netExpense = 0;
   const openingRowHtml = `<tr class="opening-row"><td colspan="3">이월금 (${monthLabel} 이전)</td><td class="income"></td><td class="expense"></td><td>${won(balance)}</td></tr>`;
   const ledgerRowsHtml = monthTx.map(tx=>{
     const inc = tx.type === 'income' ? tx.amount : 0;
     const exp = tx.type === 'expense' ? tx.amount : 0;
     balance += inc - exp;
     totalIncome += inc; totalExpense += exp;
+    if(!isTransferTx(tx)){
+      if(tx.type === 'income') netIncome += tx.amount;
+      else netExpense += tx.amount;
+    }
     return `<tr><td>${tx.date}</td><td class="memo">${escapeHtml(tx.account||'')}</td><td class="memo">${escapeHtml(tx.memo)}</td><td class="income">${inc?won(inc):''}</td><td class="expense">${exp?won(exp):''}</td><td>${won(balance)}</td></tr>`;
   }).join('') || `<tr><td colspan="6" style="text-align:center;font-family:'Pretendard';color:var(--ink-soft);">해당 월 거래 내역이 없습니다.</td></tr>`;
 
@@ -2710,24 +2716,8 @@ function buildMonthlyReportHTML(monthStr, includeMoM = true){
   const accRowsHtml = accRows.map(r=>`<tr><td colspan="2">${escapeHtml(r.label)}</td><td class="income">${r.income?won(r.income):'-'}</td><td class="expense">${r.expense?won(r.expense):'-'}</td><td class="${r.net>=0?'balance-pos':'balance-neg'}">${won(r.net)}</td></tr>`).join('')
     + `<tr class="total-row"><td colspan="2">합계</td><td class="income">${won(accGrandIncome)}</td><td class="expense">${won(accGrandExpense)}</td><td class="${accGrandNet>=0?'balance-pos':'balance-neg'}">${won(accGrandNet)}</td></tr>`;
 
-  // 3. 순수입·순지출 요약: 계좌간 이체는 실제 수입/지출이 아니므로 제외한, 그 달의 순수한 교회 재정 흐름.
-  // 위 1·2번 섹션(수입/지출/잔액)은 이체를 그대로 포함한 값을 유지하고, 이 섹션에서만 이체를 뺀 값을 별도로 보여준다.
-  let netIncome = 0, netExpense = 0;
-  monthTx.forEach(t=>{
-    if(isTransferTx(t)) return;
-    if(t.type === 'income') netIncome += t.amount; else netExpense += t.amount;
-  });
+  // 재정보고서의 핵심 수입·지출 합계는 위 거래내역 합계에서 이미 이체를 제외해 표시한다.
   const netTotal = netIncome - netExpense;
-  const netSummaryHtml = `
-    <h3 style="font-family:'Noto Serif KR',serif;font-size:17px;margin:26px 0 8px;">3. 순수입·순지출 요약 (계좌간 이체 제외)</h3>
-    <table><thead><tr><th style="text-align:left;">구분</th><th>금액</th></tr></thead>
-    <tbody>
-      <tr><td>순수입 합계</td><td class="income">${won(netIncome)}</td></tr>
-      <tr><td>순지출 합계</td><td class="expense">${won(netExpense)}</td></tr>
-      <tr class="total-row"><td>순액</td><td class="${netTotal>=0?'balance-pos':'balance-neg'}">${won(netTotal)}</td></tr>
-    </tbody></table>
-    <div class="card-caption" style="margin-top:8px;">계좌간 이체(예: 국민 통장 → 농협 통장 이체, 이월금)는 실제 수입·지출이 아니므로 제외한 값입니다. 위 1·2번 섹션의 수입·지출·잔액에는 이체가 그대로 포함되어 있습니다.</div>
-  `;
 
   let momSectionHtml = '';
   if(includeMoM){
@@ -2753,13 +2743,13 @@ function buildMonthlyReportHTML(monthStr, includeMoM = true){
     <tbody>
       ${openingRowHtml}
       ${ledgerRowsHtml}
-      <tr class="total-row"><td colspan="3">합계</td><td class="income">${won(totalIncome)}</td><td class="expense">${won(totalExpense)}</td><td>${won(balance)}</td></tr>
+      <tr class="total-row"><td colspan="3">순수입·순지출 합계 (계좌간 이체 제외)</td><td class="income">${won(netIncome)}</td><td class="expense">${won(netExpense)}</td><td>${won(balance)}</td></tr>
     </tbody></table>
 
     <h3 style="font-family:'Noto Serif KR',serif;font-size:17px;margin:26px 0 8px;">2. 통장별 잔액 (${monthLabel} 말 기준 누적)</h3>
     <table><thead><tr><th style="text-align:left;">통장</th><th></th><th>수입 합계</th><th>지출 합계</th><th>잔액</th></tr></thead>
     <tbody>${accRowsHtml}</tbody></table>
-    ${netSummaryHtml}
+    <div class="card-caption" style="margin-top:8px;">※ 순수입·순지출은 계좌간 이체(예: 국민 통장 → 농협 통장)를 제외한 실제 교회 재정 흐름입니다. 순액: ${won(netTotal)}</div>
     ${momSectionHtml}
     <div style="margin-top:60px;font-size:15px;text-align:right;">작성일: ${today}</div>
     <table style="margin-top:22px;width:auto;margin-left:auto;font-size:15px;">
