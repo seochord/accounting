@@ -575,6 +575,12 @@ color:var(--ink-soft);font-size:12.5px;margin-top:30px;display:flex;flex-directi
         <label>기준월</label>
         <input type="month" id="momMonth">
       </div>
+      <div class="f-item">
+        <label style="display:flex;align-items:center;gap:6px;cursor:pointer;" for="includeTransferToggle">
+          <input type="checkbox" id="includeTransferToggle" style="width:auto;">
+          계좌간 이체 포함
+        </label>
+      </div>
     </div>
     <div class="card-caption" id="momCaption"></div>
     <div id="anomalyWrap">
@@ -2667,11 +2673,15 @@ function momItem(label, cur, prev, biggerIsBetter, extraClass){
 }
 
 /* 항목(내용) 단위로 월별 합계를 집계. key는 "통장||내용"으로 묶어 같은 이름이라도 통장이 다르면 구분한다. */
-function sumByItemForMonth(monthStr){
+/* includeTransfer가 false(기본값)면 계좌간 이체·이월금 항목은 애초에 집계 대상에서 제외한다.
+   이체 금액은 매달 회계 담당자가 옮기는 금액이 그때그때 달라 ±20% 변동이 거의 항상 발생하고,
+   그게 특이사항 목록을 뒤덮어 정작 봐야 할 실제 특이 지출/수입이 묻히기 때문이다. */
+function sumByItemForMonth(monthStr, includeTransfer){
   const groups = {};
   if(!monthStr) return groups;
   transactions.forEach(t=>{
     if(t.date.slice(0,7) !== monthStr) return;
+    if(!includeTransfer && isTransferTx(t)) return;
     const key = (t.account || '') + '||' + t.memo;
     if(!groups[key]) groups[key] = { account: t.account || '', memo: t.memo, income: 0, expense: 0 };
     groups[key][t.type] += t.amount;
@@ -2723,12 +2733,14 @@ function renderMoM(){
 
   const prevStr = prevMonthStr(monthStr);
 
-  const curGroups = sumByItemForMonth(monthStr);
-  const prevGroups = sumByItemForMonth(prevStr);
+  const includeTransfer = document.getElementById('includeTransferToggle').checked;
+  const curGroups = sumByItemForMonth(monthStr, includeTransfer);
+  const prevGroups = sumByItemForMonth(prevStr, includeTransfer);
 
   const [cy, cm] = monthStr.split('-');
   const [py, pm] = prevStr.split('-');
-  caption.textContent = `${cy}년 ${parseInt(cm,10)}월 · 전월(${py}년 ${parseInt(pm,10)}월) 대비 ±20% 이상 변동했거나, 전월에는 없던 새로운 지출·수입(NEW)만 표시합니다.`;
+  const transferNote = includeTransfer ? ' 계좌간 이체도 포함해 비교합니다.' : ' 계좌간 이체·이월금은 제외하고 비교합니다.';
+  caption.textContent = `${cy}년 ${parseInt(cm,10)}월 · 전월(${py}년 ${parseInt(pm,10)}월) 대비 ±20% 이상 변동했거나, 전월에는 없던 새로운 지출·수입(NEW)만 표시합니다.${transferNote}`;
   document.getElementById('momPrintTitle').textContent = `특이사항 분석 - ${cy}년 ${parseInt(cm,10)}월`;
 
   // 이번달에 존재하는 모든 항목 + 전월에는 있었지만 이번달엔 사라진 항목까지 후보로 모은다
@@ -2791,6 +2803,7 @@ function renderMoM(){
 }
 
 document.getElementById('momMonth').addEventListener('change', renderMoM);
+document.getElementById('includeTransferToggle').addEventListener('change', renderMoM);
 
 document.getElementById('periodTabs').addEventListener('click', (e)=>{
   if(e.target.tagName !== 'BUTTON') return;
