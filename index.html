@@ -737,6 +737,13 @@ function autoClassify(tx){
   return '기타';
 }
 
+/* 계좌간 이체(또는 이월금) 거래인지 판별. 통장별로는 실제 수입/지출이 맞지만,
+   여러 통장을 합친 '전체 합계'에서는 돈이 옮겨간 것뿐이라 실질적인 교회 수입/지출이 아니므로
+   해당 곳(통장별 잔액 합계 행, 재정보고서 전월대비 증감)에서 걸러낼 때 사용한다. */
+function isTransferTx(tx){
+  return (tx.category || autoClassify(tx)) === '이체';
+}
+
 /* 전체 거래 목록에 대해 category가 없는 거래에만 자동 분류를 채워 넣는다(수동 지정 값은 보존). */
 function classifyAllTransactions(list){
   return list.map(t => ({ ...t, category: t.category || autoClassify({...t, category: undefined}) }));
@@ -2400,6 +2407,9 @@ function computeGroupSummary(field, year, asOfMonth){
   list.forEach(k => groups[k] = {income:0, expense:0, balance:0});
   const monthBoundary = asOfMonth ? `${asOfMonth}-31` : null; // 문자열 비교이므로 31로 두면 해당 월의 어떤 날짜든 포함됨
   const monthKey = asOfMonth || null;
+  // 여러 통장을 합친 '합계' 행에서는 계좌간 이체를 제외해야 실질적인 교회 전체 수입/지출이 된다.
+  // (통장 하나하나의 잔액/수입/지출에는 이체를 그대로 포함해야 실제 잔고와 맞으므로 groups[key]는 건드리지 않는다.)
+  let grandIncomeNoTransfer = 0, grandExpenseNoTransfer = 0;
   transactions.forEach(t=>{
     const key = t[field];
     if(!key) return;
@@ -2407,6 +2417,7 @@ function computeGroupSummary(field, year, asOfMonth){
     const y = t.date.slice(0,4);
     const ym = t.date.slice(0,7);
     const delta = t.type === 'income' ? t.amount : -t.amount;
+    const inRange = monthKey ? (ym === monthKey) : (!year || y === String(year));
     if(monthKey){
       if(t.date.slice(0,7) <= monthKey) groups[key].balance += delta;
       if(ym === monthKey) groups[key][t.type] += t.amount;
@@ -2414,13 +2425,14 @@ function computeGroupSummary(field, year, asOfMonth){
       if(!year || y <= String(year)) groups[key].balance += delta;
       if(!year || y === String(year)) groups[key][t.type] += t.amount;
     }
+    if(inRange && !isTransferTx(t)){
+      if(t.type === 'income') grandIncomeNoTransfer += t.amount; else grandExpenseNoTransfer += t.amount;
+    }
   });
   const rows = Object.keys(groups).map(k=>({
     label:k, income:groups[k].income, expense:groups[k].expense, net:groups[k].balance
   }));
-  const grandIncome = rows.reduce((s,r)=>s+r.income,0);
-  const grandExpense = rows.reduce((s,r)=>s+r.expense,0);
-  return {rows, grandIncome, grandExpense, isEmpty: transactions.length === 0};
+  return {rows, grandIncome: grandIncomeNoTransfer, grandExpense: grandExpenseNoTransfer, isEmpty: transactions.length === 0};
 }
 
 function renderGroupTable(field, bodyId, emptyId, year, asOfMonth){
@@ -2460,17 +2472,18 @@ function renderAccountSummary(){
   const asOfMonth = (accountYear && accountMonth) ? `${accountYear}-${accountMonth}` : null;
   renderGroupTable('account','accountBody','accountEmpty', accountYear, asOfMonth);
 
+  const transferNote = ' 합계 행의 수입·지출은 계좌간 이체를 제외한 값입니다(통장별 수입·지출·잔액에는 이체가 포함됩니다).';
   let title, caption;
   if(asOfMonth){
     const monthLabel = `${accountYear}년 ${parseInt(accountMonth,10)}월`;
     title = `통장별 잔액 (${monthLabel} 말 기준 누적)`;
-    caption = `${monthLabel} 말까지의 누적 잔액입니다. 월간재정보고서(같은 달)의 통장별 잔액과 동일한 시점입니다.`;
+    caption = `${monthLabel} 말까지의 누적 잔액입니다. 월간재정보고서(같은 달)의 통장별 잔액과 동일한 시점입니다.${transferNote}`;
   } else if(accountYear){
     title = `통장별 잔액 (${accountYear}년 말 기준 누적)`;
-    caption = `${accountYear}년까지의 누적 잔액입니다. 수입·지출 합계는 ${accountYear}년 한 해 기준입니다.`;
+    caption = `${accountYear}년까지의 누적 잔액입니다. 수입·지출 합계는 ${accountYear}년 한 해 기준입니다.${transferNote}`;
   } else {
     title = '통장별 잔액 (전체 기간 누적)';
-    caption = '연도 구분 없이 전체 기간(오늘 현재까지) 누적 기준입니다. 실제 통장 잔고 확인용.';
+    caption = `연도 구분 없이 전체 기간(오늘 현재까지) 누적 기준입니다. 실제 통장 잔고 확인용.${transferNote}`;
   }
   document.getElementById('accountPrintTitle').textContent = title;
   document.getElementById('accountCaption').textContent = caption;
@@ -2616,10 +2629,12 @@ document.getElementById('nameSearchExcelBtn').addEventListener('click', download
 
 
 /* ---------- 05 전월대비 증감 ---------- */
+/* 재정보고서의 '전월대비 증감' 섹션 전용. 여러 통장을 합친 전체 관점이므로
+   계좌간 이체는 실질적인 수입/지출이 아니라서 제외하고 계산한다. */
 function sumMonth(monthStr){
   let income = 0, expense = 0;
   transactions.forEach(t=>{
-    if(t.date.slice(0,7) === monthStr){
+    if(t.date.slice(0,7) === monthStr && !isTransferTx(t)){
       if(t.type === 'income') income += t.amount; else expense += t.amount;
     }
   });
@@ -2679,9 +2694,9 @@ function itemAmount(entry){
 function compareBadge(curAmt, refAmt){
   if(curAmt === 0 && refAmt === 0) return { html: '', isAnomaly: false };
   if(refAmt === 0){
-    // 비교 대상(전월)에 거래 자체가 없어 증감률을 계산할 수 없는 경우.
-    // %를 낼 수 없으므로 특이사항으로 판단하지 않고 '비교불가'로만 표시한다.
-    return { html: `<span class="anomaly-badge none">비교불가</span>`, isAnomaly: false, rateText: '비교불가' };
+    // 전월에는 없다가 이번달에 갑자기 생긴 지출/수입(신규 항목). 증감률(%)은 낼 수 없지만
+    // '갑자기 생긴 특별 지출/수입'이라는 의미 자체가 특이사항이므로 NEW로 표시한다.
+    return { html: `<span class="anomaly-badge new">NEW</span>`, isAnomaly: true, rateText: '신규' };
   }
   const diff = curAmt - refAmt;
   const rate = (diff / Math.abs(refAmt)) * 100;
@@ -2719,7 +2734,7 @@ function renderMoM(){
 
   const [cy, cm] = monthStr.split('-');
   const [py, pm] = prevStr.split('-');
-  caption.textContent = `${cy}년 ${parseInt(cm,10)}월 · 전월(${py}년 ${parseInt(pm,10)}월) 대비 ±20% 이상 변동한 항목만 표시합니다. (비교 대상 거래가 없는 항목은 제외)`;
+  caption.textContent = `${cy}년 ${parseInt(cm,10)}월 · 전월(${py}년 ${parseInt(pm,10)}월) 대비 ±20% 이상 변동했거나, 전월에는 없던 새로운 지출·수입(NEW)만 표시합니다.`;
   document.getElementById('momPrintTitle').textContent = `특이사항 분석 - ${cy}년 ${parseInt(cm,10)}월`;
 
   // 이번달에 존재하는 모든 항목 + 전월에는 있었지만 이번달엔 사라진 항목까지 후보로 모은다
@@ -2759,7 +2774,7 @@ function renderMoM(){
   if(rows.length === 0){
     wrap.style.display = 'none';
     empty.style.display = 'block';
-    empty.textContent = `${cy}년 ${parseInt(cm,10)}월에는 전월 대비 ±20% 이상 변동한 특이 항목이 없습니다.`;
+    empty.textContent = `${cy}년 ${parseInt(cm,10)}월에는 전월 대비 ±20% 이상 변동했거나 새로 생긴 지출·수입이 없습니다.`;
     return;
   }
 
