@@ -2771,50 +2771,30 @@ function buildMonthlyReportHTML(monthStr, includeMoM = false){
 
   // 월간 재정보고서 원칙
   // 1) 전월 이월금은 수입이 아니라 해당 월 1일 이전의 누적 잔액이다.
-  // 2) 수입·지출 계정별 집계에서는 계좌간 이체를 제외한다.
+  // 2) 당월 수입·지출 합계에서는 계좌간 이체를 제외한다.
   // 3) 통장별 잔액은 실제 통장 흐름을 기준으로 계산하므로 계좌간 이체를 포함한다.
+  // 4) 거래 데이터의 계정(category) 값은 변경하거나 삭제하지 않는다.
   const openingBalance = transactions.reduce((sum, t) => {
     return t.date < `${monthStr}-01`
       ? sum + (t.type === 'income' ? t.amount : -t.amount)
       : sum;
   }, 0);
 
-  // 계정별 월간 집계: 이체 제외
-  const incomeGroups = {};
-  const expenseGroups = {};
+  // 당월 수입·지출은 계정별로 나누지 않고 총액만 계산한다.
+  // 계좌간 이체는 교회 전체의 순수입·순지출에서 제외한다.
+  let netIncome = 0;
+  let netExpense = 0;
   monthTx.forEach(t=>{
     if(reportIsTransferTx(t)) return;
-    const category = reportCategoryName(t.category || autoClassify(t));
-    const target = t.type === 'income' ? incomeGroups : expenseGroups;
-    target[category] = (target[category] || 0) + t.amount;
+    if(t.type === 'income') netIncome += t.amount;
+    else if(t.type === 'expense') netExpense += t.amount;
   });
 
-  const incomeRows = Object.entries(incomeGroups)
-    .filter(([, amount]) => amount !== 0)
-    .sort((a,b)=>b[1]-a[1]);
-  const expenseRows = Object.entries(expenseGroups)
-    .filter(([, amount]) => amount !== 0)
-    .sort((a,b)=>b[1]-a[1]);
-
-  const netIncome = incomeRows.reduce((s,[,amount])=>s+amount,0);
-  const netExpense = expenseRows.reduce((s,[,amount])=>s+amount,0);
   const netTotal = netIncome - netExpense;
   const endingBalance = openingBalance + netTotal;
 
-  const categoryTable = (rows, emptyText, totalLabel, totalAmount, typeClass) => `
-    <table class="monthly-report-category-table">
-      <thead><tr><th style="text-align:left;">계정</th><th>금액</th></tr></thead>
-      <tbody>
-        ${rows.length ? rows.map(([category, amount])=>`
-          <tr><td>${escapeHtml(category)}</td><td class="${typeClass}">${won(amount)}</td></tr>
-        `).join('') : `<tr><td colspan="2" style="text-align:center;font-family:'Pretendard';color:var(--ink-soft);">${emptyText}</td></tr>`}
-        <tr class="total-row"><td>${totalLabel}</td><td class="${typeClass}">${won(totalAmount)}</td></tr>
-      </tbody>
-    </table>`;
-
   // 통장별 현재 잔액: 선택한 월 말 기준 누적, 이체 포함
-  const {rows: accRows, grandIncome: accGrandIncome, grandExpense: accGrandExpense}
-    = computeGroupSummary('account', null, monthStr);
+  const {rows: accRows} = computeGroupSummary('account', null, monthStr);
   const accGrandNet = accRows.reduce((s,r)=>s+r.net,0);
 
   const accRowsHtml = accRows.map(r=>`<tr>
@@ -2839,12 +2819,14 @@ function buildMonthlyReportHTML(monthStr, includeMoM = false){
 
       <section class="monthly-report-section">
         <h3>2. 당월 수입</h3>
-        ${categoryTable(incomeRows, '당월 수입이 없습니다.', '수입 합계', netIncome, 'income')}
+        <div class="monthly-report-opening income">${won(netIncome)}</div>
+        <div class="monthly-report-note">당월 전체 수입 합계입니다. 계정별 내역은 표시하지 않습니다.</div>
       </section>
 
       <section class="monthly-report-section">
         <h3>3. 당월 지출</h3>
-        ${categoryTable(expenseRows, '당월 지출이 없습니다.', '지출 합계', netExpense, 'expense')}
+        <div class="monthly-report-opening expense">${won(netExpense)}</div>
+        <div class="monthly-report-note">당월 전체 지출 합계입니다. 계정별 내역은 표시하지 않습니다.</div>
       </section>
 
       <section class="monthly-report-section">
@@ -2872,6 +2854,7 @@ function buildMonthlyReportHTML(monthStr, includeMoM = false){
       </section>
 
       <div class="monthly-report-date">작성일: ${today}</div>
+
       <table class="monthly-report-signature-table">
         <thead><tr><th>구분</th><th>이름</th><th>서명</th></tr></thead>
         <tbody>
@@ -2882,7 +2865,6 @@ function buildMonthlyReportHTML(monthStr, includeMoM = false){
       </table>
     </div>`;
 }
-
 function renderMonthlyReportPreview(includeMoM = false){
   const monthInput = document.getElementById('reportMonth');
   const area = document.getElementById('reportPrintArea');
