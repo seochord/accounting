@@ -781,1032 +781,7 @@ function getCategoryList(){
   return [...used];
 }
 
-const INITIAL_JULY_TRANSACTIONS = [
-  {
-    "id": "tx_202607_001_75gt",
-    "date": "2026-07-01",
-    "type": "income",
-    "account": "국민 감사헌금",
-    "memo": "6월 이월금",
-    "amount": 90174126
-  },
-  {
-    "id": "tx_202607_002_8zbs",
-    "date": "2026-07-01",
-    "type": "expense",
-    "account": "국민 선교헌금",
-    "memo": "26상반기 네팔",
-    "amount": 550000
-  },
-  {
-    "id": "tx_202607_003_47ob",
-    "date": "2026-07-01",
-    "type": "income",
-    "account": "국민 선교헌금",
-    "memo": "박승현",
-    "amount": 30000
-  },
-  {
-    "id": "tx_202607_004_4635",
-    "date": "2026-07-01",
-    "type": "income",
-    "account": "국민 선교헌금",
-    "memo": "6월 이월금",
-    "amount": 20837153
-  },
-  {
-    "id": "tx_202607_005_18nv",
-    "date": "2026-07-01",
-    "type": "expense",
-    "account": "국민 선교헌금",
-    "memo": "26상반기 필리핀",
-    "amount": 800000
-  },
-  {
-    "id": "tx_202607_006_irrf",
-    "date": "2026-07-01",
-    "type": "expense",
-    "account": "국민 선교헌금",
-    "memo": "26상반기 타사와르",
-    "amount": 400000
-  },
-  {
-    "id": "tx_202607_007_t8lc",
-    "date": "2026-07-02",
-    "type": "income",
-    "account": "국민 감사헌금",
-    "memo": "송정심",
-    "amount": 300000
-  },
-  {
-    "id": "tx_202607_008_2qd7",
-    "date": "2026-07-02",
-    "type": "expense",
-    "account": "국민 감사헌금",
-    "memo": "문화비 알라딘",
-    "amount": 125100
-  },
-  {
-    "id": "tx_202607_009_481p",
-    "date": "2026-07-04",
-    "type": "income",
-    "account": "국민 감사헌금",
-    "memo": "김은애",
-    "amount": 100000
-  },
-  {
-    "id": "tx_202607_010_uztf",
-    "date": "2026-07-05",
-    "type": "income",
-    "account": "국민 감사헌금",
-    "memo": "임은경성경",
-    "amount": 30000
-  },
-  {
-    "id": "tx_202607_011_n98h",
-    "date": "2026-07-05",
-    "type": "income",
-    "account": "국민 감사헌금",
-    "memo": "헌금",
-    "amount": 50000
-  },
-  {
-    "id": "tx_202607_012_e29a",
-    "date": "2026-07-05",
-    "type": "expense",
-    "account": "국민 감사헌금",
-    "memo": "농협감사헌금계좌로이체",
-    "amount": 50000000
-  },
-  {
-    "id": "tx_202607_013_6uji",
-    "date": "2026-07-05",
-    "type": "income",
-    "account": "국민 감사헌금",
-    "memo": "오혜리",
-    "amount": 30000
-  },
-  {
-    "id": "tx_202607_014_wnqb",
-    "date": "2026-07-05",
-    "type": "expense",
-    "account": "국민 감사헌금",
-    "memo": "농협감사헌금계좌로이체",
-    "amount": 20000000
-  },
-  {
-    "id": "tx_202607_015_v1eq",
-    "date": "2026-07-05",
-    "type": "income",
-    "account": "국민 감사헌금",
-    "memo": "홍성수",
-    "amount": 100000
-  },
-  {
-    "id": "tx_202607_016_iubm",
-    "date": "2026-07-05",
-    "type": "income",
-    "account": "국민 감사헌금",
-    "memo": "헌금",
-    "amount": 300000
-  },
-  {
-    "id": "tx_202607_017_e5zt",
-    "date": "2026-07-05",
-    "type": "income",
-    "account": "국민 감사헌금",
-    "memo": "황준성",
-    "amount": 50000
-  },
-  {
-    "id": "tx_202607_018_6hf5",
-    "date": "2026-07-05",
-    "type": "income",
-    "account": "국민 감사헌금",
-    "memo": "전예서",
-    "amount": 1000
-  },
-  {
-    "id": "tx_202607_019_jyo6",
-    "date": "2026-07-05",
-    "type": "income",
-    "account": "국민 감사헌금",
-    "memo": "헌금",
-    "amount": 50000
-  },
-  {
-    "id": "tx_202607_020_gjoa",
-    "date": "2026-07-05",
-    "type": "income",
-    "account": "국민 감사헌금",
-    "memo": "임은경",
-    "amount": 100000
-  },
-  {
-    "id": "tx_202607_021_77d7",
-    "date": "2026-07-05",
-    "type": "income",
-    "account": "국민 감사헌금",
-    "memo": "김희수",
-    "amount": 20000
-  },
-  {
-    "id": "tx_202607_022_v847",
-    "date": "2026-07-05",
-    "type": "income",
-    "account": "국민 감사헌금",
-    "memo": "전건휘",
-    "amount": 50000
-  },
-  {
-    "id": "tx_202607_023_oqaj",
-    "date": "2026-07-05",
-    "type": "expense",
-    "account": "국민 선교헌금",
-    "memo": "농협선교계좌로 이체",
-    "amount": 10000000
-  },
-  {
-    "id": "tx_202607_024_mtqd",
-    "date": "2026-07-05",
-    "type": "income",
-    "account": "농협 선교헌금",
-    "memo": "국민선교계좌에서 이체",
-    "amount": 10000000
-  },
-  {
-    "id": "tx_202607_025_i9ag",
-    "date": "2026-07-05",
-    "type": "income",
-    "account": "농협 감사헌금",
-    "memo": "국민감사헌금계좌에서 이체",
-    "amount": 50000000
-  },
-  {
-    "id": "tx_202607_026_xmq0",
-    "date": "2026-07-05",
-    "type": "income",
-    "account": "농협 감사헌금",
-    "memo": "국민감사헌금계좌에서 이체",
-    "amount": 20000000
-  },
-  {
-    "id": "tx_202607_027_zovf",
-    "date": "2026-07-05",
-    "type": "income",
-    "account": "농협 감사헌금",
-    "memo": "제천교회",
-    "amount": 5000000
-  },
-  {
-    "id": "tx_202607_028_1wbo",
-    "date": "2026-07-06",
-    "type": "income",
-    "account": "국민 감사헌금",
-    "memo": "주일헌금",
-    "amount": 50000
-  },
-  {
-    "id": "tx_202607_029_wfov",
-    "date": "2026-07-06",
-    "type": "expense",
-    "account": "국민 감사헌금",
-    "memo": "SSG.Com",
-    "amount": 82877
-  },
-  {
-    "id": "tx_202607_030_dizx",
-    "date": "2026-07-06",
-    "type": "income",
-    "account": "국민 선교헌금",
-    "memo": "국내외선교후원",
-    "amount": 30000
-  },
-  {
-    "id": "tx_202607_031_3wds",
-    "date": "2026-07-06",
-    "type": "expense",
-    "account": "국민 선교헌금",
-    "memo": "파키스탄 3분",
-    "amount": 2318129
-  },
-  {
-    "id": "tx_202607_032_pz09",
-    "date": "2026-07-06",
-    "type": "expense",
-    "account": "국민 선교헌금",
-    "memo": "농협선교계좌로 이체",
-    "amount": 5000000
-  },
-  {
-    "id": "tx_202607_033_kqp0",
-    "date": "2026-07-06",
-    "type": "income",
-    "account": "농협 선교헌금",
-    "memo": "국민선교계좌에서 이체",
-    "amount": 5000000
-  },
-  {
-    "id": "tx_202607_034_vksq",
-    "date": "2026-07-06",
-    "type": "income",
-    "account": "농협 감사헌금",
-    "memo": "주일헌금(현금)",
-    "amount": 3621000
-  },
-  {
-    "id": "tx_202607_035_xf4z",
-    "date": "2026-07-07",
-    "type": "expense",
-    "account": "국민 감사헌금",
-    "memo": "제티 80개 구입",
-    "amount": 21860
-  },
-  {
-    "id": "tx_202607_036_tm9h",
-    "date": "2026-07-08",
-    "type": "expense",
-    "account": "국민 감사헌금",
-    "memo": "윤지원사례비",
-    "amount": 1400300
-  },
-  {
-    "id": "tx_202607_037_ay3a",
-    "date": "2026-07-08",
-    "type": "expense",
-    "account": "국민 감사헌금",
-    "memo": "김성조사례비",
-    "amount": 2500000
-  },
-  {
-    "id": "tx_202607_038_b5u5",
-    "date": "2026-07-08",
-    "type": "expense",
-    "account": "국민 감사헌금",
-    "memo": "김영균사례비",
-    "amount": 1200300
-  },
-  {
-    "id": "tx_202607_039_bgv2",
-    "date": "2026-07-08",
-    "type": "expense",
-    "account": "국민 감사헌금",
-    "memo": "허국현사례비",
-    "amount": 1100300
-  },
-  {
-    "id": "tx_202607_040_efe3",
-    "date": "2026-07-08",
-    "type": "income",
-    "account": "농협 감사헌금",
-    "memo": "이미혜",
-    "amount": 100000000
-  },
-  {
-    "id": "tx_202607_041_tf0z",
-    "date": "2026-07-08",
-    "type": "income",
-    "account": "농협 감사헌금",
-    "memo": "이미혜",
-    "amount": 100000000
-  },
-  {
-    "id": "tx_202607_042_pude",
-    "date": "2026-07-10",
-    "type": "income",
-    "account": "국민 감사헌금",
-    "memo": "박상희",
-    "amount": 50000
-  },
-  {
-    "id": "tx_202607_043_xfdu",
-    "date": "2026-07-10",
-    "type": "income",
-    "account": "국민 감사헌금",
-    "memo": "조성배",
-    "amount": 1300000
-  },
-  {
-    "id": "tx_202607_044_a8fe",
-    "date": "2026-07-10",
-    "type": "income",
-    "account": "국민 감사헌금",
-    "memo": "황인호",
-    "amount": 500000
-  },
-  {
-    "id": "tx_202607_045_o2ku",
-    "date": "2026-07-10",
-    "type": "income",
-    "account": "국민 감사헌금",
-    "memo": "카드입금",
-    "amount": 3980
-  },
-  {
-    "id": "tx_202607_046_gcf7",
-    "date": "2026-07-10",
-    "type": "expense",
-    "account": "국민 선교헌금",
-    "memo": "쏘어TV",
-    "amount": 200000
-  },
-  {
-    "id": "tx_202607_047_7zxm",
-    "date": "2026-07-10",
-    "type": "expense",
-    "account": "국민 선교헌금",
-    "memo": "건강과생명",
-    "amount": 100000
-  },
-  {
-    "id": "tx_202607_048_8fqm",
-    "date": "2026-07-10",
-    "type": "expense",
-    "account": "국민 선교헌금",
-    "memo": "네팔 이정엽",
-    "amount": 200000
-  },
-  {
-    "id": "tx_202607_049_i7qz",
-    "date": "2026-07-10",
-    "type": "expense",
-    "account": "국민 선교헌금",
-    "memo": "필리핀 배요셉",
-    "amount": 200000
-  },
-  {
-    "id": "tx_202607_050_uoha",
-    "date": "2026-07-10",
-    "type": "income",
-    "account": "국민 선교헌금",
-    "memo": "박상희",
-    "amount": 20000
-  },
-  {
-    "id": "tx_202607_051_ehrv",
-    "date": "2026-07-10",
-    "type": "expense",
-    "account": "국민 선교헌금",
-    "memo": "대만 박정선",
-    "amount": 100000
-  },
-  {
-    "id": "tx_202607_052_payt",
-    "date": "2026-07-10",
-    "type": "income",
-    "account": "국민 선교헌금",
-    "memo": "조성배",
-    "amount": 1000000
-  },
-  {
-    "id": "tx_202607_053_yxqn",
-    "date": "2026-07-10",
-    "type": "income",
-    "account": "농협 감사헌금",
-    "memo": "대출연동",
-    "amount": 1300000000
-  },
-  {
-    "id": "tx_202607_054_f2yl",
-    "date": "2026-07-10",
-    "type": "expense",
-    "account": "농협 감사헌금",
-    "memo": "이전및설정비",
-    "amount": 5090000
-  },
-  {
-    "id": "tx_202607_055_xmzy",
-    "date": "2026-07-10",
-    "type": "expense",
-    "account": "농협 감사헌금",
-    "memo": "인지세",
-    "amount": 175000
-  },
-  {
-    "id": "tx_202607_056_ajv3",
-    "date": "2026-07-10",
-    "type": "expense",
-    "account": "농협 감사헌금",
-    "memo": "개봉동 건물잔금",
-    "amount": 1497134200
-  },
-  {
-    "id": "tx_202607_057_44z6",
-    "date": "2026-07-12",
-    "type": "income",
-    "account": "국민 감사헌금",
-    "memo": "오혜리",
-    "amount": 30000
-  },
-  {
-    "id": "tx_202607_058_nvgf",
-    "date": "2026-07-12",
-    "type": "income",
-    "account": "국민 감사헌금",
-    "memo": "김영광",
-    "amount": 300000
-  },
-  {
-    "id": "tx_202607_059_rifd",
-    "date": "2026-07-12",
-    "type": "income",
-    "account": "국민 감사헌금",
-    "memo": "감사헌금",
-    "amount": 50000
-  },
-  {
-    "id": "tx_202607_060_gufj",
-    "date": "2026-07-12",
-    "type": "income",
-    "account": "국민 감사헌금",
-    "memo": "헌금",
-    "amount": 10000
-  },
-  {
-    "id": "tx_202607_061_rfy8",
-    "date": "2026-07-12",
-    "type": "income",
-    "account": "국민 감사헌금",
-    "memo": "김희수",
-    "amount": 20000
-  },
-  {
-    "id": "tx_202607_062_3zvs",
-    "date": "2026-07-12",
-    "type": "income",
-    "account": "국민 감사헌금",
-    "memo": "헌금",
-    "amount": 100000
-  },
-  {
-    "id": "tx_202607_063_23lq",
-    "date": "2026-07-12",
-    "type": "income",
-    "account": "국민 감사헌금",
-    "memo": "이명식",
-    "amount": 30000
-  },
-  {
-    "id": "tx_202607_064_czy9",
-    "date": "2026-07-12",
-    "type": "expense",
-    "account": "국민 선교헌금",
-    "memo": "명동산돌교회 전도지",
-    "amount": 600000
-  },
-  {
-    "id": "tx_202607_065_87d4",
-    "date": "2026-07-12",
-    "type": "income",
-    "account": "농협 선교헌금",
-    "memo": "전예지",
-    "amount": 30000
-  },
-  {
-    "id": "tx_202607_066_62nl",
-    "date": "2026-07-12",
-    "type": "income",
-    "account": "농협 감사헌금",
-    "memo": "황준성",
-    "amount": 50000
-  },
-  {
-    "id": "tx_202607_067_9ur0",
-    "date": "2026-07-12",
-    "type": "income",
-    "account": "농협 감사헌금",
-    "memo": "주일헌금(현금)",
-    "amount": 5677000
-  },
-  {
-    "id": "tx_202607_068_3r55",
-    "date": "2026-07-12",
-    "type": "income",
-    "account": "농협 감사헌금",
-    "memo": "감사",
-    "amount": 300000
-  },
-  {
-    "id": "tx_202607_069_ct64",
-    "date": "2026-07-13",
-    "type": "income",
-    "account": "국민 감사헌금",
-    "memo": "주일헌금",
-    "amount": 50000
-  },
-  {
-    "id": "tx_202607_070_8hq5",
-    "date": "2026-07-13",
-    "type": "expense",
-    "account": "국민 감사헌금",
-    "memo": "청소비(7월)",
-    "amount": 300000
-  },
-  {
-    "id": "tx_202607_071_k4xw",
-    "date": "2026-07-13",
-    "type": "expense",
-    "account": "국민 감사헌금",
-    "memo": "주방봉사비(7월)",
-    "amount": 400000
-  },
-  {
-    "id": "tx_202607_072_grre",
-    "date": "2026-07-13",
-    "type": "expense",
-    "account": "국민 감사헌금",
-    "memo": "식사지원비(7월)",
-    "amount": 800000
-  },
-  {
-    "id": "tx_202607_073_jdmc",
-    "date": "2026-07-13",
-    "type": "expense",
-    "account": "농협 감사헌금",
-    "memo": "인도명령비용",
-    "amount": 78580
-  },
-  {
-    "id": "tx_202607_074_g31a",
-    "date": "2026-07-14",
-    "type": "income",
-    "account": "국민 감사헌금",
-    "memo": "이재신형지숙",
-    "amount": 300000
-  },
-  {
-    "id": "tx_202607_075_24ky",
-    "date": "2026-07-15",
-    "type": "income",
-    "account": "국민 선교헌금",
-    "memo": "정은경",
-    "amount": 20000
-  },
-  {
-    "id": "tx_202607_076_1pr2",
-    "date": "2026-07-15",
-    "type": "expense",
-    "account": "농협 감사헌금",
-    "memo": "김화영",
-    "amount": 426000
-  },
-  {
-    "id": "tx_202607_077_e44p",
-    "date": "2026-07-16",
-    "type": "expense",
-    "account": "국민 감사헌금",
-    "memo": "알라딘 서적",
-    "amount": 16200
-  },
-  {
-    "id": "tx_202607_078_t5bh",
-    "date": "2026-07-16",
-    "type": "income",
-    "account": "국민 감사헌금",
-    "memo": "주경선",
-    "amount": 100000
-  },
-  {
-    "id": "tx_202607_079_wmke",
-    "date": "2026-07-16",
-    "type": "expense",
-    "account": "국민 감사헌금",
-    "memo": "알라딘 서적",
-    "amount": 36000
-  },
-  {
-    "id": "tx_202607_080_3x9e",
-    "date": "2026-07-16",
-    "type": "expense",
-    "account": "농협 감사헌금",
-    "memo": "인증수수료",
-    "amount": 13200
-  },
-  {
-    "id": "tx_202607_081_6k4h",
-    "date": "2026-07-18",
-    "type": "expense",
-    "account": "국민 감사헌금",
-    "memo": "3분기 거리설교지원",
-    "amount": 150000
-  },
-  {
-    "id": "tx_202607_082_sk5u",
-    "date": "2026-07-18",
-    "type": "expense",
-    "account": "국민 감사헌금",
-    "memo": "3분기 유치부지원",
-    "amount": 150000
-  },
-  {
-    "id": "tx_202607_083_i6q0",
-    "date": "2026-07-18",
-    "type": "expense",
-    "account": "국민 감사헌금",
-    "memo": "3분기 중등부지원",
-    "amount": 150000
-  },
-  {
-    "id": "tx_202607_084_hwav",
-    "date": "2026-07-18",
-    "type": "expense",
-    "account": "국민 감사헌금",
-    "memo": "3분기 중고등부지원",
-    "amount": 150000
-  },
-  {
-    "id": "tx_202607_085_60z4",
-    "date": "2026-07-18",
-    "type": "expense",
-    "account": "국민 감사헌금",
-    "memo": "3분기 초등부지원",
-    "amount": 150000
-  },
-  {
-    "id": "tx_202607_086_z8fq",
-    "date": "2026-07-18",
-    "type": "expense",
-    "account": "국민 감사헌금",
-    "memo": "3분기 유년부지원",
-    "amount": 150000
-  },
-  {
-    "id": "tx_202607_087_jzw0",
-    "date": "2026-07-19",
-    "type": "income",
-    "account": "국민 감사헌금",
-    "memo": "김희수",
-    "amount": 20000
-  },
-  {
-    "id": "tx_202607_088_x38m",
-    "date": "2026-07-19",
-    "type": "income",
-    "account": "국민 감사헌금",
-    "memo": "오혜리",
-    "amount": 30000
-  },
-  {
-    "id": "tx_202607_089_itl9",
-    "date": "2026-07-19",
-    "type": "income",
-    "account": "국민 감사헌금",
-    "memo": "김현아",
-    "amount": 50000
-  },
-  {
-    "id": "tx_202607_090_kh9t",
-    "date": "2026-07-19",
-    "type": "income",
-    "account": "국민 감사헌금",
-    "memo": "이명식",
-    "amount": 30000
-  },
-  {
-    "id": "tx_202607_091_0zo0",
-    "date": "2026-07-19",
-    "type": "income",
-    "account": "국민 선교헌금",
-    "memo": "billy",
-    "amount": 30000
-  },
-  {
-    "id": "tx_202607_092_ppyn",
-    "date": "2026-07-19",
-    "type": "income",
-    "account": "농협 감사헌금",
-    "memo": "황준성",
-    "amount": 50000
-  },
-  {
-    "id": "tx_202607_093_s9rv",
-    "date": "2026-07-19",
-    "type": "income",
-    "account": "농협 감사헌금",
-    "memo": "주일헌금(현금)",
-    "amount": 1664000
-  },
-  {
-    "id": "tx_202607_094_r15g",
-    "date": "2026-07-19",
-    "type": "income",
-    "account": "농협 감사헌금",
-    "memo": "고형석",
-    "amount": 50000
-  },
-  {
-    "id": "tx_202607_095_jnp3",
-    "date": "2026-07-19",
-    "type": "income",
-    "account": "농협 감사헌금",
-    "memo": "헌금",
-    "amount": 300000
-  },
-  {
-    "id": "tx_202607_096_nkul",
-    "date": "2026-07-20",
-    "type": "income",
-    "account": "국민 감사헌금",
-    "memo": "주일헌금",
-    "amount": 50000
-  },
-  {
-    "id": "tx_202607_097_k5oi",
-    "date": "2026-07-21",
-    "type": "expense",
-    "account": "국민 감사헌금",
-    "memo": "생명의말씀사",
-    "amount": 108050
-  },
-  {
-    "id": "tx_202607_098_64p4",
-    "date": "2026-07-22",
-    "type": "income",
-    "account": "국민 선교헌금",
-    "memo": "박상희",
-    "amount": 10000
-  },
-  {
-    "id": "tx_202607_099_445g",
-    "date": "2026-07-22",
-    "type": "income",
-    "account": "농협 감사헌금",
-    "memo": "박상희",
-    "amount": 27700
-  },
-  {
-    "id": "tx_202607_100_1eyy",
-    "date": "2026-07-24",
-    "type": "income",
-    "account": "국민 선교헌금",
-    "memo": "박창용",
-    "amount": 100000
-  },
-  {
-    "id": "tx_202607_101_hrd3",
-    "date": "2026-07-26",
-    "type": "income",
-    "account": "국민 감사헌금",
-    "memo": "이명식",
-    "amount": 30000
-  },
-  {
-    "id": "tx_202607_102_c4o0",
-    "date": "2026-07-26",
-    "type": "income",
-    "account": "국민 감사헌금",
-    "memo": "김희수",
-    "amount": 20000
-  },
-  {
-    "id": "tx_202607_103_ex2x",
-    "date": "2026-07-26",
-    "type": "income",
-    "account": "국민 감사헌금",
-    "memo": "임은경",
-    "amount": 100000
-  },
-  {
-    "id": "tx_202607_104_7st5",
-    "date": "2026-07-26",
-    "type": "income",
-    "account": "국민 감사헌금",
-    "memo": "조수민",
-    "amount": 100000
-  },
-  {
-    "id": "tx_202607_105_mpbl",
-    "date": "2026-07-26",
-    "type": "income",
-    "account": "국민 감사헌금",
-    "memo": "이남순",
-    "amount": 100000
-  },
-  {
-    "id": "tx_202607_106_jk2k",
-    "date": "2026-07-26",
-    "type": "income",
-    "account": "농협 감사헌금",
-    "memo": "황준성",
-    "amount": 50000
-  },
-  {
-    "id": "tx_202607_107_4dix",
-    "date": "2026-07-26",
-    "type": "income",
-    "account": "농협 감사헌금",
-    "memo": "타사와르",
-    "amount": 100000
-  },
-  {
-    "id": "tx_202607_108_bq5w",
-    "date": "2026-07-26",
-    "type": "expense",
-    "account": "농협 감사헌금",
-    "memo": "박재호이사비",
-    "amount": 5000500
-  },
-  {
-    "id": "tx_202607_109_82zb",
-    "date": "2026-07-26",
-    "type": "expense",
-    "account": "농협 감사헌금",
-    "memo": "윤지원사례비-2중",
-    "amount": 400500
-  },
-  {
-    "id": "tx_202607_110_4x37",
-    "date": "2026-07-26",
-    "type": "income",
-    "account": "농협 감사헌금",
-    "memo": "주일헌금(현금)",
-    "amount": 3575000
-  },
-  {
-    "id": "tx_202607_111_uh6c",
-    "date": "2026-07-26",
-    "type": "expense",
-    "account": "농협 감사헌금",
-    "memo": "전기요금(7월)",
-    "amount": 624565
-  },
-  {
-    "id": "tx_202607_112_q31b",
-    "date": "2026-07-26",
-    "type": "expense",
-    "account": "농협 감사헌금",
-    "memo": "임차료(7월)",
-    "amount": 4574300
-  },
-  {
-    "id": "tx_202607_113_kdft",
-    "date": "2026-07-26",
-    "type": "expense",
-    "account": "농협 감사헌금",
-    "memo": "관리비(7월)",
-    "amount": 1804500
-  },
-  {
-    "id": "tx_202607_114_kkcw",
-    "date": "2026-07-26",
-    "type": "expense",
-    "account": "농협 감사헌금",
-    "memo": "주방봉사료",
-    "amount": 400500
-  },
-  {
-    "id": "tx_202607_115_941l",
-    "date": "2026-07-27",
-    "type": "expense",
-    "account": "국민 감사헌금",
-    "memo": "KT요금",
-    "amount": 42830
-  },
-  {
-    "id": "tx_202607_116_55xe",
-    "date": "2026-07-27",
-    "type": "income",
-    "account": "국민 감사헌금",
-    "memo": "주일헌금",
-    "amount": 50000
-  },
-  {
-    "id": "tx_202607_117_rz8h",
-    "date": "2026-07-27",
-    "type": "income",
-    "account": "국민 선교헌금",
-    "memo": "한정자",
-    "amount": 30000
-  },
-  {
-    "id": "tx_202607_118_qik1",
-    "date": "2026-07-27",
-    "type": "income",
-    "account": "국민 선교헌금",
-    "memo": "황선석",
-    "amount": 30000
-  },
-  {
-    "id": "tx_202607_119_dd13",
-    "date": "2026-07-27",
-    "type": "income",
-    "account": "국민 선교헌금",
-    "memo": "홍용만",
-    "amount": 20000
-  },
-  {
-    "id": "tx_202607_120_dr0z",
-    "date": "2026-07-27",
-    "type": "income",
-    "account": "국민 선교헌금",
-    "memo": "이남순",
-    "amount": 20000
-  },
-  {
-    "id": "tx_202607_121_loqb",
-    "date": "2026-07-27",
-    "type": "income",
-    "account": "국민 선교헌금",
-    "memo": "김선희",
-    "amount": 50000
-  },
-  {
-    "id": "tx_202607_122_nnw3",
-    "date": "2026-07-27",
-    "type": "income",
-    "account": "국민 선교헌금",
-    "memo": "김영선",
-    "amount": 30000
-  },
-  {
-    "id": "tx_202607_123_1jy8",
-    "date": "2026-07-28",
-    "type": "income",
-    "account": "국민 감사헌금",
-    "memo": "헌금",
-    "amount": 120000
-  },
-  {
-    "id": "tx_202607_124_me3b",
-    "date": "2026-07-29",
-    "type": "expense",
-    "account": "국민 감사헌금",
-    "memo": "알라딘 서적",
-    "amount": 34200
-  },
-  {
-    "id": "tx_202607_125_nm8d",
-    "date": "2026-07-30",
-    "type": "income",
-    "account": "농협 선교헌금",
-    "memo": "이현주",
-    "amount": 30000
-  },
-  {
-    "id": "tx_202607_126_er9u",
-    "date": "2026-07-31",
-    "type": "income",
-    "account": "국민 감사헌금",
-    "memo": "조현준",
-    "amount": 50000
-  },
-  {
-    "id": "tx_202607_127_pkp1",
-    "date": "2026-07-31",
-    "type": "income",
-    "account": "국민 선교헌금",
-    "memo": "전우연",
-    "amount": 10000
-  },
-  {
-    "id": "tx_202607_128_yi56",
-    "date": "2026-07-31",
-    "type": "income",
-    "account": "국민 선교헌금",
-    "memo": "한정자",
-    "amount": 10000
-  }
-];
+const INITIAL_JULY_TRANSACTIONS = [];
 
 function loadLocalCache(){
   try{
@@ -1983,12 +958,6 @@ async function deleteTx(id){
   render();
 }
 
-/* 거래 내역 표의 현재 필터(연도·월·통장)에 해당하는 거래를 한 번에 삭제.
-   실수로 전체 데이터를 지우는 것을 막기 위해 연도 선택이 반드시 필요하다. */
-/* 거래 내역 표의 현재 필터(연도·월·통장)에 해당하는 거래를 한 번에 삭제.
-   연도만 선택 -> 그 연도 전체, 연도+월 -> 그 연도 그 달, 연도+통장 -> 그 연도 그 통장,
-   연도+월+통장을 모두 선택하면 그 조건에 정확히 맞는 거래만 삭제된다.
-   실수로 전체 데이터를 지우는 것을 막기 위해 연도 선택이 반드시 필요하다. */
 async function bulkDeleteByFilter(){
   if(!filterYear){
     alert('연도를 먼저 선택해 주세요.\n(전체 삭제 실수를 막기 위해 연도를 선택해야만 필터 조건 삭제를 사용할 수 있습니다.\n필요하면 월·통장 필터도 함께 선택해서 범위를 좁힐 수 있습니다.)');
@@ -2072,7 +1041,6 @@ function populateFilters(){
 document.getElementById('filterAccount').addEventListener('change', (e)=>{ filterAccount = e.target.value; renderLedger(); });
 document.getElementById('filterYear').addEventListener('change', (e)=>{
   filterYear = e.target.value;
-  // 연도를 바꾸면 월 필터는 "전체"로 초기화 — 그래야 전년도 잔액이 새 연도의 이월금으로 온전히 표시됨
   filterMonth = '';
   document.getElementById('filterMonth').value = '';
   renderLedger();
@@ -2162,7 +1130,6 @@ function renderLedger(){
   });
 }
 
-/* 거래내역 표에서 계정 배지를 클릭하면 그 자리에 select를 띄워 바로 계정을 바꿀 수 있게 한다. */
 function openCategoryPicker(badge){
   const id = badge.dataset.id;
   const tx = transactions.find(t => t.id === id);
@@ -2189,7 +1156,6 @@ function openCategoryPicker(badge){
     if(commit && select.value !== current){
       const idx = transactions.findIndex(t => t.id === id);
       if(idx !== -1){
-        // categoryManual: true로 표시해두면 '자동 재분류' 실행 시 이 거래는 건드리지 않는다(사용자가 직접 고른 값 보존).
         transactions[idx] = {...transactions[idx], category: select.value, categoryManual: true};
         await saveData();
       }
@@ -2207,10 +1173,6 @@ function escapeHtml(s){
   return d.innerHTML;
 }
 
-/* 이월금(전월/전년 이전 누적 잔액) 계산
-   - 연도 필터가 걸려 있으면: (연도+월 필터) 해당 월 1일 이전, 또는 (연도만) 해당 연도 1월 1일 이전까지의 누적 잔액
-   - 연도 없이 월만 필터된 경우: 필터된 목록의 최초 거래일 이전까지의 누적 잔액 (거래가 있을 때만)
-   - 통장 필터가 걸려 있으면 해당 통장 거래만으로 계산 */
 function computeOpeningBalance(list){
   let boundary = null;
   let label = '';
@@ -2274,7 +1236,6 @@ function populateYearSelect(){
   accountMonthSel.innerHTML = '<option value="">연도 말 기준</option>' + monthOptionsHtml;
   accountMonthSel.value = accountYear ? accountMonthPrev : '';
   accountMonth = accountMonthSel.value;
-  // 연도를 선택하지 않았으면(전체 누적) 월 선택은 의미가 없으므로 비활성화
   accountMonthSel.disabled = !accountYear;
 
   const nameYearSel = document.getElementById('nameSearchYear');
@@ -2314,15 +1275,11 @@ function computeAgg(){
     });
   }
 
-  // 이월금(전체 기간 시작부터, 이 집계에서 다루는 첫 구간 이전까지)을 시작 잔액으로 계산.
-  // 통장 필터가 걸려 있으면 그 통장 거래만으로 계산해야 다른 카드의 통장별 잔액과 일치한다.
   const acctTx = aggAccount ? transactions.filter(t => t.account === aggAccount) : transactions;
   let openingBalance = 0;
   if(currentMode === 'year'){
-    // 연도별 집계는 order의 첫 연도 이전 거래가 없으므로(전체 연도를 다 나열) 이월금 0에서 시작
     openingBalance = 0;
   } else {
-    // 월/분기/반기 집계는 선택한 연도(currentYear) 1월 1일 이전까지의 누적 잔액을 이월금으로 사용
     const boundary = `${currentYear}-01-01`;
     acctTx.forEach(t=>{
       if(t.date < boundary) openingBalance += (t.type === 'income' ? t.amount : -t.amount);
@@ -2337,7 +1294,6 @@ function computeAgg(){
   });
   const grandIncome = rows.reduce((s,r)=>s+r.income,0);
   const grandExpense = rows.reduce((s,r)=>s+r.expense,0);
-  // 합계 행의 잔액은 마지막 구간까지의 최종 누적 잔액(=이월금 + 전체 수입 - 전체 지출)
   const grandNet = openingBalance + grandIncome - grandExpense;
   return {rows, grandIncome, grandExpense, grandNet, openingBalance, isEmpty: currentMode !== 'year' && yearTx.length === 0};
 }
@@ -2368,7 +1324,6 @@ function renderAgg(){
 
   body.innerHTML = '';
 
-  // 월/분기/반기 집계는 선택 연도 이전까지의 이월금이 있으면 첫 행으로 보여준다 (연도별 집계는 이월금 없음)
   if(currentMode !== 'year' && openingBalance !== 0){
     const openRow = document.createElement('tr');
     openRow.className = 'opening-row';
@@ -2403,12 +1358,6 @@ function renderAgg(){
   body.appendChild(totalRow);
 }
 
-/* field 기준으로 그룹화한 수입/지출/잔액을 계산.
-   - year: 지정 시 그 연도 말까지 누적 잔액 + 그 연도 한 해의 수입·지출 합계
-   - asOfMonth('YYYY-MM'): 지정 시 그 달 말까지 누적 잔액 + 그 달 한 달의 수입·지출 합계
-     (재정보고서에서 거래내역 잔액과 통장별 잔액의 계산 시점을 일치시키기 위해 사용)
-   계좌간 이체도 실제 통장 잔고에는 영향을 주는 거래이므로 수입/지출/잔액 모두 그대로 포함한다.
-   (이체를 제외한 순수입/순지출은 재정보고서의 별도 '순수입·순지출 요약' 섹션에서만 보여준다.) */
 function computeGroupSummary(field, year, asOfMonth){
   const list = getAccountList();
   const groups = {};
@@ -2456,8 +1405,6 @@ function renderGroupTable(field, bodyId, emptyId, year, asOfMonth){
     body.appendChild(tr);
   });
 
-  // 합계 잔액은 grandIncome-grandExpense가 아니라 각 통장 net(누적 잔액)의 합으로 계산해야
-  // year로 기간이 좁혀졌을 때도(수입·지출은 그 기간, net은 그 시점까지 누적) 정확하다.
   const grandNet = rows.reduce((s,r)=>s+r.net,0);
   const totalRow = document.createElement('tr');
   totalRow.className = 'total-row';
@@ -2490,7 +1437,6 @@ function renderAccountSummary(){
   document.getElementById('accountCaption').textContent = caption;
 }
 
-/* ---------- 05. 이름별 연도별 집계 ---------- */
 function populateMemoOptions(){
   const names = [...new Set(transactions.map(t => t.memo).filter(Boolean))].sort();
   document.getElementById('memoOptions').innerHTML = names.map(n => `<option value="${escapeHtml(n)}">`).join('');
@@ -2628,9 +1574,6 @@ document.getElementById('nameSearchYear').addEventListener('change', (e)=>{ name
 document.getElementById('nameSearchPrintBtn').addEventListener('click', ()=> printSection('nameSearchCard'));
 document.getElementById('nameSearchExcelBtn').addEventListener('click', downloadNameSearchExcel);
 
-
-/* ---------- 05 전월대비 증감 ---------- */
-/* 재정보고서의 '전월대비 증감' 섹션 전용. 계좌간 이체도 그대로 포함한 전체 수입/지출이다. */
 function sumMonth(monthStr){
   let income = 0, expense = 0;
   transactions.forEach(t=>{
@@ -2643,7 +1586,7 @@ function sumMonth(monthStr){
 
 function prevMonthStr(monthStr){
   const [y,m] = monthStr.split('-').map(Number);
-  const d = new Date(y, m-2, 1); // m은 1~12, m-2 -> 0-index 전달로 전월 계산
+  const d = new Date(y, m-2, 1);
   return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
 }
 
@@ -2672,10 +1615,6 @@ function momItem(label, cur, prev, biggerIsBetter, extraClass){
   `;
 }
 
-/* 항목(내용) 단위로 월별 합계를 집계. key는 "통장||내용"으로 묶어 같은 이름이라도 통장이 다르면 구분한다. */
-/* includeTransfer가 false(기본값)면 계좌간 이체·이월금 항목은 애초에 집계 대상에서 제외한다.
-   이체 금액은 매달 회계 담당자가 옮기는 금액이 그때그때 달라 ±20% 변동이 거의 항상 발생하고,
-   그게 특이사항 목록을 뒤덮어 정작 봐야 할 실제 특이 지출/수입이 묻히기 때문이다. */
 function sumByItemForMonth(monthStr, includeTransfer){
   const groups = {};
   if(!monthStr) return groups;
@@ -2689,7 +1628,6 @@ function sumByItemForMonth(monthStr, includeTransfer){
   return groups;
 }
 
-/* 항목의 수입/지출 중 0이 아닌 쪽의 값을 대표값으로 사용 (한 항목은 보통 수입 또는 지출 한쪽만 발생) */
 function itemAmount(entry){
   if(!entry) return 0;
   return entry.income !== 0 ? entry.income : entry.expense;
@@ -2698,8 +1636,6 @@ function itemAmount(entry){
 function compareBadge(curAmt, refAmt){
   if(curAmt === 0 && refAmt === 0) return { html: '', isAnomaly: false };
   if(refAmt === 0){
-    // 전월에는 없다가 이번달에 갑자기 생긴 지출/수입(신규 항목). 증감률(%)은 낼 수 없지만
-    // '갑자기 생긴 특별 지출/수입'이라는 의미 자체가 특이사항이므로 NEW로 표시한다.
     return { html: `<span class="anomaly-badge new">NEW</span>`, isAnomaly: true, rateText: '신규' };
   }
   const diff = curAmt - refAmt;
@@ -2743,7 +1679,6 @@ function renderMoM(){
   caption.textContent = `${cy}년 ${parseInt(cm,10)}월 · 전월(${py}년 ${parseInt(pm,10)}월) 대비 ±20% 이상 변동했거나, 전월에는 없던 새로운 지출·수입(NEW)만 표시합니다.${transferNote}`;
   document.getElementById('momPrintTitle').textContent = `특이사항 분석 - ${cy}년 ${parseInt(cm,10)}월`;
 
-  // 이번달에 존재하는 모든 항목 + 전월에는 있었지만 이번달엔 사라진 항목까지 후보로 모은다
   const allKeys = new Set([
     ...Object.keys(curGroups),
     ...Object.keys(prevGroups),
@@ -2763,7 +1698,6 @@ function renderMoM(){
     const curAmt = itemAmount(cur);
     const prevAmt = itemAmount(prev);
 
-    // 이번달 거래가 없는데 전월에만 있던 항목은(사라진 항목) 이번 리포트 범위에서는 제외
     if(!cur) return;
 
     const prevCmp = compareBadge(curAmt, prevAmt);
@@ -2835,7 +1769,6 @@ function render(){
   renderMoM();
 }
 
-/* ---------- 인쇄 ---------- */
 function printSection(cardId){
   document.querySelectorAll('.card').forEach(c=>c.classList.remove('print-target'));
   document.getElementById(cardId).classList.add('print-target');
@@ -2872,15 +1805,8 @@ function buildMonthlyReportHTML(monthStr, includeMoM = true){
     return `<tr><td>${tx.date}</td><td class="memo">${escapeHtml(tx.account||'')}</td><td class="memo">${escapeHtml(tx.memo)}</td><td class="income">${inc?won(inc):''}</td><td class="expense">${exp?won(exp):''}</td><td>${won(balance)}</td></tr>`;
   }).join('') || `<tr><td colspan="6" style="text-align:center;font-family:'Pretendard';color:var(--ink-soft);">해당 월 거래 내역이 없습니다.</td></tr>`;
 
-  // 1번(거래내역) 잔액과 시점을 일치시키기 위해 통장별 잔액도 '해당 월 말 기준'으로 계산
-  const {rows: accRows, grandIncome: accGrandIncome, grandExpense: accGrandExpense} = computeGroupSummary('account', null, monthStr);
-  // 합계 잔액은 각 통장의 net(해당 월 말까지 누적 잔액)을 더한 값이어야 1번(거래내역) 잔액과 일치한다.
-  const accGrandNet = accRows.reduce((s,r)=>s+r.net,0);
-  const accRowsHtml = accRows.map(r=>`<tr><td colspan="2">${escapeHtml(r.label)}</td><td class="income">${r.income?won(r.income):'-'}</td><td class="expense">${r.expense?won(r.expense):'-'}</td><td class="${r.net>=0?'balance-pos':'balance-neg'}">${won(r.net)}</td></tr>`).join('')
-    + `<tr class="total-row"><td colspan="2">합계</td><td class="income">${won(accGrandIncome)}</td><td class="expense">${won(accGrandExpense)}</td><td class="${accGrandNet>=0?'balance-pos':'balance-neg'}">${won(accGrandNet)}</td></tr>`;
-
-  // 3. 순수입·순지출 요약: 계좌간 이체는 실제 수입/지출이 아니므로 제외한, 그 달의 순수한 교회 재정 흐름.
-  // 위 1·2번 섹션(수입/지출/잔액)은 이체를 그대로 포함한 값을 유지하고, 이 섹션에서만 이체를 뺀 값을 별도로 보여준다.
+  // 당월 요약(수입·지출·순이익): 계좌간 이체는 실제 수입/지출이 아니므로 제외한, 그 달의 순수한 교회 재정 흐름.
+  // 위 1번 섹션(거래내역, 잔액)은 이체를 그대로 포함한 값을 유지하고, 이 섹션에서만 이체를 뺀 값을 별도로 보여준다.
   let netIncome = 0, netExpense = 0;
   monthTx.forEach(t=>{
     if(isTransferTx(t)) return;
@@ -2888,14 +1814,14 @@ function buildMonthlyReportHTML(monthStr, includeMoM = true){
   });
   const netTotal = netIncome - netExpense;
   const netSummaryHtml = `
-    <h3 style="font-family:'Noto Serif KR',serif;font-size:17px;margin:26px 0 8px;">3. 순수입·순지출 요약 (계좌간 이체 제외)</h3>
+    <h3 style="font-family:'Noto Serif KR',serif;font-size:17px;margin:26px 0 8px;">2. 당월 수입·지출 요약 (순이익, 계좌간 이체 제외)</h3>
     <table><thead><tr><th style="text-align:left;">구분</th><th>금액</th></tr></thead>
     <tbody>
-      <tr><td>순수입 합계</td><td class="income">${won(netIncome)}</td></tr>
-      <tr><td>순지출 합계</td><td class="expense">${won(netExpense)}</td></tr>
-      <tr class="total-row"><td>순액</td><td class="${netTotal>=0?'balance-pos':'balance-neg'}">${won(netTotal)}</td></tr>
+      <tr><td>당월 수입 합계</td><td class="income">${won(netIncome)}</td></tr>
+      <tr><td>당월 지출 합계</td><td class="expense">${won(netExpense)}</td></tr>
+      <tr class="total-row"><td>당월 순이익</td><td class="${netTotal>=0?'balance-pos':'balance-neg'}">${won(netTotal)}</td></tr>
     </tbody></table>
-    <div class="card-caption" style="margin-top:8px;">계좌간 이체(예: 국민 통장 → 농협 통장 이체, 이월금)는 실제 수입·지출이 아니므로 제외한 값입니다. 위 1·2번 섹션의 수입·지출·잔액에는 이체가 그대로 포함되어 있습니다.</div>
+    <div class="card-caption" style="margin-top:8px;">계좌간 이체(예: 국민 통장 → 농협 통장 이체, 이월금)는 실제 수입·지출이 아니므로 제외한 값입니다. 위 1번 섹션의 거래 내역·잔액에는 이체가 그대로 포함되어 있습니다.</div>
   `;
 
   let momSectionHtml = '';
@@ -2907,7 +1833,7 @@ function buildMonthlyReportHTML(monthStr, includeMoM = true){
       + momItem('지출', cur.expense, prev.expense, false)
       + momItem('총합계(순액)', cur.net, prev.net, true, 'net');
     momSectionHtml = `
-    <h3 style="font-family:'Noto Serif KR',serif;font-size:17px;margin:26px 0 8px;">4. 전월대비 증감</h3>
+    <h3 style="font-family:'Noto Serif KR',serif;font-size:17px;margin:26px 0 8px;">3. 전월대비 증감</h3>
     <div class="mom-grid">${momHtml}</div>
     `;
   }
@@ -2925,9 +1851,6 @@ function buildMonthlyReportHTML(monthStr, includeMoM = true){
       <tr class="total-row"><td colspan="3">합계</td><td class="income">${won(totalIncome)}</td><td class="expense">${won(totalExpense)}</td><td>${won(balance)}</td></tr>
     </tbody></table>
 
-    <h3 style="font-family:'Noto Serif KR',serif;font-size:17px;margin:26px 0 8px;">2. 통장별 잔액 (${monthLabel} 말 기준 누적)</h3>
-    <table><thead><tr><th style="text-align:left;">통장</th><th></th><th>수입 합계</th><th>지출 합계</th><th>잔액</th></tr></thead>
-    <tbody>${accRowsHtml}</tbody></table>
     ${netSummaryHtml}
     ${momSectionHtml}
     <div style="margin-top:60px;font-size:15px;text-align:right;">작성일: ${today}</div>
@@ -2964,9 +1887,6 @@ function excelFilename(prefix){
   return `${prefix}_${new Date().toISOString().slice(0,10)}.xlsx`;
 }
 
-/* netTotal을 명시하면 그 값을 합계 소계로 쓰고, 생략하면 기존처럼 grandIncome-grandExpense를 쓴다.
-   (기간별 집계는 grandIncome-grandExpense가 곧 순액이지만, 통장별 잔액처럼 net이 누적값인 경우
-   grandIncome-grandExpense가 아니라 각 행 net의 합을 합계로 써야 정확하다.) */
 function summaryToSheetRows(headerLabel, rows, grandIncome, grandExpense, netTotal){
   const sheetRows = [[headerLabel, '수입 합계', '지출 합계', '소계(잔액)']];
   rows.forEach(r => sheetRows.push([r.label, r.income, r.expense, r.net]));
@@ -3037,12 +1957,10 @@ function downloadGroupExcel(field, sheetName, prefix, year, asOfMonth){
   if(isEmpty){ alert('내보낼 내역이 없습니다.'); return; }
   const headerLabel = field === 'account' ? '통장' : '명목';
   const finalPrefix = asOfMonth ? `${prefix}_${asOfMonth}` : (year ? `${prefix}_${year}년` : prefix);
-  // net은 누적 잔액이므로 합계도 grandIncome-grandExpense가 아니라 각 행 net의 합이어야 정확하다
   const grandNet = rows.reduce((s,r)=>s+r.net,0);
   writeSingleSheetWorkbook(summaryToSheetRows(headerLabel, rows, grandIncome, grandExpense, grandNet), SUMMARY4_COL_WIDTHS, sheetName, finalPrefix);
 }
 
-/* 연도별 누적 잔액(이월금 개념 없이 연도별로 다 나열하므로 0에서 시작해 순차 누적) */
 function yearlySummaryRows(){
   const years = getYears().sort((a,b)=>a-b);
   const groups = {};
@@ -3085,7 +2003,6 @@ document.getElementById('accountExcelBtn').addEventListener('click', ()=> {
 });
 document.getElementById('accountYear').addEventListener('change', (e)=>{
   accountYear = e.target.value;
-  // 연도가 바뀌면(특히 '전체'로 돌아가면) 월 선택은 의미가 없어지므로 초기화
   accountMonth = '';
   const accountMonthSel = document.getElementById('accountMonth');
   accountMonthSel.value = '';
@@ -3252,7 +2169,7 @@ document.getElementById('bulkSaveBtn').addEventListener('click', async ()=>{
     const memo = tr.querySelector('.bulk-memo').value.trim();
     const amountRaw = tr.querySelector('.bulk-amount').value;
 
-    if(!memo && !amountRaw) return; // 완전히 빈 행은 건너뜀
+    if(!memo && !amountRaw) return;
 
     const amount = parseFloat(amountRaw);
     if(!date || !memo || isNaN(amount) || amount === 0 || !Number.isInteger(amount)){
@@ -3348,7 +2265,6 @@ document.getElementById('bulkSaveBtn').addEventListener('click', async ()=>{
 
   document.getElementById('autoAddRowBtn').addEventListener('click', () => addAutoRow('', 'income', '', ''));
 
-  /* 통합 파일 핸들러 (이미지 / PDF / 엑셀 구별 분기) */
   async function handleAutoFile(file){
     document.getElementById('autoFileName').textContent = file.name;
     document.getElementById('autoFileSize').textContent = (file.size / 1024).toFixed(1) + ' KB';
@@ -3382,7 +2298,6 @@ document.getElementById('bulkSaveBtn').addEventListener('click', async ()=>{
     }
   }
 
-  /* 이미지 전처리 */
   function preprocessImage(img){
     const canvas = document.createElement('canvas');
     const ctx = canvas.getContext('2d');
@@ -3402,7 +2317,6 @@ document.getElementById('bulkSaveBtn').addEventListener('click', async ()=>{
     return canvas;
   }
 
-  /* OCR 처리 */
   async function processImageOcr(file){
     const url = URL.createObjectURL(file);
     autoPreviewImg.src = url;
@@ -3448,7 +2362,6 @@ document.getElementById('bulkSaveBtn').addEventListener('click', async ()=>{
     }
   }
 
-  /* PDF 처리 */
   async function processPdfFile(file){
     try {
       const arrayBuffer = await file.arrayBuffer();
@@ -3500,7 +2413,6 @@ document.getElementById('bulkSaveBtn').addEventListener('click', async ()=>{
     }
   }
 
-  /* 엑셀 처리 (.xlsx, .xls) */
   async function processExcelFile(file){
     const reader = new FileReader();
     reader.onload = function(e){
@@ -3517,8 +2429,6 @@ document.getElementById('bulkSaveBtn').addEventListener('click', async ()=>{
     reader.readAsArrayBuffer(file);
   }
 
-  /* CSV 처리: 국내 은행 CSV는 UTF-8이 아닌 EUC-KR(CP949)로 내려받아지는 경우가 많아
-     UTF-8로 먼저 디코딩해 보고, 깨진 것으로 판단되면 EUC-KR로 재시도한다. */
   async function processCsvFile(file){
     try {
       const buffer = await file.arrayBuffer();
@@ -3536,7 +2446,6 @@ document.getElementById('bulkSaveBtn').addEventListener('click', async ()=>{
       const utf8Result = decodeWith('utf-8');
       let finalText = utf8Result.text;
 
-      // UTF-8로 읽었을 때 치환문자(글자 깨짐)가 나왔다면 EUC-KR로 재시도해 더 나은 쪽을 채택
       if(utf8Result.replacementCount > 0){
         const eucKrResult = decodeWith('euc-kr');
         if(eucKrResult.replacementCount < utf8Result.replacementCount){
@@ -3544,7 +2453,6 @@ document.getElementById('bulkSaveBtn').addEventListener('click', async ()=>{
         }
       }
 
-      // 엑셀에서 저장한 UTF-8 CSV는 앞에 BOM이 붙는 경우가 있어 제거
       finalText = finalText.replace(/^\uFEFF/, '');
 
       const workbook = XLSX.read(finalText, { type: 'string', cellDates: false, raw: true });
@@ -3557,9 +2465,6 @@ document.getElementById('bulkSaveBtn').addEventListener('click', async ()=>{
     }
   }
 
-  /* 엑셀/CSV 공통 워크북 파싱 로직
-     isCsv=true일 때는 셀 값을 원본 문자열 그대로 유지(raw:true)해서
-     날짜/시간 문자열이 로케일 형식(MM/DD/YY 등)으로 재포맷되어 깨지는 것을 방지한다. */
   function handleParsedWorkbook(workbook, sourceLabel, isCsv){
     try {
       let sheetName = workbook.SheetNames[0];
@@ -3578,11 +2483,8 @@ document.getElementById('bulkSaveBtn').addEventListener('click', async ()=>{
       let colMap = { date: -1, memo: -1, note: -1, income: -1, expense: -1, amount: -1, type: -1 };
 
       const dateKeys = ['거래일', '일자', '거래일자', '날짜', 'date', '일시'];
-      // 보내는이/받는이(입금자·출금자·거래상대방) 이름 컬럼을 최우선으로 사용
       const nameKeys = ['보낸분', '받는분', '보낸사람', '받은사람', '보내는이', '받는이', '입금자명', '출금자명', '거래상대방', '상대계좌예금주', '예금주', '송금인', '수취인', '입금자', '출금자'];
-      // 이름 컬럼이 없을 때만 사용하는 보조(적요/내용) 컬럼
       const memoKeys = ['적요', '내용', '거래내용', '취급점', '기증자', '비고', '상호', '기름', '적요/내용'];
-      // 사용자가 은행 앱 등에서 직접 남긴 개인 메모(내 통장 표시) 컬럼 — 이름과 합쳐서 표시
       const noteKeys = ['내통장표시', '내통장메모', '통장메모', '나의메모', '개인메모', '메모'];
       const incomeKeys = ['입금원금', '입금', '입금액', '수입', '수입액', '받은금액'];
       const expenseKeys = ['출금원금', '출금', '출금액', '지출', '지출액', '보낸금액'];
@@ -3611,7 +2513,6 @@ document.getElementById('bulkSaveBtn').addEventListener('click', async ()=>{
 
         if(dCol !== -1 && (iCol !== -1 || eCol !== -1 || aCol !== -1)){
           headerIdx = r;
-          // 보내는이/받는이 이름 컬럼이 있으면 그것을, 없으면 적요/내용 컬럼을 사용
           colMap = { date: dCol, memo: (nCol !== -1 ? nCol : mCol), note: noteCol, income: iCol, expense: eCol, amount: aCol, type: tCol };
           break;
         }
@@ -3637,7 +2538,6 @@ document.getElementById('bulkSaveBtn').addEventListener('click', async ()=>{
 
         let memo = colMap.memo !== -1 && row[colMap.memo] ? String(row[colMap.memo]).trim() : '';
         let note = colMap.note !== -1 && row[colMap.note] ? String(row[colMap.note]).trim() : '';
-        // "내 통장 표시"(개인 메모)가 있으면 "보낸분/받는분 - 메모" 형태로 합쳐서 표시
         if(note && memo){
           memo = `${memo} - ${note}`;
         } else if(note){
@@ -3718,7 +2618,6 @@ document.getElementById('bulkSaveBtn').addEventListener('click', async ()=>{
     return isNeg ? -num : num;
   }
 
-  /* 텍스트 줄 단위 은행 거래 파서 (농협 · 국민은행 등) */
   function parseBankText(lines){
     const results = [];
     const datePatterns = [
@@ -3779,7 +2678,6 @@ document.getElementById('bulkSaveBtn').addEventListener('click', async ()=>{
       memo = memo.replace(/^[\s\-·.,;:]+|[\s\-·.,;:]+$/g, '').trim();
       if(!memo) memo = '거래내역';
 
-      // 적요 전체 문구 대신, 남은 텍스트에서 보내는이/받는이로 보이는 한글 이름(2~4자)을 우선 채택
       const nameStopwords = ['입금','출금','이체','결제','인출','카드','수수료','이용료','납부','지급','구매','배송','주문',
         '이자','급여','수입','환급','보조금','배당','지원금','감사헌금','선교헌금','헌금','봉헌','거래내역','통장','계좌',
         '잔액','합계','현금','자동이체','타행','농협','국민','신한','우리','하나','기업','카카오뱅크','토스뱅크',
@@ -3828,7 +2726,6 @@ document.getElementById('bulkSaveBtn').addEventListener('click', async ()=>{
     autoResultWrap.style.display = 'block';
   }
 
-  /* 일괄 저장 (음수/마이너스 지출 금액 완벽 지원) */
   document.getElementById('autoSaveBtn').addEventListener('click', async () => {
     const account = document.getElementById('auto-account').value.trim();
     if(!account){ alert('통장을 입력해 주세요 (인식된 거래에 공통 적용됩니다).'); return; }
