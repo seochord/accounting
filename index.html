@@ -1617,6 +1617,18 @@ function buildMonthlyReportHTML(monthStr){
     return `<tr><td>${tx.date}</td><td class="memo">${escapeHtml(tx.account||'')}</td><td class="memo">${escapeHtml(tx.memo)}</td><td class="income">${inc?won(inc):''}</td><td class="expense">${exp?won(exp):''}</td><td>${won(balance)}</td></tr>`;
   }).join('') || `<tr><td colspan="6" style="text-align:center;font-family:'Pretendard';color:var(--ink-soft);">해당 월 거래 내역이 없습니다.</td></tr>`;
 
+  // 통장별 잔액 현황: 1번(거래내역) 잔액과 시점을 일치시키기 위해 해당 월 말 기준 누적으로 계산.
+  // 계좌간 이체도 실제 통장 잔고에는 영향을 주는 거래이므로 수입/지출/잔액 모두 그대로 포함한다.
+  const {rows: accRows, grandIncome: accGrandIncome, grandExpense: accGrandExpense} = computeGroupSummary('account', null, monthStr);
+  const accGrandNet = accRows.reduce((s,r)=>s+r.net,0);
+  const accRowsHtml = accRows.map(r=>`<tr><td colspan="2">${escapeHtml(r.label)}</td><td class="income">${r.income?won(r.income):'-'}</td><td class="expense">${r.expense?won(r.expense):'-'}</td><td class="${r.net>=0?'balance-pos':'balance-neg'}">${won(r.net)}</td></tr>`).join('')
+    + `<tr class="total-row"><td colspan="2">합계</td><td class="income">${won(accGrandIncome)}</td><td class="expense">${won(accGrandExpense)}</td><td class="${accGrandNet>=0?'balance-pos':'balance-neg'}">${won(accGrandNet)}</td></tr>`;
+  const accountSummaryHtml = `
+    <h3 style="font-family:'Noto Serif KR',serif;font-size:17px;margin:26px 0 8px;">2. 통장별 잔액 현황 (${monthLabel} 말 기준 누적)</h3>
+    <table><thead><tr><th style="text-align:left;">통장</th><th></th><th>수입 합계</th><th>지출 합계</th><th>잔액</th></tr></thead>
+    <tbody>${accRowsHtml}</tbody></table>
+  `;
+
   // 당월 요약(수입·지출·순이익): 계좌간 이체는 실제 수입/지출이 아니므로 제외한, 그 달의 순수한 교회 재정 흐름.
   // 위 1번 섹션(거래내역, 잔액)은 이체를 그대로 포함한 값을 유지하고, 이 섹션에서만 이체를 뺀 값을 별도로 보여준다.
   let netIncome = 0, netExpense = 0;
@@ -1626,14 +1638,14 @@ function buildMonthlyReportHTML(monthStr){
   });
   const netTotal = netIncome - netExpense;
   const netSummaryHtml = `
-    <h3 style="font-family:'Noto Serif KR',serif;font-size:17px;margin:26px 0 8px;">2. 당월 수입·지출 요약 (순이익, 계좌간 이체 제외)</h3>
+    <h3 style="font-family:'Noto Serif KR',serif;font-size:17px;margin:26px 0 8px;">3. 당월 수입·지출 요약 (순이익, 계좌간 이체 제외)</h3>
     <table><thead><tr><th style="text-align:left;">구분</th><th>금액</th></tr></thead>
     <tbody>
       <tr><td>당월 수입 합계</td><td class="income">${won(netIncome)}</td></tr>
       <tr><td>당월 지출 합계</td><td class="expense">${won(netExpense)}</td></tr>
       <tr class="total-row"><td>당월 순이익</td><td class="${netTotal>=0?'balance-pos':'balance-neg'}">${won(netTotal)}</td></tr>
     </tbody></table>
-    <div class="card-caption" style="margin-top:8px;">계좌간 이체(예: 국민 통장 → 농협 통장 이체, 이월금)는 실제 수입·지출이 아니므로 제외한 값입니다. 위 1번 섹션의 거래 내역·잔액에는 이체가 그대로 포함되어 있습니다.</div>
+    <div class="card-caption" style="margin-top:8px;">계좌간 이체(예: 국민 통장 → 농협 통장 이체, 이월금)는 실제 수입·지출이 아니므로 제외한 값입니다. 위 1·2번 섹션의 거래 내역·통장별 잔액에는 이체가 그대로 포함되어 있습니다.</div>
   `;
 
   const today = new Date().toLocaleDateString('ko-KR', {year:'numeric',month:'long',day:'numeric'});
@@ -1649,6 +1661,7 @@ function buildMonthlyReportHTML(monthStr){
       <tr class="total-row"><td colspan="3">합계</td><td class="income">${won(totalIncome)}</td><td class="expense">${won(totalExpense)}</td><td>${won(balance)}</td></tr>
     </tbody></table>
 
+    ${accountSummaryHtml}
     ${netSummaryHtml}
     <div style="margin-top:60px;font-size:15px;text-align:right;">작성일: ${today}</div>
     <table style="margin-top:22px;width:auto;margin-left:auto;font-size:15px;">
