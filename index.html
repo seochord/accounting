@@ -564,11 +564,7 @@ color:var(--ink-soft);font-size:12.5px;margin-top:30px;display:flex;flex-directi
 
   <div class="card" id="momCard">
     <h2>
-      <span class="idx">06</span> 특이사항 분석
-      <span class="print-title print-target-title" id="momPrintTitle">특이사항 분석</span>
-      <div class="card-tools no-print">
-        <button class="tool-btn" id="churchReportBtn">월간재정보고서 출력 (증감 제외)</button>
-      </div>
+      <span class="idx">06</span> 재정보고서
     </h2>
     <div class="filter-row no-print">
       <div class="f-item">
@@ -576,28 +572,10 @@ color:var(--ink-soft);font-size:12.5px;margin-top:30px;display:flex;flex-directi
         <input type="month" id="momMonth">
       </div>
       <div class="f-item">
-        <label style="display:flex;align-items:center;gap:6px;cursor:pointer;" for="includeTransferToggle">
-          <input type="checkbox" id="includeTransferToggle" style="width:auto;">
-          계좌간 이체 포함
-        </label>
+        <button type="button" class="tool-btn" id="churchReportBtn">월간재정보고서 출력</button>
       </div>
     </div>
-    <div class="card-caption" id="momCaption"></div>
-    <div id="anomalyWrap">
-      <div class="table-scroll">
-        <table>
-          <thead><tr>
-            <th style="text-align:left;">항목(내용)</th>
-            <th style="text-align:left;">통장</th>
-            <th>이번달</th>
-            <th>전월</th>
-            <th>전월대비</th>
-          </tr></thead>
-          <tbody id="anomalyBody"></tbody>
-        </table>
-      </div>
-    </div>
-    <div id="momEmpty" class="empty" style="display:none;">비교할 거래 내역이 없습니다.</div>
+    <div class="card-caption">기준월을 선택하고 버튼을 누르면 해당 월의 거래 내역과 당월 수입·지출(순이익) 요약이 인쇄용으로 출력됩니다.</div>
   </div>
 
   <div class="card" id="reportPrintArea" style="display:none;"></div>
@@ -1574,171 +1552,6 @@ document.getElementById('nameSearchYear').addEventListener('change', (e)=>{ name
 document.getElementById('nameSearchPrintBtn').addEventListener('click', ()=> printSection('nameSearchCard'));
 document.getElementById('nameSearchExcelBtn').addEventListener('click', downloadNameSearchExcel);
 
-function sumMonth(monthStr){
-  let income = 0, expense = 0;
-  transactions.forEach(t=>{
-    if(t.date.slice(0,7) === monthStr){
-      if(t.type === 'income') income += t.amount; else expense += t.amount;
-    }
-  });
-  return {income, expense, net: income - expense};
-}
-
-function prevMonthStr(monthStr){
-  const [y,m] = monthStr.split('-').map(Number);
-  const d = new Date(y, m-2, 1);
-  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
-}
-
-function momItem(label, cur, prev, biggerIsBetter, extraClass){
-  const diff = cur - prev;
-  let rateText, cls, arrow;
-  if(prev === 0){
-    rateText = cur === 0 ? '전월도 0원' : '직전월 실적 없음';
-    cls = cur === 0 ? 'flat' : (biggerIsBetter ? 'up' : 'down');
-    arrow = cur === 0 ? '' : (diff > 0 ? '▲' : '▼');
-  } else {
-    const rate = (diff / Math.abs(prev)) * 100;
-    rateText = (diff >= 0 ? '+' : '') + rate.toFixed(1) + '%';
-    if(diff === 0){ cls = 'flat'; arrow = ''; }
-    else if(diff > 0){ cls = biggerIsBetter ? 'up' : 'down'; arrow = '▲'; }
-    else { cls = biggerIsBetter ? 'down' : 'up'; arrow = '▼'; }
-  }
-  const diffText = (diff >= 0 ? '+' : '') + won(diff);
-  return `
-    <div class="mom-box${extraClass ? ' '+extraClass : ''}">
-      <div class="mom-label">${label}</div>
-      <div class="mom-cur">${won(cur)}</div>
-      <div class="mom-prev">전월 ${won(prev)}</div>
-      <div class="mom-delta ${cls}">${arrow} ${diffText} (${rateText})</div>
-    </div>
-  `;
-}
-
-function sumByItemForMonth(monthStr, includeTransfer){
-  const groups = {};
-  if(!monthStr) return groups;
-  transactions.forEach(t=>{
-    if(t.date.slice(0,7) !== monthStr) return;
-    if(!includeTransfer && isTransferTx(t)) return;
-    const key = (t.account || '') + '||' + t.memo;
-    if(!groups[key]) groups[key] = { account: t.account || '', memo: t.memo, income: 0, expense: 0 };
-    groups[key][t.type] += t.amount;
-  });
-  return groups;
-}
-
-function itemAmount(entry){
-  if(!entry) return 0;
-  return entry.income !== 0 ? entry.income : entry.expense;
-}
-
-function compareBadge(curAmt, refAmt){
-  if(curAmt === 0 && refAmt === 0) return { html: '', isAnomaly: false };
-  if(refAmt === 0){
-    return { html: `<span class="anomaly-badge new">NEW</span>`, isAnomaly: true, rateText: '신규' };
-  }
-  const diff = curAmt - refAmt;
-  const rate = (diff / Math.abs(refAmt)) * 100;
-  const isAnomaly = Math.abs(rate) >= 20;
-  const cls = diff > 0 ? 'up' : (diff < 0 ? 'down' : 'flat');
-  const arrow = diff > 0 ? '▲' : (diff < 0 ? '▼' : '');
-  const rateText = (diff >= 0 ? '+' : '') + rate.toFixed(0) + '%';
-  const html = isAnomaly
-    ? `<span class="anomaly-badge ${cls}">${arrow} ${rateText}</span>`
-    : `<span class="anomaly-badge flat">${arrow} ${rateText}</span>`;
-  return { html, isAnomaly, rateText };
-}
-
-function renderMoM(){
-  const monthInput = document.getElementById('momMonth');
-  const monthStr = monthInput.value;
-  const body = document.getElementById('anomalyBody');
-  const empty = document.getElementById('momEmpty');
-  const caption = document.getElementById('momCaption');
-  const wrap = document.getElementById('anomalyWrap');
-
-  body.innerHTML = '';
-
-  if(!monthStr){
-    wrap.style.display = 'none';
-    empty.style.display = 'block';
-    empty.textContent = '기준월을 선택하면 전월 대비 특이 항목을 보여줍니다.';
-    return;
-  }
-
-  const prevStr = prevMonthStr(monthStr);
-
-  const includeTransfer = document.getElementById('includeTransferToggle').checked;
-  const curGroups = sumByItemForMonth(monthStr, includeTransfer);
-  const prevGroups = sumByItemForMonth(prevStr, includeTransfer);
-
-  const [cy, cm] = monthStr.split('-');
-  const [py, pm] = prevStr.split('-');
-  const transferNote = includeTransfer ? ' 계좌간 이체도 포함해 비교합니다.' : ' 계좌간 이체·이월금은 제외하고 비교합니다.';
-  caption.textContent = `${cy}년 ${parseInt(cm,10)}월 · 전월(${py}년 ${parseInt(pm,10)}월) 대비 ±20% 이상 변동했거나, 전월에는 없던 새로운 지출·수입(NEW)만 표시합니다.${transferNote}`;
-  document.getElementById('momPrintTitle').textContent = `특이사항 분석 - ${cy}년 ${parseInt(cm,10)}월`;
-
-  const allKeys = new Set([
-    ...Object.keys(curGroups),
-    ...Object.keys(prevGroups),
-  ]);
-
-  if(allKeys.size === 0){
-    wrap.style.display = 'none';
-    empty.style.display = 'block';
-    empty.textContent = '비교할 거래 내역이 없습니다.';
-    return;
-  }
-
-  const rows = [];
-  allKeys.forEach(key=>{
-    const cur = curGroups[key];
-    const prev = prevGroups[key];
-    const curAmt = itemAmount(cur);
-    const prevAmt = itemAmount(prev);
-
-    if(!cur) return;
-
-    const prevCmp = compareBadge(curAmt, prevAmt);
-
-    if(!prevCmp.isAnomaly) return;
-
-    rows.push({
-      memo: cur.memo, account: cur.account, curAmt,
-      prevAmt, prevCmp,
-      sortKey: Math.abs(curAmt - prevAmt)
-    });
-  });
-
-  if(rows.length === 0){
-    wrap.style.display = 'none';
-    empty.style.display = 'block';
-    empty.textContent = `${cy}년 ${parseInt(cm,10)}월에는 전월 대비 ±20% 이상 변동했거나 새로 생긴 지출·수입이 없습니다.`;
-    return;
-  }
-
-  empty.style.display = 'none';
-  wrap.style.display = 'block';
-
-  rows.sort((a,b)=> b.sortKey - a.sortKey);
-
-  rows.forEach(r=>{
-    const tr = document.createElement('tr');
-    tr.innerHTML = `
-      <td class="anomaly-name">${escapeHtml(r.memo)}</td>
-      <td class="anomaly-account">${escapeHtml(r.account)}</td>
-      <td>${won(r.curAmt)}</td>
-      <td>${r.prevAmt ? won(r.prevAmt) : '-'}</td>
-      <td>${r.prevCmp.html || '<span class="anomaly-badge none">-</span>'}</td>
-    `;
-    body.appendChild(tr);
-  });
-}
-
-document.getElementById('momMonth').addEventListener('change', renderMoM);
-document.getElementById('includeTransferToggle').addEventListener('change', renderMoM);
-
 document.getElementById('periodTabs').addEventListener('click', (e)=>{
   if(e.target.tagName !== 'BUTTON') return;
   currentMode = e.target.dataset.mode;
@@ -1766,7 +1579,6 @@ function render(){
   renderAgg();
   renderAccountSummary();
   renderNameSearch();
-  renderMoM();
 }
 
 function printSection(cardId){
@@ -1787,7 +1599,7 @@ document.getElementById('reclassifyBtn').addEventListener('click', reclassifyAll
 document.getElementById('ledgerBulkDeleteBtn').addEventListener('click', bulkDeleteByFilter);
 
 /* ---------- 월간 재정보고서 (통합 인쇄) ---------- */
-function buildMonthlyReportHTML(monthStr, includeMoM = true){
+function buildMonthlyReportHTML(monthStr){
   const [y, m] = monthStr.split('-');
   const monthLabel = `${y}년 ${parseInt(m,10)}월`;
 
@@ -1824,20 +1636,6 @@ function buildMonthlyReportHTML(monthStr, includeMoM = true){
     <div class="card-caption" style="margin-top:8px;">계좌간 이체(예: 국민 통장 → 농협 통장 이체, 이월금)는 실제 수입·지출이 아니므로 제외한 값입니다. 위 1번 섹션의 거래 내역·잔액에는 이체가 그대로 포함되어 있습니다.</div>
   `;
 
-  let momSectionHtml = '';
-  if(includeMoM){
-    const prevStr = prevMonthStr(monthStr);
-    const cur = sumMonth(monthStr);
-    const prev = sumMonth(prevStr);
-    const momHtml = momItem('수입', cur.income, prev.income, true)
-      + momItem('지출', cur.expense, prev.expense, false)
-      + momItem('총합계(순액)', cur.net, prev.net, true, 'net');
-    momSectionHtml = `
-    <h3 style="font-family:'Noto Serif KR',serif;font-size:17px;margin:26px 0 8px;">3. 전월대비 증감</h3>
-    <div class="mom-grid">${momHtml}</div>
-    `;
-  }
-
   const today = new Date().toLocaleDateString('ko-KR', {year:'numeric',month:'long',day:'numeric'});
 
   return `
@@ -1852,7 +1650,6 @@ function buildMonthlyReportHTML(monthStr, includeMoM = true){
     </tbody></table>
 
     ${netSummaryHtml}
-    ${momSectionHtml}
     <div style="margin-top:60px;font-size:15px;text-align:right;">작성일: ${today}</div>
     <table style="margin-top:22px;width:auto;margin-left:auto;font-size:15px;">
       <thead><tr>
@@ -1869,18 +1666,18 @@ function buildMonthlyReportHTML(monthStr, includeMoM = true){
   `;
 }
 
-function printMonthlyReport(includeMoM = true){
+function printMonthlyReport(){
   const monthStr = document.getElementById('momMonth').value;
   if(!monthStr){ alert('기준월을 먼저 선택해 주세요.'); return; }
   const area = document.getElementById('reportPrintArea');
-  area.innerHTML = buildMonthlyReportHTML(monthStr, includeMoM);
+  area.innerHTML = buildMonthlyReportHTML(monthStr);
   document.querySelectorAll('.card').forEach(c=>c.classList.remove('print-target'));
   area.classList.add('print-target');
   document.body.classList.add('printing');
   window.print();
 }
 
-document.getElementById('churchReportBtn').addEventListener('click', ()=> printMonthlyReport(false));
+document.getElementById('churchReportBtn').addEventListener('click', printMonthlyReport);
 
 /* ---------- 엑셀 다운로드 ---------- */
 function excelFilename(prefix){
