@@ -1629,36 +1629,6 @@ function buildMonthlyReportHTML(monthStr){
     <tbody>${accRowsHtml}</tbody></table>
   `;
 
-  // 대출 현황: '대출금' 계정(자동분류 CATEGORY_RULES 기준, 대출·원리금·이자·상환 관련 거래)만 모아
-  // 해당 월 말까지의 누적 잔액(대출 실행액 - 누적 상환액)과 이번달 대출 관련 거래를 보여준다.
-  // 원금상환과 이자는 별도로 구분하지 않고 '대출금' 계정 안에서 함께 관리한다.
-  const categoryOf = t => t.category || autoClassify(t);
-  const loanCumulative = transactions.reduce((sum, t) => {
-    if(categoryOf(t) !== '대출금') return sum;
-    return t.date.slice(0,7) <= monthStr ? sum + (t.type === 'income' ? t.amount : -t.amount) : sum;
-  }, 0);
-  const loanMonthTx = monthTx.filter(t => categoryOf(t) === '대출금');
-  let loanIncome = 0, loanExpense = 0;
-  const loanRowsHtml = loanMonthTx.map(tx=>{
-    const inc = tx.type === 'income' ? tx.amount : 0;
-    const exp = tx.type === 'expense' ? tx.amount : 0;
-    loanIncome += inc; loanExpense += exp;
-    return `<tr><td>${tx.date}</td><td class="memo">${escapeHtml(tx.account||'')}</td><td class="memo">${escapeHtml(tx.memo)}</td><td class="income">${inc?won(inc):''}</td><td class="expense">${exp?won(exp):''}</td></tr>`;
-  }).join('') || `<tr><td colspan="5" style="text-align:center;font-family:'Pretendard';color:var(--ink-soft);">이번 달 대출 관련 거래가 없습니다.</td></tr>`;
-  const loanSummaryHtml = `
-    <h3 style="font-family:'Noto Serif KR',serif;font-size:17px;margin:26px 0 8px;">3. 대출 현황</h3>
-    <table><thead><tr><th style="text-align:left;">구분</th><th>금액</th></tr></thead>
-    <tbody>
-      <tr class="total-row"><td>대출 잔액 (${monthLabel} 말 기준)</td><td class="${loanCumulative>=0?'balance-pos':'balance-neg'}">${won(loanCumulative)}</td></tr>
-    </tbody></table>
-    <table style="margin-top:10px;"><thead><tr><th style="text-align:left;">거래일</th><th style="text-align:left;">통장</th><th style="text-align:left;">내용</th><th>수입(실행)</th><th>지출(상환)</th></tr></thead>
-    <tbody>
-      ${loanRowsHtml}
-      <tr class="total-row"><td colspan="3">이번달 합계</td><td class="income">${won(loanIncome)}</td><td class="expense">${won(loanExpense)}</td></tr>
-    </tbody></table>
-    <div class="card-caption" style="margin-top:8px;">'대출금' 계정으로 분류된 거래(대출 실행·원리금 상환·이자)만 모은 값입니다. 원금상환과 이자는 별도로 구분하지 않습니다.</div>
-  `;
-
   // 당월 요약(수입·지출·순이익): 계좌간 이체는 실제 수입/지출이 아니므로 제외한, 그 달의 순수한 교회 재정 흐름.
   // 위 1번 섹션(거래내역, 잔액)은 이체를 그대로 포함한 값을 유지하고, 이 섹션에서만 이체를 뺀 값을 별도로 보여준다.
   let netIncome = 0, netExpense = 0;
@@ -1668,7 +1638,7 @@ function buildMonthlyReportHTML(monthStr){
   });
   const netTotal = netIncome - netExpense;
   const netSummaryHtml = `
-    <h3 style="font-family:'Noto Serif KR',serif;font-size:17px;margin:26px 0 8px;">4. 당월 수입·지출 요약 (순이익, 계좌간 이체 제외)</h3>
+    <h3 style="font-family:'Noto Serif KR',serif;font-size:17px;margin:26px 0 8px;">3. 당월 수입·지출 요약 (순이익, 계좌간 이체 제외)</h3>
     <table><thead><tr><th style="text-align:left;">구분</th><th>금액</th></tr></thead>
     <tbody>
       <tr><td>당월 수입 합계</td><td class="income">${won(netIncome)}</td></tr>
@@ -1692,7 +1662,6 @@ function buildMonthlyReportHTML(monthStr){
     </tbody></table>
 
     ${accountSummaryHtml}
-    ${loanSummaryHtml}
     ${netSummaryHtml}
     <div style="margin-top:60px;font-size:15px;text-align:right;">작성일: ${today}</div>
     <table style="margin-top:22px;width:auto;margin-left:auto;font-size:15px;">
