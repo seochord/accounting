@@ -1013,6 +1013,14 @@ function populateFilters(){
   filterMonth = monthSel.value;
 }
 
+/* 거래내역에서 연도·월을 모두 선택하면(=특정 월로 좁히면) 05번 재정보고서의 기준월도
+   같은 월로 자동으로 맞춰준다. 재정보고서 카드에서 기준월을 따로 바꾸는 것은 그대로 가능하다. */
+function syncMomMonthWithFilter(){
+  if(filterYear && filterMonth){
+    document.getElementById('momMonth').value = `${filterYear}-${filterMonth}`;
+  }
+}
+
 document.getElementById('filterAccount').addEventListener('change', (e)=>{ filterAccount = e.target.value; renderLedger(); renderAccountSummary(); });
 document.getElementById('filterYear').addEventListener('change', (e)=>{
   filterYear = e.target.value;
@@ -1021,7 +1029,12 @@ document.getElementById('filterYear').addEventListener('change', (e)=>{
   renderLedger();
   renderAccountSummary();
 });
-document.getElementById('filterMonth').addEventListener('change', (e)=>{ filterMonth = e.target.value; renderLedger(); renderAccountSummary(); });
+document.getElementById('filterMonth').addEventListener('change', (e)=>{
+  filterMonth = e.target.value;
+  renderLedger();
+  renderAccountSummary();
+  syncMomMonthWithFilter();
+});
 
 function renderLedger(){
   const body = document.getElementById('ledgerBody');
