@@ -513,7 +513,7 @@ color:var(--ink-soft);font-size:12.5px;margin-top:30px;display:flex;flex-directi
         <select id="accountMonth" disabled><option value="">연도 말 기준</option></select>
       </div>
     </div>
-    <div class="card-caption no-print" id="accountCaption">연도 구분 없이 전체 기간 누적 기준입니다. 실제 통장 잔고 확인용.</div>
+    <div class="card-caption no-print" id="accountCaption">연도 구분 없이 전체 기간 누적 기준입니다. 실제 통장 잔고 확인용이므로 계좌간 이체도 포함해 계산합니다.</div>
     <div class="table-scroll">
       <table>
         <thead><tr><th>통장</th><th></th><th>수입 합계</th><th>지출 합계</th><th>잔액</th></tr></thead>
@@ -1061,9 +1061,11 @@ function renderLedger(){
   list.forEach(tx=>{
     const inc = tx.type === 'income' ? tx.amount : 0;
     const exp = tx.type === 'expense' ? tx.amount : 0;
-    balance += inc - exp;
-    totalIncome += inc;
-    totalExpense += exp;
+    if(!isTransferTx(tx)){
+      balance += inc - exp;
+      totalIncome += inc;
+      totalExpense += exp;
+    }
 
     const tr = document.createElement('tr');
     const category = tx.category || autoClassify(tx);
@@ -1086,7 +1088,7 @@ function renderLedger(){
   totalRow.className = 'total-row';
   const activeFilters = [filterYear, filterMonth, filterAccount].some(Boolean);
   totalRow.innerHTML = `
-    <td colspan="3">합계${activeFilters ? ' (필터 적용됨)' : ''}</td>
+    <td colspan="3">합계${activeFilters ? ' (필터 적용됨)' : ''} · 이체 제외</td>
     <td class="income">${wonNum(totalIncome)}</td>
     <td class="expense">${wonNum(totalExpense)}</td>
     <td class="${balance>=0?'balance-pos':'balance-neg'}">${wonNum(balance)}</td>
@@ -1173,6 +1175,7 @@ function computeOpeningBalance(list){
   const acctTx = filterAccount ? transactions.filter(t => t.account === filterAccount) : transactions;
   let openingBalance = 0;
   acctTx.forEach(t=>{
+    if(isTransferTx(t)) return;
     if(t.date < boundary) openingBalance += (t.type === 'income' ? t.amount : -t.amount);
   });
 
@@ -1230,7 +1233,7 @@ const AGG_LABELS = {month:'월', quarter:'분기', half:'반기', year:'연도'}
 
 function computeAgg(){
   const matchAcc = t => !aggAccount || t.account === aggAccount;
-  const yearTx = transactions.filter(t => matchAcc(t) && (currentMode === 'year' || parseInt(t.date.slice(0,4),10) === currentYear));
+  const yearTx = transactions.filter(t => matchAcc(t) && !isTransferTx(t) && (currentMode === 'year' || parseInt(t.date.slice(0,4),10) === currentYear));
   let groups = {};
   let order = [];
 
@@ -1247,7 +1250,7 @@ function computeAgg(){
     const years = getYears().sort((a,b)=>a-b);
     years.forEach(y=>{ order.push(y); groups[y] = {label:`${y}년`, income:0, expense:0}; });
     transactions.forEach(t=>{
-      if(!matchAcc(t)) return;
+      if(!matchAcc(t) || isTransferTx(t)) return;
       const y = parseInt(t.date.slice(0,4),10);
       if(groups[y]) groups[y][t.type] += t.amount;
     });
@@ -1260,6 +1263,7 @@ function computeAgg(){
   } else {
     const boundary = `${currentYear}-01-01`;
     acctTx.forEach(t=>{
+      if(isTransferTx(t)) return;
       if(t.date < boundary) openingBalance += (t.type === 'income' ? t.amount : -t.amount);
     });
   }
@@ -1291,7 +1295,7 @@ function renderAgg(){
   const accSuffix = aggAccount ? ` · ${aggAccount}` : '';
   document.getElementById('aggPrintTitle').textContent = `기간별 집계 - ${titleSuffix}${accSuffix}`;
 
-  head.innerHTML = `<tr><th>${colLabel}</th><th></th><th>수입 합계</th><th>지출 합계</th><th>소계(잔액)</th></tr>`;
+  head.innerHTML = `<tr><th>${colLabel}</th><th></th><th>수입 합계 (이체 제외)</th><th>지출 합계 (이체 제외)</th><th>소계(잔액)</th></tr>`;
 
   if(isEmpty){
     body.innerHTML = '';
@@ -1403,13 +1407,13 @@ function renderAccountSummary(){
   if(asOfMonth){
     const monthLabel = `${accountYear}년 ${parseInt(accountMonth,10)}월`;
     title = `통장별 잔액 (${monthLabel} 말 기준 누적)`;
-    caption = `${monthLabel} 말까지의 누적 잔액입니다. 월간재정보고서(같은 달)의 통장별 잔액과 동일한 시점입니다.`;
+    caption = `${monthLabel} 말까지의 누적 잔액입니다. 실제 통장 잔고 확인용이며 계좌간 이체도 포함해 계산합니다. (재정보고서의 통장별 잔액은 이체를 제외하므로 이 화면과 금액이 다를 수 있습니다.)`;
   } else if(accountYear){
     title = `통장별 잔액 (${accountYear}년 말 기준 누적)`;
-    caption = `${accountYear}년까지의 누적 잔액입니다. 수입·지출 합계는 ${accountYear}년 한 해 기준입니다.`;
+    caption = `${accountYear}년까지의 누적 잔액입니다. 수입·지출 합계는 ${accountYear}년 한 해 기준이며, 실제 통장 잔고 확인용이므로 계좌간 이체도 포함합니다.`;
   } else {
     title = '통장별 잔액 (전체 기간 누적)';
-    caption = '연도 구분 없이 전체 기간(오늘 현재까지) 누적 기준입니다. 실제 통장 잔고 확인용.';
+    caption = '연도 구분 없이 전체 기간(오늘 현재까지) 누적 기준입니다. 실제 통장 잔고 확인용이므로 계좌간 이체도 포함해 계산합니다.';
   }
   document.getElementById('accountPrintTitle').textContent = title;
   document.getElementById('accountCaption').textContent = caption;
@@ -1724,7 +1728,7 @@ function summaryToSheetRows(headerLabel, rows, grandIncome, grandExpense, netTot
 }
 
 function buildLedgerSheetRows(list, openingInfo){
-  const rows = [['거래일','통장','내용','수입','지출','소계(잔액)']];
+  const rows = [['거래일','통장','내용','수입','지출','소계(잔액, 이체 제외)']];
   let balance = 0, totalIncome = 0, totalExpense = 0;
   if(openingInfo && openingInfo.showOpening){
     balance = openingInfo.openingBalance;
@@ -1733,11 +1737,13 @@ function buildLedgerSheetRows(list, openingInfo){
   list.forEach(tx=>{
     const inc = tx.type === 'income' ? tx.amount : 0;
     const exp = tx.type === 'expense' ? tx.amount : 0;
-    balance += inc - exp;
-    totalIncome += inc; totalExpense += exp;
+    if(!isTransferTx(tx)){
+      balance += inc - exp;
+      totalIncome += inc; totalExpense += exp;
+    }
     rows.push([tx.date, tx.account || '', tx.memo, inc || 0, exp || 0, balance]);
   });
-  rows.push(['합계', '', '', totalIncome, totalExpense, balance]);
+  rows.push(['합계 (이체 제외)', '', '', totalIncome, totalExpense, balance]);
   return rows;
 }
 
@@ -1794,6 +1800,7 @@ function yearlySummaryRows(){
   const groups = {};
   years.forEach(y => groups[y] = {income:0, expense:0});
   transactions.forEach(t=>{
+    if(isTransferTx(t)) return;
     const y = parseInt(t.date.slice(0,4),10);
     if(groups[y]) groups[y][t.type] += t.amount;
   });
