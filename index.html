@@ -538,7 +538,7 @@ color:var(--ink-soft);font-size:12.5px;margin-top:30px;display:flex;flex-directi
     <div class="card-caption no-print" id="accountCaption">연도 구분 없이 전체 기간 누적 기준입니다. 실제 통장 잔고 확인용이므로 계좌간 이체도 포함해 계산합니다.</div>
     <div class="table-scroll">
       <table>
-        <thead><tr><th>통장</th><th></th><th>수입 합계</th><th>지출 합계</th><th>잔액</th></tr></thead>
+        <thead><tr><th style="text-align:left;">통장</th><th>이월잔액</th><th>수입 합계</th><th>지출 합계</th><th>잔액</th></tr></thead>
         <tbody id="accountBody"></tbody>
       </table>
     </div>
@@ -1398,7 +1398,8 @@ function computeGroupSummary(field, year, asOfMonth){
     }
   });
   const rows = Object.keys(groups).map(k=>({
-    label:k, income:groups[k].income, expense:groups[k].expense, net:groups[k].balance
+    label:k, income:groups[k].income, expense:groups[k].expense, net:groups[k].balance,
+    opening: groups[k].balance - groups[k].income + groups[k].expense
   }));
   const grandIncome = rows.reduce((s,r)=>s+r.income,0);
   const grandExpense = rows.reduce((s,r)=>s+r.expense,0);
@@ -1416,7 +1417,8 @@ function renderGroupTable(field, bodyId, emptyId, year, asOfMonth){
   rows.forEach(r=>{
     const tr = document.createElement('tr');
     tr.innerHTML = `
-      <td colspan="2">${escapeHtml(r.label)}</td>
+      <td>${escapeHtml(r.label)}</td>
+      <td class="${r.opening>=0?'balance-pos':'balance-neg'}">${won(r.opening)}</td>
       <td class="income">${r.income ? won(r.income) : '-'}</td>
       <td class="expense">${r.expense ? won(r.expense) : '-'}</td>
       <td class="${r.net>=0?'balance-pos':'balance-neg'}">${won(r.net)}</td>
@@ -1424,11 +1426,13 @@ function renderGroupTable(field, bodyId, emptyId, year, asOfMonth){
     body.appendChild(tr);
   });
 
+  const grandOpening = rows.reduce((s,r)=>s+r.opening,0);
   const grandNet = rows.reduce((s,r)=>s+r.net,0);
   const totalRow = document.createElement('tr');
   totalRow.className = 'total-row';
   totalRow.innerHTML = `
-    <td colspan="2">합계</td>
+    <td>합계</td>
+    <td class="${grandOpening>=0?'balance-pos':'balance-neg'}">${won(grandOpening)}</td>
     <td class="income">${won(grandIncome)}</td>
     <td class="expense">${won(grandExpense)}</td>
     <td class="${grandNet>=0?'balance-pos':'balance-neg'}">${won(grandNet)}</td>
@@ -1681,15 +1685,19 @@ function buildMonthlyReportHTML(monthStr){
     if(t.date.slice(0,7) <= monthStr) acctGroups[key].balance += delta;
     if(t.date.slice(0,7) === monthStr) acctGroups[key][t.type] += t.amount;
   });
-  const accRows = Object.keys(acctGroups).map(k=>({label:k, income:acctGroups[k].income, expense:acctGroups[k].expense, net:acctGroups[k].balance}));
+  const accRows = Object.keys(acctGroups).map(k=>({
+    label:k, income:acctGroups[k].income, expense:acctGroups[k].expense, net:acctGroups[k].balance,
+    opening: acctGroups[k].balance - acctGroups[k].income + acctGroups[k].expense
+  }));
   const accGrandIncome = accRows.reduce((s,r)=>s+r.income,0);
   const accGrandExpense = accRows.reduce((s,r)=>s+r.expense,0);
   const accGrandNet = accRows.reduce((s,r)=>s+r.net,0);
-  const accRowsHtml = accRows.map(r=>`<tr><td colspan="2">${escapeHtml(r.label)}</td><td class="income">${r.income?won(r.income):'-'}</td><td class="expense">${r.expense?won(r.expense):'-'}</td><td class="${r.net>=0?'balance-pos':'balance-neg'}">${won(r.net)}</td></tr>`).join('')
-    + `<tr class="total-row"><td colspan="2">합계</td><td class="income">${won(accGrandIncome)}</td><td class="expense">${won(accGrandExpense)}</td><td class="${accGrandNet>=0?'balance-pos':'balance-neg'}">${won(accGrandNet)}</td></tr>`;
+  const accGrandOpening = accRows.reduce((s,r)=>s+r.opening,0);
+  const accRowsHtml = accRows.map(r=>`<tr><td>${escapeHtml(r.label)}</td><td class="${r.opening>=0?'balance-pos':'balance-neg'}">${won(r.opening)}</td><td class="income">${r.income?won(r.income):'-'}</td><td class="expense">${r.expense?won(r.expense):'-'}</td><td class="${r.net>=0?'balance-pos':'balance-neg'}">${won(r.net)}</td></tr>`).join('')
+    + `<tr class="total-row"><td>합계</td><td class="${accGrandOpening>=0?'balance-pos':'balance-neg'}">${won(accGrandOpening)}</td><td class="income">${won(accGrandIncome)}</td><td class="expense">${won(accGrandExpense)}</td><td class="${accGrandNet>=0?'balance-pos':'balance-neg'}">${won(accGrandNet)}</td></tr>`;
   const accountSummaryHtml = `
     <h3 style="font-family:'Noto Serif KR',serif;margin:26px 0 8px;">2. 통장별 잔액 현황 (${monthLabel} 말 기준 누적, 이체·여입 제외)</h3>
-    <table><thead><tr><th style="text-align:left;">통장</th><th></th><th>수입 합계</th><th>지출 합계</th><th>잔액</th></tr></thead>
+    <table><thead><tr><th style="text-align:left;">통장</th><th>이월잔액</th><th>수입 합계</th><th>지출 합계</th><th>잔액</th></tr></thead>
     <tbody>${accRowsHtml}</tbody></table>
     <div class="card-caption" style="margin-top:8px;">통장별 잔액은 계좌간 이체와 여입을 제외하고 계산합니다. 위 1번 거래 내역 표의 합계·소계와 동일한 기준이므로 수입·지출 합계가 서로 일치해야 합니다.</div>
   `;
