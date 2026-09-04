@@ -131,6 +131,17 @@
     cursor:pointer;white-space:nowrap;vertical-align:middle;
   }
   .category-badge:hover{background:var(--paper-line);color:var(--ink);}
+  .category-badge.badge-transfer{background:#DCE6F2;color:#3A5A85;}
+  .category-badge.badge-refund{background:#FBE7C6;color:#8A5A10;}
+  tr.tx-transfer td.memo, tr.tx-refund td.memo{font-style:italic;}
+  tr.tx-transfer{background:#EEF3FA !important;-webkit-print-color-adjust:exact;print-color-adjust:exact;}
+  tr.tx-refund{background:#FDF3E3 !important;-webkit-print-color-adjust:exact;print-color-adjust:exact;}
+  .special-tag{
+    display:inline-block;margin-left:6px;padding:1px 6px;border-radius:8px;
+    font-size:11px;font-weight:700;vertical-align:middle;-webkit-print-color-adjust:exact;print-color-adjust:exact;
+  }
+  .special-tag.tag-transfer{background:#DCE6F2;color:#3A5A85;}
+  .special-tag.tag-refund{background:#FBE7C6;color:#8A5A10;}
   select.category-picker{
     margin-left:6px;padding:1px 4px;border-radius:6px;border:1px solid var(--accent);
     font-size:12px;font-family:'Pretendard';background:#fff;color:var(--ink);
@@ -685,13 +696,14 @@ function updateStorageStatus(extra){
 }
 
 /* ---------- 계정(카테고리) 자동 분류 ---------- */
-const DEFAULT_CATEGORIES = ['헌금','선교헌금','사례비','공공요금','문화비','대출금','월세','운영비','수리유지비','이체','기타'];
+const DEFAULT_CATEGORIES = ['헌금','선교헌금','사례비','공공요금','문화비','대출금','월세','운영비','수리유지비','이체','여입','기타'];
 
 // 선교 지원 대상 국가명 패턴 감지용 (예: "26상반기 네팔", "필리핀 배요셉", "네팔 이정엽" 등 국가명이 포함된 지원비)
 const MISSION_COUNTRY_KEYWORDS = ['네팔','필리핀','파키스탄','대만','타사와르'];
 
 // 키워드가 포함되면 해당 계정으로 분류. 배열 순서대로 검사하며 먼저 매칭되는 규칙이 적용된다.
 const CATEGORY_RULES = [
+  { category: '여입', keywords: ['여입'] },
   { category: '이체', keywords: ['이월금', '계좌로이체', '계좌에서이체', '계좌로 이체', '계좌에서 이체'] },
   { category: '사례비', keywords: ['사례비'] },
   { category: '선교헌금', keywords: ['선교', '파송', '사역자', '단기선교', '해외선교'] },
@@ -737,6 +749,12 @@ function autoClassify(tx){
    해당 곳(통장별 잔액 합계 행, 재정보고서 전월대비 증감)에서 걸러낼 때 사용한다. */
 function isTransferTx(tx){
   return (tx.category || autoClassify(tx)) === '이체';
+}
+
+/* 오류로 지출됐다가 다시 들어온 수입('여입') 거래인지 판별.
+   거래 내역·재정보고서에서 시각적으로 특별 표시할 때 사용한다. */
+function isRefundInTx(tx){
+  return (tx.category || autoClassify(tx)) === '여입';
 }
 
 /* 전체 거래 목록에 대해 category가 없는 거래에만 자동 분류를 채워 넣는다(수동 지정 값은 보존). */
@@ -1080,12 +1098,17 @@ function renderLedger(){
 
     const tr = document.createElement('tr');
     const category = tx.category || autoClassify(tx);
+    const isTransfer = category === '이체';
+    const isRefund = category === '여입';
+    if(isTransfer) tr.classList.add('tx-transfer');
+    if(isRefund) tr.classList.add('tx-refund');
+    const badgeClass = isTransfer ? ' badge-transfer' : (isRefund ? ' badge-refund' : '');
     tr.innerHTML = `
       <td>${tx.date}</td>
       <td class="memo">${escapeHtml(tx.account || '')}</td>
       <td class="memo">
         ${escapeHtml(tx.memo)}
-        <span class="category-badge" data-id="${tx.id}" title="클릭해서 계정 변경">${escapeHtml(category)}</span>
+        <span class="category-badge${badgeClass}" data-id="${tx.id}" title="클릭해서 계정 변경">${escapeHtml(category)}</span>
       </td>
       <td class="income">${inc ? wonNum(inc) : ''}</td>
       <td class="expense">${exp ? wonNum(exp) : ''}</td>
@@ -1632,11 +1655,15 @@ function buildMonthlyReportHTML(monthStr){
   const ledgerRowsHtml = monthTx.map(tx=>{
     const inc = tx.type === 'income' ? tx.amount : 0;
     const exp = tx.type === 'expense' ? tx.amount : 0;
-    if(!isTransferTx(tx)){
+    const isTransfer = isTransferTx(tx);
+    const isRefund = isRefundInTx(tx);
+    if(!isTransfer){
       balance += inc - exp;
       totalIncome += inc; totalExpense += exp;
     }
-    return `<tr><td>${tx.date}</td><td class="memo">${escapeHtml(tx.account||'')}</td><td class="memo">${escapeHtml(tx.memo)}</td><td class="income">${inc?won(inc):''}</td><td class="expense">${exp?won(exp):''}</td><td>${won(balance)}</td></tr>`;
+    const rowClass = isTransfer ? ' class="tx-transfer"' : (isRefund ? ' class="tx-refund"' : '');
+    const tag = isTransfer ? ' <span class="special-tag tag-transfer">이체</span>' : (isRefund ? ' <span class="special-tag tag-refund">여입</span>' : '');
+    return `<tr${rowClass}><td>${tx.date}</td><td class="memo">${escapeHtml(tx.account||'')}</td><td class="memo">${escapeHtml(tx.memo)}${tag}</td><td class="income">${inc?won(inc):''}</td><td class="expense">${exp?won(exp):''}</td><td>${won(balance)}</td></tr>`;
   }).join('') || `<tr><td colspan="6" style="text-align:center;font-family:'Pretendard';color:var(--ink-soft);">해당 월 거래 내역이 없습니다.</td></tr>`;
 
   // 통장별 잔액 현황: 실제 통장 잔고와 맞춰볼 수 있도록 이체를 포함한 모든 거래를 반영한다.
@@ -1677,6 +1704,7 @@ function buildMonthlyReportHTML(monthStr){
       ${ledgerRowsHtml}
       <tr class="total-row"><td colspan="3">합계</td><td class="income">${won(totalIncome)}</td><td class="expense">${won(totalExpense)}</td><td>${won(balance)}</td></tr>
     </tbody></table>
+    <div class="card-caption" style="margin-top:8px;"><span class="special-tag tag-transfer">이체</span> 계좌간 이체(합계·소계에서 제외) · <span class="special-tag tag-refund">여입</span> 오류 지출 후 재입금(합계·소계에는 포함, 표시만 구분)</div>
 
     ${accountSummaryHtml}
     <div style="margin-top:40px;text-align:right;">작성일: ${today}</div>
