@@ -1604,33 +1604,51 @@ function buildMonthlyReportHTML(monthStr){
   const monthLabel = `${y}년 ${parseInt(m,10)}월`;
 
   const monthTx = sortedTx().filter(t => t.date.slice(0,7) === monthStr);
+
+  // 재정보고서의 모든 섹션(거래내역·통장별 잔액·당월 요약)은 계좌간 이체를 수입·지출·잔액 계산에서 제외한다.
+  // 이체 거래 자체는 거래 내역 표에 그대로 표시되지만, 소계(누적 잔액)와 합계에는 반영되지 않는다.
   const openingBalance = transactions.reduce((sum, t) => {
+    if(isTransferTx(t)) return sum;
     return t.date < `${monthStr}-01` ? sum + (t.type === 'income' ? t.amount : -t.amount) : sum;
   }, 0);
   let balance = openingBalance, totalIncome = 0, totalExpense = 0;
-  const openingRowHtml = `<tr class="opening-row"><td colspan="3">이월금 (${monthLabel} 이전)</td><td class="income"></td><td class="expense"></td><td>${won(balance)}</td></tr>`;
+  const openingRowHtml = `<tr class="opening-row"><td colspan="3">이월금 (${monthLabel} 이전, 이체 제외)</td><td class="income"></td><td class="expense"></td><td>${won(balance)}</td></tr>`;
   const ledgerRowsHtml = monthTx.map(tx=>{
     const inc = tx.type === 'income' ? tx.amount : 0;
     const exp = tx.type === 'expense' ? tx.amount : 0;
-    balance += inc - exp;
-    totalIncome += inc; totalExpense += exp;
+    if(!isTransferTx(tx)){
+      balance += inc - exp;
+      totalIncome += inc; totalExpense += exp;
+    }
     return `<tr><td>${tx.date}</td><td class="memo">${escapeHtml(tx.account||'')}</td><td class="memo">${escapeHtml(tx.memo)}</td><td class="income">${inc?won(inc):''}</td><td class="expense">${exp?won(exp):''}</td><td>${won(balance)}</td></tr>`;
   }).join('') || `<tr><td colspan="6" style="text-align:center;font-family:'Pretendard';color:var(--ink-soft);">해당 월 거래 내역이 없습니다.</td></tr>`;
 
-  // 통장별 잔액 현황: 1번(거래내역) 잔액과 시점을 일치시키기 위해 해당 월 말 기준 누적으로 계산.
-  // 계좌간 이체도 실제 통장 잔고에는 영향을 주는 거래이므로 수입/지출/잔액 모두 그대로 포함한다.
-  const {rows: accRows, grandIncome: accGrandIncome, grandExpense: accGrandExpense} = computeGroupSummary('account', null, monthStr);
+  // 통장별 잔액 현황: 위 거래내역과 마찬가지로 이체를 제외하고 계산한다.
+  // (통장별 카드 04번 화면의 실제 잔고 확인용 집계와는 별개로, 재정보고서 전용으로 계산)
+  const acctGroups = {};
+  getAccountList().forEach(k => acctGroups[k] = {income:0, expense:0, balance:0});
+  transactions.forEach(t=>{
+    if(isTransferTx(t)) return;
+    const key = t.account;
+    if(!key) return;
+    if(!acctGroups[key]) acctGroups[key] = {income:0, expense:0, balance:0};
+    const delta = t.type === 'income' ? t.amount : -t.amount;
+    if(t.date.slice(0,7) <= monthStr) acctGroups[key].balance += delta;
+    if(t.date.slice(0,7) === monthStr) acctGroups[key][t.type] += t.amount;
+  });
+  const accRows = Object.keys(acctGroups).map(k=>({label:k, income:acctGroups[k].income, expense:acctGroups[k].expense, net:acctGroups[k].balance}));
+  const accGrandIncome = accRows.reduce((s,r)=>s+r.income,0);
+  const accGrandExpense = accRows.reduce((s,r)=>s+r.expense,0);
   const accGrandNet = accRows.reduce((s,r)=>s+r.net,0);
   const accRowsHtml = accRows.map(r=>`<tr><td colspan="2">${escapeHtml(r.label)}</td><td class="income">${r.income?won(r.income):'-'}</td><td class="expense">${r.expense?won(r.expense):'-'}</td><td class="${r.net>=0?'balance-pos':'balance-neg'}">${won(r.net)}</td></tr>`).join('')
     + `<tr class="total-row"><td colspan="2">합계</td><td class="income">${won(accGrandIncome)}</td><td class="expense">${won(accGrandExpense)}</td><td class="${accGrandNet>=0?'balance-pos':'balance-neg'}">${won(accGrandNet)}</td></tr>`;
   const accountSummaryHtml = `
-    <h3 style="font-family:'Noto Serif KR',serif;font-size:17px;margin:26px 0 8px;">2. 통장별 잔액 현황 (${monthLabel} 말 기준 누적)</h3>
+    <h3 style="font-family:'Noto Serif KR',serif;font-size:17px;margin:26px 0 8px;">2. 통장별 잔액 현황 (${monthLabel} 말 기준 누적, 이체 제외)</h3>
     <table><thead><tr><th style="text-align:left;">통장</th><th></th><th>수입 합계</th><th>지출 합계</th><th>잔액</th></tr></thead>
     <tbody>${accRowsHtml}</tbody></table>
   `;
 
   // 당월 요약(수입·지출·순이익): 계좌간 이체는 실제 수입/지출이 아니므로 제외한, 그 달의 순수한 교회 재정 흐름.
-  // 위 1번 섹션(거래내역, 잔액)은 이체를 그대로 포함한 값을 유지하고, 이 섹션에서만 이체를 뺀 값을 별도로 보여준다.
   let netIncome = 0, netExpense = 0;
   monthTx.forEach(t=>{
     if(isTransferTx(t)) return;
@@ -1638,14 +1656,14 @@ function buildMonthlyReportHTML(monthStr){
   });
   const netTotal = netIncome - netExpense;
   const netSummaryHtml = `
-    <h3 style="font-family:'Noto Serif KR',serif;font-size:17px;margin:26px 0 8px;">3. 당월 수입·지출 요약 (순이익, 계좌간 이체 제외)</h3>
+    <h3 style="font-family:'Noto Serif KR',serif;font-size:17px;margin:26px 0 8px;">3. 당월 수입·지출 요약 (순이익)</h3>
     <table><thead><tr><th style="text-align:left;">구분</th><th>금액</th></tr></thead>
     <tbody>
       <tr><td>당월 수입 합계</td><td class="income">${won(netIncome)}</td></tr>
       <tr><td>당월 지출 합계</td><td class="expense">${won(netExpense)}</td></tr>
       <tr class="total-row"><td>당월 순이익</td><td class="${netTotal>=0?'balance-pos':'balance-neg'}">${won(netTotal)}</td></tr>
     </tbody></table>
-    <div class="card-caption" style="margin-top:8px;">계좌간 이체(예: 국민 통장 → 농협 통장 이체, 이월금)는 실제 수입·지출이 아니므로 제외한 값입니다. 위 1·2번 섹션의 거래 내역·통장별 잔액에는 이체가 그대로 포함되어 있습니다.</div>
+    <div class="card-caption" style="margin-top:8px;">이 보고서의 모든 섹션(거래 내역·통장별 잔액·당월 요약)은 계좌간 이체(예: 국민 통장 → 농협 통장 이체, 이월금)를 수입·지출·잔액 계산에서 제외합니다. 이체 거래 자체는 위 1번 거래 내역 표에는 표시되지만 소계·합계에는 반영되지 않습니다.</div>
   `;
 
   const today = new Date().toLocaleDateString('ko-KR', {year:'numeric',month:'long',day:'numeric'});
