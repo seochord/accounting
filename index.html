@@ -1643,21 +1643,21 @@ function buildMonthlyReportHTML(monthStr){
 
   const monthTx = sortedTx().filter(t => t.date.slice(0,7) === monthStr);
 
-  // 거래 내역 섹션(1번)은 계좌간 이체를 수입·지출·잔액 계산에서 제외한다.
-  // 이체 거래 자체는 표에 그대로 표시되지만, 소계(누적 잔액)와 합계에는 반영되지 않는다.
-  // (통장별 잔액 섹션은 실제 통장 잔고 확인을 위해 이체를 포함한다 — 아래 참조)
+  // 거래 내역 섹션(1번)은 계좌간 이체·여입을 수입·지출·잔액 계산에서 제외한다.
+  // 이체·여입 거래 자체는 표에 그대로 표시되지만, 소계(누적 잔액)와 합계에는 반영되지 않는다.
+  // (통장별 잔액 섹션과 동일한 기준 — 두 섹션의 수입·지출 합계가 일치해야 한다)
   const openingBalance = transactions.reduce((sum, t) => {
-    if(isTransferTx(t)) return sum;
+    if(isTransferTx(t) || isRefundInTx(t)) return sum;
     return t.date < `${monthStr}-01` ? sum + (t.type === 'income' ? t.amount : -t.amount) : sum;
   }, 0);
   let balance = openingBalance, totalIncome = 0, totalExpense = 0;
-  const openingRowHtml = `<tr class="opening-row"><td colspan="3">이월금 (${monthLabel} 이전, 이체 제외)</td><td class="income"></td><td class="expense"></td><td>${won(balance)}</td></tr>`;
+  const openingRowHtml = `<tr class="opening-row"><td colspan="3">이월금 (${monthLabel} 이전, 이체·여입 제외)</td><td class="income"></td><td class="expense"></td><td>${won(balance)}</td></tr>`;
   const ledgerRowsHtml = monthTx.map(tx=>{
     const inc = tx.type === 'income' ? tx.amount : 0;
     const exp = tx.type === 'expense' ? tx.amount : 0;
     const isTransfer = isTransferTx(tx);
     const isRefund = isRefundInTx(tx);
-    if(!isTransfer){
+    if(!isTransfer && !isRefund){
       balance += inc - exp;
       totalIncome += inc; totalExpense += exp;
     }
@@ -1688,7 +1688,7 @@ function buildMonthlyReportHTML(monthStr){
     <h3 style="font-family:'Noto Serif KR',serif;margin:26px 0 8px;">2. 통장별 잔액 현황 (${monthLabel} 말 기준 누적, 이체·여입 제외)</h3>
     <table><thead><tr><th style="text-align:left;">통장</th><th></th><th>수입 합계</th><th>지출 합계</th><th>잔액</th></tr></thead>
     <tbody>${accRowsHtml}</tbody></table>
-    <div class="card-caption" style="margin-top:8px;">통장별 잔액은 계좌간 이체와 여입을 제외하고 계산합니다. 위 1번 거래 내역 표의 합계·소계는 이체만 제외(여입은 포함)하므로, 두 섹션의 금액이 서로 다를 수 있습니다.</div>
+    <div class="card-caption" style="margin-top:8px;">통장별 잔액은 계좌간 이체와 여입을 제외하고 계산합니다. 위 1번 거래 내역 표의 합계·소계와 동일한 기준이므로 수입·지출 합계가 서로 일치해야 합니다.</div>
   `;
 
   const today = new Date().toLocaleDateString('ko-KR', {year:'numeric',month:'long',day:'numeric'});
@@ -1702,9 +1702,9 @@ function buildMonthlyReportHTML(monthStr){
     <tbody>
       ${openingRowHtml}
       ${ledgerRowsHtml}
-      <tr class="total-row"><td colspan="3">합계</td><td class="income">${won(totalIncome)}</td><td class="expense">${won(totalExpense)}</td><td>${won(balance)}</td></tr>
+      <tr class="total-row"><td colspan="3">합계 (이체·여입 제외)</td><td class="income">${won(totalIncome)}</td><td class="expense">${won(totalExpense)}</td><td>${won(balance)}</td></tr>
     </tbody></table>
-    <div class="card-caption" style="margin-top:8px;"><span class="special-tag tag-transfer">이체</span> 계좌간 이체(합계·소계에서 제외) · <span class="special-tag tag-refund">여입</span> 오류 지출 후 재입금(합계·소계에는 포함, 표시만 구분)</div>
+    <div class="card-caption" style="margin-top:8px;"><span class="special-tag tag-transfer">이체</span> 계좌간 이체 · <span class="special-tag tag-refund">여입</span> 오류 지출 후 재입금 — 두 항목 모두 위 합계·소계 계산에서 제외됩니다 (아래 통장별 잔액과 동일한 기준).</div>
 
     ${accountSummaryHtml}
     <div style="margin-top:40px;text-align:right;">작성일: ${today}</div>
