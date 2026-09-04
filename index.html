@@ -245,6 +245,17 @@ color:var(--ink-soft);font-size:12.5px;margin-top:30px;display:flex;flex-directi
     body.printing .print-title.print-target-title{display:block;font-family:'Noto Serif KR',serif;font-size:20.5px;font-weight:700;margin-bottom:14px;}
   }
 
+  /* 재정보고서 전용: 나이 드신 분들도 편하게 보실 수 있도록 글씨를 크게, 줄 간격을 넓게 잡은 인쇄용 레이아웃 */
+  .elder-report{ line-height:1.6; }
+  .elder-report table{ font-size:20px; }
+  .elder-report thead th{ font-size:18px; padding:14px 10px; border-bottom-width:3px; }
+  .elder-report tbody td{ padding:14px 10px; font-size:20px; }
+  .elder-report tbody tr.total-row td{ font-size:21px; }
+  .elder-report h3{ font-size:24px !important; margin:34px 0 14px !important; }
+  .elder-report .card-caption{ font-size:16px; line-height:1.6; }
+  body.printing .elder-report .print-title.print-target-title{ font-size:30px; margin-bottom:22px; }
+  .elder-report div[style*="text-align:right"]{ font-size:18px; }
+
   /* OCR & Excel & PDF Upload */
   .ocr-toolbar, .excel-toolbar, .pdf-toolbar{display:flex;gap:10px;flex-wrap:wrap;align-items:end;margin-bottom:14px;}
   .ocr-toolbar .f-item, .excel-toolbar .f-item, .pdf-toolbar .f-item{display:flex;flex-direction:column;gap:4px;}
@@ -1647,7 +1658,7 @@ function buildMonthlyReportHTML(monthStr){
   const accRowsHtml = accRows.map(r=>`<tr><td colspan="2">${escapeHtml(r.label)}</td><td class="income">${r.income?won(r.income):'-'}</td><td class="expense">${r.expense?won(r.expense):'-'}</td><td class="${r.net>=0?'balance-pos':'balance-neg'}">${won(r.net)}</td></tr>`).join('')
     + `<tr class="total-row"><td colspan="2">합계</td><td class="income">${won(accGrandIncome)}</td><td class="expense">${won(accGrandExpense)}</td><td class="${accGrandNet>=0?'balance-pos':'balance-neg'}">${won(accGrandNet)}</td></tr>`;
   const accountSummaryHtml = `
-    <h3 style="font-family:'Noto Serif KR',serif;font-size:17px;margin:26px 0 8px;">2. 통장별 잔액 현황 (${monthLabel} 말 기준 누적, 이체 제외)</h3>
+    <h3 style="font-family:'Noto Serif KR',serif;margin:26px 0 8px;">2. 통장별 잔액 현황 (${monthLabel} 말 기준 누적, 이체 제외)</h3>
     <table><thead><tr><th style="text-align:left;">통장</th><th></th><th>수입 합계</th><th>지출 합계</th><th>잔액</th></tr></thead>
     <tbody>${accRowsHtml}</tbody></table>
     <div class="card-caption" style="margin-top:8px;">이 보고서의 모든 섹션(거래 내역·통장별 잔액)은 계좌간 이체(예: 국민 통장 → 농협 통장 이체, 이월금)를 수입·지출·잔액 계산에서 제외합니다. 이체 거래 자체는 위 1번 거래 내역 표에는 표시되지만 소계·합계에는 반영되지 않습니다.</div>
@@ -1656,9 +1667,10 @@ function buildMonthlyReportHTML(monthStr){
   const today = new Date().toLocaleDateString('ko-KR', {year:'numeric',month:'long',day:'numeric'});
 
   return `
+    <div class="elder-report">
     <div class="print-title print-target-title">진리침례교회 재정보고서 — ${monthLabel}</div>
 
-    <h3 style="font-family:'Noto Serif KR',serif;font-size:17px;margin:20px 0 8px;">1. ${monthLabel} 거래 내역</h3>
+    <h3 style="font-family:'Noto Serif KR',serif;margin:20px 0 8px;">1. ${monthLabel} 거래 내역</h3>
     <table><thead><tr><th style="text-align:left;">거래일</th><th style="text-align:left;">통장</th><th style="text-align:left;">내용</th><th>수입</th><th>지출</th><th>소계</th></tr></thead>
     <tbody>
       ${openingRowHtml}
@@ -1667,19 +1679,8 @@ function buildMonthlyReportHTML(monthStr){
     </tbody></table>
 
     ${accountSummaryHtml}
-    <div style="margin-top:60px;font-size:15px;text-align:right;">작성일: ${today}</div>
-    <table style="margin-top:22px;width:auto;margin-left:auto;font-size:15px;">
-      <thead><tr>
-        <th style="width:70px;">구분</th>
-        <th style="width:150px;">이름</th>
-        <th style="width:150px;">서명</th>
-      </tr></thead>
-      <tbody>
-        <tr><td>담당</td><td style="height:40px;">&nbsp;</td><td style="height:40px;">&nbsp;</td></tr>
-        <tr><td>회계</td><td style="height:40px;">&nbsp;</td><td style="height:40px;">&nbsp;</td></tr>
-        <tr><td>확인</td><td style="height:40px;">&nbsp;</td><td style="height:40px;">&nbsp;</td></tr>
-      </tbody>
-    </table>
+    <div style="margin-top:40px;text-align:right;">작성일: ${today}</div>
+    </div>
   `;
 }
 
