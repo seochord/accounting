@@ -1444,6 +1444,8 @@ const EXPENSE_GROUPS = [
 // 개인 헌금자 이름이 그대로 노출되지 않도록 세부내역을 생략하는 수입 계정
 const NO_DETAIL_INCOME = ['헌금','선교헌금'];
 const CATEGORY_DETAIL_LIMIT = 5;
+// 세부내역을 개수 제한 없이 모두 보여 줄 계정(선교비는 후원 내역을 전부 확인해야 하므로)
+const CATEGORY_DETAIL_ALL = ['선교비'];
 
 function periodBounds(year, month){
   if(year && month) return { start: `${year}-${month}-01`, match: d => d.slice(0,7) === `${year}-${month}` };
@@ -1451,7 +1453,7 @@ function periodBounds(year, month){
   return { start: null, match: () => true };
 }
 
-function summarizeDetails(list, withDetail){
+function summarizeDetails(list, withDetail, limit){
   const amount = list.reduce((a,t)=>a+t.amount,0);
   const res = { amount, count: list.length, details: [], more: null };
   if(!withDetail) return res;
@@ -1462,8 +1464,11 @@ function summarizeDetails(list, withDetail){
     m[k].amount += t.amount; m[k].count += 1;
   });
   const arr = Object.values(m).sort((x,y)=> y.amount - x.amount);
-  res.details = arr.slice(0, CATEGORY_DETAIL_LIMIT);
-  const rest = arr.slice(CATEGORY_DETAIL_LIMIT);
+  // 나머지가 1건뿐이면 '외 1건'으로 묶지 않고 그대로 보여 준다. limit이 Infinity면 모두 보여 준다.
+  let max = limit === undefined ? CATEGORY_DETAIL_LIMIT : limit;
+  if(arr.length - max === 1) max = arr.length;
+  res.details = arr.slice(0, max);
+  const rest = arr.slice(max);
   if(rest.length) res.more = { label:`외 ${rest.length}건`, amount: rest.reduce((a,r)=>a+r.amount,0), count: rest.reduce((a,r)=>a+r.count,0) };
   return res;
 }
@@ -1505,7 +1510,7 @@ function buildCategoryReport(year, month){
   const expCats = sortCats(Object.keys(exp).filter(c => c !== '이체'));
   const used = new Set();
   const groups = EXPENSE_GROUPS.map(g=>{
-    const items = g.cats.filter(c => expCats.includes(c)).map(c=>{ used.add(c); return { cat:c, ...summarizeDetails(exp[c], true) }; });
+    const items = g.cats.filter(c => expCats.includes(c)).map(c=>{ used.add(c); return { cat:c, ...summarizeDetails(exp[c], true, CATEGORY_DETAIL_ALL.includes(c) ? Infinity : undefined) }; });
     return { name:g.name, items };
   });
   const others = expCats.filter(c => !used.has(c)).map(c => ({ cat:c, ...summarizeDetails(exp[c], true) }));
