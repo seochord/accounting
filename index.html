@@ -141,6 +141,18 @@
     white-space:nowrap;-webkit-print-color-adjust:exact;print-color-adjust:exact;
   }
   tbody td.acct-cell{border-left:4px solid var(--acct-c,transparent);}
+  table.cat-side td{font-size:13.5px;padding-left:8px;padding-right:8px;vertical-align:top;}
+  table.cat-side td.cs-label{text-align:left;font-family:'Pretendard';word-break:keep-all;}
+  table.cat-side td.cs-amt{text-align:right;white-space:nowrap;}
+  table.cat-side td.cs-div{border-left:2px solid var(--paper-line);}
+  table.cat-side .cs-cnt{font-size:11.5px;color:var(--ink-soft);margin-left:4px;}
+  table.cat-side td.c-group{background:#E4E6F7;color:#2B3270;font-weight:700;text-align:center;-webkit-print-color-adjust:exact;print-color-adjust:exact;}
+  table.cat-side td.c-group2{background:#F0F1FA;color:#2B3270;font-weight:700;-webkit-print-color-adjust:exact;print-color-adjust:exact;}
+  table.cat-side td.c-amber{background:#FDF3E3;-webkit-print-color-adjust:exact;print-color-adjust:exact;}
+  table.cat-side td.c-detail{font-size:12px;color:var(--ink-soft);padding-top:1px;padding-bottom:1px;}
+  table.cat-side td.c-detail.cs-label{padding-left:20px;}
+  table.cat-side td.c-sub{font-weight:700;border-top:1px solid var(--paper-line);}
+  table.cat-side td.c-total{font-weight:700;background:#FFF6CC;border-top:2px solid var(--paper-line);-webkit-print-color-adjust:exact;print-color-adjust:exact;}
   tr.cat-group-row td{text-align:left !important;font-weight:700;background:#E4E6F7;color:#2B3270;-webkit-print-color-adjust:exact;print-color-adjust:exact;}
   tr.cat-detail-row td{font-size:12.5px;color:var(--ink-soft);padding-top:2px;padding-bottom:2px;}
   tr.cat-detail-row td:first-child{padding-left:26px;}
@@ -507,8 +519,8 @@ color:var(--ink-soft);font-size:12.5px;margin-top:30px;display:flex;flex-directi
       <input type="checkbox" id="categoryDetailToggle" checked> 세부내역 함께 보기
     </label>
     <div class="table-scroll">
-      <table>
-        <thead><tr><th style="text-align:left;">항목</th><th style="text-align:right;">금액</th><th style="text-align:right;">건수</th></tr></thead>
+      <table class="cat-side">
+        <thead><tr><th style="text-align:left;">수입 항목</th><th style="text-align:right;">금액</th><th style="text-align:left;border-left:2px solid var(--paper-line);">지출 항목</th><th style="text-align:right;">금액</th></tr></thead>
         <tbody id="categoryBody"></tbody>
       </table>
     </div>
@@ -1520,6 +1532,65 @@ function buildCategoryReport(year, month){
 
 let categoryDetailVisible = true;
 
+/* 좌(수입) · 우(지출) 두 칸으로 나란히 보여 주는 표의 <tr> 목록을 만든다. (03번 카드와 재정보고서가 함께 사용) */
+function categorySideRowsHTML(R, label, showDetail){
+  const pn = v => v >= 0 ? 'balance-pos' : 'balance-neg';
+  // 한쪽 칸의 항목: {t:'group'|'group2'|'item'|'detail'|'sub'|'total', name, amount, count, kind, amber}
+  const L = [], Rt = [], Ltot = [], Rtot = [];
+  const addItems = (arr, items, kind)=> items.forEach(it=>{
+    arr.push({t:'item', name:it.cat, amount:it.amount, count:it.count, kind, amber:AMBER_CATEGORIES.includes(it.cat)});
+    if(showDetail){
+      it.details.forEach(d => arr.push({t:'detail', name:'· ' + d.label, amount:d.amount, count:d.count, kind}));
+      if(it.more) arr.push({t:'detail', name:'· ' + it.more.label, amount:it.more.amount, count:it.more.count, kind});
+    }
+  });
+
+  L.push({t:'group', name:'수입'});
+  if(R.opening !== null) L.push({t:'item', name:'전월 이월금액', amount:R.opening, kind:pn(R.opening)});
+  addItems(L, R.incomeItems, 'income');
+  Ltot.push({t:'total', name:`${label} 총수입액`, amount:R.incomeTotal, count:R.incomeCount, kind:'income'});
+  if(R.opening !== null) Ltot.push({t:'total', name:'총계 (이월금 포함)', amount:R.withCarry, kind:pn(R.withCarry)});
+
+  Rt.push({t:'group', name:'지출'});
+  R.groups.forEach(g=>{
+    Rt.push({t:'group2', name:g.name});
+    addItems(Rt, g.items, 'expense');
+    Rt.push({t:'sub', name:'소 계', amount:g.amount, count:g.count, kind:'expense'});
+  });
+  Rtot.push({t:'total', name:`${label} 총지출액`, amount:R.expenseTotal, count:R.expenseCount, kind:'expense'});
+  const diff = R.incomeTotal - R.expenseTotal;
+  if(R.opening !== null) Rtot.push({t:'total', name:'차월 이월금액', amount:R.closing, kind:pn(R.closing)});
+  else Rtot.push({t:'total', name:'차액 (수입-지출)', amount:diff, kind:pn(diff)});
+
+  const pad = (arr, n)=>{ while(arr.length < n) arr.push(null); };
+  const n = Math.max(L.length, Rt.length);
+  pad(L, n); pad(Rt, n);
+  const m = Math.max(Ltot.length, Rtot.length);
+  pad(Ltot, m); pad(Rtot, m);
+
+  const cells = (e, divider)=>{
+    const dv = divider ? ' cs-div' : '';
+    if(!e) return `<td class="cs-label${dv}"></td><td class="cs-amt"></td>`;
+    if(e.t === 'group') return `<td colspan="2" class="c-group${dv}">${e.name}</td>`;
+    if(e.t === 'group2') return `<td colspan="2" class="c-group2${dv}">${e.name}</td>`;
+    const cls = e.t === 'detail' ? ' c-detail' : (e.t === 'sub' ? ' c-sub' : (e.t === 'total' ? ' c-total' : (e.amber ? ' c-amber' : '')));
+    const cnt = (e.count !== undefined && e.count !== null && e.count !== '') ? `<span class="cs-cnt">${e.count}건</span>` : '';
+    const amt = (e.amount === undefined || e.amount === null) ? '' : won(e.amount);
+    return `<td class="cs-label${cls}${dv}">${escapeHtml(e.name)}${cnt}</td><td class="cs-amt ${e.kind || ''}${cls}">${amt}</td>`;
+  };
+  const html = [];
+  for(let i=0; i<n; i++) html.push(`<tr>${cells(L[i], false)}${cells(Rt[i], true)}</tr>`);
+  for(let i=0; i<m; i++) html.push(`<tr>${cells(Ltot[i], false)}${cells(Rtot[i], true)}</tr>`);
+
+  if(R.transfer.incomeCount || R.transfer.expenseCount){
+    html.push(`<tr><td colspan="4" class="c-group2" style="text-align:left;">참고 · 계좌간 이체 (총수입·총지출에서 제외)</td></tr>`);
+    const tIn = R.transfer.incomeCount ? {t:'item', name:'이체 입금', amount:R.transfer.income, count:R.transfer.incomeCount, kind:'income', amber:true} : null;
+    const tOut = R.transfer.expenseCount ? {t:'item', name:'이체 출금', amount:R.transfer.expense, count:R.transfer.expenseCount, kind:'expense', amber:true} : null;
+    html.push(`<tr>${cells(tIn, false)}${cells(tOut, true)}</tr>`);
+  }
+  return html.join('');
+}
+
 function renderCategorySummary(){
   const body = document.getElementById('categoryBody');
   const empty = document.getElementById('categoryEmpty');
@@ -1532,64 +1603,13 @@ function renderCategorySummary(){
   else periodLabel = '전체 기간';
   const shortLabel = (filterYear && filterMonth) ? `${parseInt(filterMonth,10)}월` : (filterYear ? `${filterYear}년` : '전체');
   heading.textContent = `계정별 현황 (${periodLabel})`;
-  caption.textContent = `모든 통장을 통합한 재정현황입니다. 거래내역의 연도·월 필터와 같은 기간(${periodLabel})만 집계하며, 계좌간 이체는 총수입·총지출에서 제외하고 맨 아래에 따로 표시합니다. 개인 헌금자 이름은 세부내역에 나열하지 않습니다.`;
+  caption.textContent = `모든 통장을 통합한 재정현황입니다. 왼쪽은 수입, 오른쪽은 지출이며 거래내역의 연도·월 필터와 같은 기간(${periodLabel})만 집계합니다. 계좌간 이체는 총수입·총지출에서 제외하고 맨 아래에 따로 표시합니다. 개인 헌금자 이름은 세부내역에 나열하지 않습니다.`;
 
   body.innerHTML = '';
   const R = buildCategoryReport(filterYear, filterMonth);
   if(R.isEmpty && !R.opening){ empty.style.display = 'block'; return; }
   empty.style.display = 'none';
-
-  const showDetail = categoryDetailVisible;
-  const row = (cls, label, amount, count, kind, style)=>{
-    const tr = document.createElement('tr');
-    if(cls) tr.className = cls;
-    tr.innerHTML = `
-      <td${style ? ` style="${style}"` : ''}>${label}</td>
-      <td class="${kind || ''}">${amount === null || amount === undefined ? '' : won(amount)}</td>
-      <td>${count === null || count === undefined || count === '' ? '' : count + '건'}</td>`;
-    body.appendChild(tr);
-    return tr;
-  };
-  const group = title => {
-    const tr = document.createElement('tr');
-    tr.className = 'cat-group-row';
-    tr.innerHTML = `<td colspan="3">${title}</td>`;
-    body.appendChild(tr);
-  };
-  const itemRows = (items, kind)=>{
-    items.forEach(it=>{
-      const tr = row(AMBER_CATEGORIES.includes(it.cat) ? 'tx-refund' : '', escapeHtml(it.cat), it.amount, it.count, kind);
-      if(showDetail){
-        it.details.forEach(d => row('cat-detail-row', '· ' + escapeHtml(d.label), d.amount, d.count, kind));
-        if(it.more) row('cat-detail-row', '· ' + escapeHtml(it.more.label), it.more.amount, it.more.count, kind);
-      }
-    });
-  };
-
-  // ── 수입 ──
-  group('수입');
-  if(R.opening !== null) row('', '전월 이월금액', R.opening, null, R.opening >= 0 ? 'balance-pos' : 'balance-neg');
-  itemRows(R.incomeItems, 'income');
-  row('total-row', `${shortLabel} 총수입액`, R.incomeTotal, R.incomeCount, 'income');
-  if(R.opening !== null) row('total-row', '총계 (이월금 포함)', R.withCarry, null, R.withCarry >= 0 ? 'balance-pos' : 'balance-neg');
-
-  // ── 지출 ──
-  group('지출');
-  R.groups.forEach(g=>{
-    row('cat-group-row', `<span style="font-weight:700">${g.name}</span>`, null, null, '', 'background:#F0F1FA;');
-    itemRows(g.items, 'expense');
-    row('cat-subtotal-row', '소 계', g.amount, g.count, 'expense');
-  });
-  row('total-row', `${shortLabel} 총지출액`, R.expenseTotal, R.expenseCount, 'expense');
-  if(R.opening !== null) row('total-row', '차월 이월금액', R.closing, null, R.closing >= 0 ? 'balance-pos' : 'balance-neg');
-  else row('total-row', '차액 (수입-지출)', R.incomeTotal - R.expenseTotal, null, (R.incomeTotal - R.expenseTotal) >= 0 ? 'balance-pos' : 'balance-neg');
-
-  // ── 참고: 계좌간 이체 ──
-  if(R.transfer.incomeCount || R.transfer.expenseCount){
-    group('참고 · 계좌간 이체 (총수입·총지출에서 제외)');
-    if(R.transfer.incomeCount)  row('tx-transfer', '이체 입금', R.transfer.income, R.transfer.incomeCount, 'income');
-    if(R.transfer.expenseCount) row('tx-transfer', '이체 출금', R.transfer.expense, R.transfer.expenseCount, 'expense');
-  }
+  body.innerHTML = categorySideRowsHTML(R, shortLabel, categoryDetailVisible);
 }
 
 function renderAccountSummary(){
@@ -1819,36 +1839,7 @@ document.getElementById('ledgerBulkDeleteBtn').addEventListener('click', bulkDel
 /* 재정보고서용 '계정별 현황' 표(HTML 문자열). 화면의 03번 카드와 같은 계산(buildCategoryReport)을 쓴다. */
 function categoryReportTableHTML(year, month){
   const R = buildCategoryReport(year, month);
-  const label = `${parseInt(month,10)}월`;
-  const rows = [];
-  const tr = (cls, name, amount, count, kind, style)=>
-    `<tr${cls?` class="${cls}"`:''}><td${style?` style="${style}"`:''}>${name}</td><td class="${kind||''}">${amount===null||amount===undefined?'':won(amount)}</td><td>${count===null||count===undefined||count===''?'':count+'건'}</td></tr>`;
-  const group = t => `<tr class="cat-group-row"><td colspan="3">${t}</td></tr>`;
-  const items = (list, kind)=> list.forEach(it=>{
-    rows.push(tr(AMBER_CATEGORIES.includes(it.cat)?'tx-refund':'', escapeHtml(it.cat), it.amount, it.count, kind));
-    it.details.forEach(d => rows.push(tr('cat-detail-row', '· ' + escapeHtml(d.label), d.amount, d.count, kind)));
-    if(it.more) rows.push(tr('cat-detail-row', '· ' + escapeHtml(it.more.label), it.more.amount, it.more.count, kind));
-  });
-  const pn = v => v >= 0 ? 'balance-pos' : 'balance-neg';
-  rows.push(group('수입'));
-  if(R.opening !== null) rows.push(tr('', '전월 이월금액', R.opening, null, pn(R.opening)));
-  items(R.incomeItems, 'income');
-  rows.push(tr('total-row', `${label} 총수입액`, R.incomeTotal, R.incomeCount, 'income'));
-  if(R.opening !== null) rows.push(tr('total-row', '총계 (이월금 포함)', R.withCarry, null, pn(R.withCarry)));
-  rows.push(group('지출'));
-  R.groups.forEach(g=>{
-    rows.push(tr('cat-group-row', `<span style="font-weight:700">${g.name}</span>`, null, null, '', 'background:#F0F1FA;'));
-    items(g.items, 'expense');
-    rows.push(tr('cat-subtotal-row', '소 계', g.amount, g.count, 'expense'));
-  });
-  rows.push(tr('total-row', `${label} 총지출액`, R.expenseTotal, R.expenseCount, 'expense'));
-  if(R.opening !== null) rows.push(tr('total-row', '차월 이월금액', R.closing, null, pn(R.closing)));
-  if(R.transfer.incomeCount || R.transfer.expenseCount){
-    rows.push(group('참고 · 계좌간 이체 (총수입·총지출에서 제외)'));
-    if(R.transfer.incomeCount)  rows.push(tr('tx-transfer', '이체 입금', R.transfer.income, R.transfer.incomeCount, 'income'));
-    if(R.transfer.expenseCount) rows.push(tr('tx-transfer', '이체 출금', R.transfer.expense, R.transfer.expenseCount, 'expense'));
-  }
-  return `<table><thead><tr><th style="text-align:left;">항목</th><th>금액</th><th>건수</th></tr></thead><tbody>${rows.join('')}</tbody></table>`;
+  return `<table class="cat-side"><thead><tr><th style="text-align:left;">수입 항목</th><th>금액</th><th style="text-align:left;border-left:2px solid var(--paper-line);">지출 항목</th><th>금액</th></tr></thead><tbody>${categorySideRowsHTML(R, `${parseInt(month,10)}월`, true)}</tbody></table>`;
 }
 
 function buildMonthlyReportHTML(monthStr){
