@@ -673,7 +673,12 @@ function updateStorageStatus(extra){
 /* ---------- 계정(카테고리) 자동 분류 ---------- */
 // 수입 계정 / 지출 계정 / 공통 계정으로 나눈다. 거래의 수입·지출 구분에 따라 자동 분류와 계정 선택 목록이 달라진다.
 const INCOME_CATEGORIES  = ['이월금','헌금','선교헌금','예배당이전헌금','이자','환입','여입'];
-const EXPENSE_CATEGORIES = ['사례비','선교비','공공요금','문화비','대출금','월세','운영비','수리유지비'];
+// 지출 계정은 교회 월별 재정현황 양식(지원비 / 운영비 / 고정비)에 맞춘다.
+const EXPENSE_CATEGORIES = ['사례비','선교비','예배당이전비','식사지원','친교행사비','경조비',
+                            '통신비','도서비품','수리유지비','보험행정비',
+                            '대출금','건물관리비'];
+// 예전에 쓰던 지출 계정 → 새 계정 (정리되어 없어진 이름)
+const LEGACY_CATEGORY_MAP = { '공공요금':'건물관리비', '월세':'건물관리비', '문화비':'도서비품', '운영비':'도서비품' };
 const COMMON_CATEGORIES  = ['이체','오류','기타'];
 const DEFAULT_CATEGORIES = [...INCOME_CATEGORIES, ...EXPENSE_CATEGORIES, ...COMMON_CATEGORIES];
 const AMBER_CATEGORIES   = ['여입','환입','오류'];
@@ -696,15 +701,19 @@ const CATEGORY_RULES = [
   // 수입의 '이자'는 예금이자(수입). 지출의 '이자'는 아래 대출금 규칙. 사람 이름(예: 이자영)과 헷갈리지 않도록 별도 처리(autoClassify).
   { category: '선교헌금', type: 'income', keywords: ['선교', '파송', '사역자', '단기선교', '해외선교'] },
   { category: '헌금', type: 'income', keywords: ['헌금', '십일조', '감사', '주정', '절기', '건축', '구제'] },
-  // ---- 지출 계정 ----
+  // ---- 지출 계정 (위에 있는 규칙이 먼저 적용됨) ----
   { category: '사례비', type: 'expense', keywords: ['사례비', '사례금', '강사비', '강사료'] },
   { category: '선교비', type: 'expense', keywords: ['선교', '파송', '사역자', '단기선교', '해외선교'] },
-  { category: '공공요금', type: 'expense', keywords: ['전기료', '수도료', '가스', 'KT', 'kt요금', '통신비', '전기요금', '관리비', '인터넷', '수도', '전기', '난방', '보험료', '세금'] },
-  { category: '문화비', type: 'expense', keywords: ['서적', '알라딘', '문화비', '도서', '교재', '성경', '찬송'] },
-  { category: '월세', type: 'expense', keywords: ['임차료', '월세', '임대료'] },
-  { category: '대출금', type: 'expense', keywords: ['대출', '원리금', '이자', '대출이자', '상환'] },
-  { category: '수리유지비', type: 'expense', keywords: ['수리', '보수', '공사', '시설비', '유지보수', '설치', '교체'] },
-  { category: '운영비', type: 'expense', keywords: ['청소비', '주방봉사', '식사지원', '봉사료', '운영비', '비품', '소모품', '식비', '다과', '간식', '행사', '주유', '택배', '인쇄', '사무'] },
+  { category: '예배당이전비', type: 'expense', keywords: ['이전비', '예배당이전', '교회이전', '이전헌금', '명도비', '이사'] },
+  { category: '경조비', type: 'expense', keywords: ['위로금', '애경사', '경조', '조의', '축의', '부조', '병문안', '조화'] },
+  { category: '식사지원', type: 'expense', keywords: ['식사', '식자', '식재', '주방', '쌀', '반찬', '점심', '급식'] },
+  { category: '친교행사비', type: 'expense', keywords: ['친교', '행사', '친목', '간식', '다과', '성찬', '만찬', '식빵', '수련회', '야외예배'] },
+  { category: '통신비', type: 'expense', keywords: ['KT', 'kt', '통신', '인터넷', '전화', '휴대폰'] },
+  { category: '보험행정비', type: 'expense', keywords: ['보험', '세금', '재산세', '지방세', '국민건강', '국민연금', '4대보험', '산재', '인도명령', '소송', '법무', '등기', '인지', '수수료'] },
+  { category: '대출금', type: 'expense', keywords: ['대출', '원리금', '이자', '상환'] },
+  { category: '수리유지비', type: 'expense', keywords: ['수리', '보수', '공사', '시설비', '유지보수', '설치', '교체', '철거', '증축', '공구'] },
+  { category: '건물관리비', type: 'expense', keywords: ['건물관리', '관리비', '임차료', '월세', '임대료', '전기', '수도', '가스', '난방'] },
+  { category: '도서비품', type: 'expense', keywords: ['서적', '알라딘', '도서', '문화비', '교재', '성경', '찬송', '비품', '소모품', '봉투', '청소', '복사', '인쇄', '문구', '용품', '택배', '주유'] },
 ];
 
 // 사람 이름으로 보이는 패턴(한글 2~4자, 또는 "이름(소속)" 형태)인지 판별
@@ -796,7 +805,15 @@ function isAmberTx(tx){
 
 /* 전체 거래 목록에 대해 category가 없는 거래에만 자동 분류를 채워 넣는다(수동 지정 값은 보존). */
 function classifyAllTransactions(list){
-  return list.map(t => ({ ...t, category: t.category || autoClassify({...t, category: undefined}) }));
+  return list.map(t=>{
+    const legacy = LEGACY_CATEGORY_MAP[t.category];
+    if(legacy){
+      // 정리되어 없어진 예전 계정: 자동 분류였다면 새 규칙으로 다시 분류, 직접 지정이었다면 대응하는 새 계정으로 옮긴다.
+      if(t.categoryManual) return { ...t, category: legacy };
+      return { ...t, category: autoClassify({...t, category: undefined}) };
+    }
+    return { ...t, category: t.category || autoClassify({...t, category: undefined}) };
+  });
 }
 
 /* '자동 재분류' 버튼: 분류 규칙이 바뀌었거나 처음 자동분류가 마음에 들지 않을 때,
@@ -1398,9 +1415,9 @@ function computeCategorySummary(year, month){
 
 /* ---------- 계정별 현황(보고서형): 수입 / 지출(지원비·운영비·고정비) + 세부내역 ---------- */
 const EXPENSE_GROUPS = [
-  { name:'지원비', cats:['사례비','선교비'] },
-  { name:'운영비', cats:['공공요금','문화비','운영비','수리유지비'] },
-  { name:'고정비', cats:['대출금','월세'] }
+  { name:'지원비', cats:['사례비','선교비','예배당이전비','식사지원','친교행사비','경조비'] },
+  { name:'운영비', cats:['통신비','도서비품','수리유지비','보험행정비'] },
+  { name:'고정비', cats:['대출금','건물관리비'] }
 ];
 // 개인 헌금자 이름이 그대로 노출되지 않도록 세부내역을 생략하는 수입 계정
 const NO_DETAIL_INCOME = ['헌금','선교헌금'];
