@@ -511,7 +511,7 @@ color:var(--ink-soft);font-size:12.5px;margin-top:30px;display:flex;flex-directi
     <div class="card-caption no-print" id="categoryCaption"></div>
     <div class="table-scroll">
       <table>
-        <thead><tr><th style="text-align:left;">계정</th><th style="text-align:right;">수입 합계</th><th style="text-align:right;">지출 합계</th><th style="text-align:right;">차액(수입-지출)</th><th style="text-align:right;">건수</th><th style="text-align:right;border-left:2px solid var(--paper-line);">전체기간 수입</th><th style="text-align:right;">전체기간 지출</th><th style="text-align:right;">전체기간 차액</th></tr></thead>
+        <thead><tr><th style="text-align:left;">계정</th><th style="text-align:right;">수입 합계</th><th style="text-align:right;">지출 합계</th><th style="text-align:right;">차액(수입-지출)</th><th style="text-align:right;">건수</th></tr></thead>
         <tbody id="categoryBody"></tbody>
       </table>
     </div>
@@ -1337,22 +1337,12 @@ function renderCategorySummary(){
   else if(filterYear) periodLabel = `${filterYear}년`;
   else periodLabel = '전체 기간';
   heading.textContent = `계정별 합계 (${periodLabel})`;
-  caption.textContent = `모든 통장을 통합한 계정별 합계입니다(통장 구분 없음). 왼쪽은 거래내역의 연도·월 필터와 같은 기간(${periodLabel}), 오른쪽 "전체기간"은 필터와 관계없이 모든 거래의 총합입니다. "합계(이체 포함)"는 위 통장별 합계와, "합계(이체 제외)"는 거래내역 표의 합계와 같은 기준입니다(거래내역에서 통장 필터를 쓰지 않았을 때). 계정은 거래내역에서 계정 배지를 눌러 바꿀 수 있습니다.`;
+  caption.textContent = `모든 통장을 통합한 계정별 합계입니다(통장 구분 없음). 거래내역의 연도·월 필터와 같은 기간(${periodLabel})만 집계합니다. "합계(이체 포함)"는 위 통장별 합계와, "합계(이체 제외)"는 거래내역 표의 합계와 같은 기준입니다(거래내역에서 통장 필터를 쓰지 않았을 때). 계정은 거래내역에서 계정 배지를 눌러 바꿀 수 있습니다.`;
 
   body.innerHTML = '';
   const {rows, all, noTransfer, isEmpty} = computeCategorySummary(filterYear, filterMonth);
-  const full = computeCategorySummary('', '');
-  if(isEmpty && full.isEmpty){ empty.style.display = 'block'; return; }
+  if(isEmpty){ empty.style.display = 'block'; return; }
   empty.style.display = 'none';
-  const fullMap = {};
-  full.rows.forEach(r => fullMap[r.label] = r);
-  const fullCells = (inc, exp) => `
-      <td class="income" style="border-left:2px solid var(--paper-line);">${inc ? won(inc) : '-'}</td>
-      <td class="expense">${exp ? won(exp) : '-'}</td>
-      <td class="${inc-exp>=0?'balance-pos':'balance-neg'}">${won(inc-exp)}</td>`;
-  // 선택 기간에는 거래가 없지만 전체기간에는 있는 계정도 표시한다.
-  const shown = new Set(rows.map(r=>r.label));
-  full.rows.forEach(r=>{ if(!shown.has(r.label)) rows.push({label:r.label, income:0, expense:0, net:0, count:0}); });
 
   rows.forEach(r=>{
     const tr = document.createElement('tr');
@@ -1364,12 +1354,11 @@ function renderCategorySummary(){
       <td class="expense">${r.expense ? won(r.expense) : '-'}</td>
       <td class="${r.net>=0?'balance-pos':'balance-neg'}">${won(r.net)}</td>
       <td>${r.count}건</td>
-      ${fullCells((fullMap[r.label]||{}).income||0, (fullMap[r.label]||{}).expense||0)}
     `;
     body.appendChild(tr);
   });
 
-  const addTotal = (label, s, f)=>{
+  const addTotal = (label, s)=>{
     const net = s.income - s.expense;
     const tr = document.createElement('tr');
     tr.className = 'total-row';
@@ -1379,12 +1368,11 @@ function renderCategorySummary(){
       <td class="expense">${won(s.expense)}</td>
       <td class="${net>=0?'balance-pos':'balance-neg'}">${won(net)}</td>
       <td>${s.count}건</td>
-      ${fullCells(f.income, f.expense)}
     `;
     body.appendChild(tr);
   };
-  addTotal('합계 (이체 포함)', all, full.all);
-  addTotal('합계 (이체 제외)', noTransfer, full.noTransfer);
+  addTotal('합계 (이체 포함)', all);
+  addTotal('합계 (이체 제외)', noTransfer);
 }
 
 function renderAccountSummary(){
@@ -1752,18 +1740,13 @@ function writeSingleSheetWorkbook(sheetRows, colWidths, sheetName, filenamePrefi
 
 const LEDGER_COL_WIDTHS = [{wch:12},{wch:14},{wch:22},{wch:12},{wch:12},{wch:14}];
 const SUMMARY4_COL_WIDTHS = [{wch:14},{wch:14},{wch:14},{wch:14}];
-const CATEGORY_COL_WIDTHS = [{wch:18},{wch:14},{wch:14},{wch:16},{wch:8},{wch:16},{wch:16},{wch:16}];
+const CATEGORY_COL_WIDTHS = [{wch:18},{wch:14},{wch:14},{wch:16},{wch:8}];
 
 function categorySheetRows(cat){
-  const full = computeCategorySummary('', '');
-  const fm = {}; full.rows.forEach(r => fm[r.label] = r);
-  const fx = (i,e) => [i, e, i-e];
-  const sheetRows = [['계정','수입 합계','지출 합계','차액(수입-지출)','건수','전체기간 수입','전체기간 지출','전체기간 차액']];
-  const labels = cat.rows.map(r=>r.label);
-  full.rows.forEach(r=>{ if(!labels.includes(r.label)) cat.rows.push({label:r.label,income:0,expense:0,net:0,count:0}); });
-  cat.rows.forEach(r => sheetRows.push([r.label, r.income, r.expense, r.net, r.count, ...fx((fm[r.label]||{}).income||0,(fm[r.label]||{}).expense||0)]));
-  sheetRows.push(['합계 (이체 포함)', cat.all.income, cat.all.expense, cat.all.income - cat.all.expense, cat.all.count, ...fx(full.all.income, full.all.expense)]);
-  sheetRows.push(['합계 (이체 제외)', cat.noTransfer.income, cat.noTransfer.expense, cat.noTransfer.income - cat.noTransfer.expense, cat.noTransfer.count, ...fx(full.noTransfer.income, full.noTransfer.expense)]);
+  const sheetRows = [['계정','수입 합계','지출 합계','차액(수입-지출)','건수']];
+  cat.rows.forEach(r => sheetRows.push([r.label, r.income, r.expense, r.net, r.count]));
+  sheetRows.push(['합계 (이체 포함)', cat.all.income, cat.all.expense, cat.all.income - cat.all.expense, cat.all.count]);
+  sheetRows.push(['합계 (이체 제외)', cat.noTransfer.income, cat.noTransfer.expense, cat.noTransfer.income - cat.noTransfer.expense, cat.noTransfer.count]);
   return sheetRows;
 }
 
