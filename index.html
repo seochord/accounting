@@ -511,7 +511,7 @@ color:var(--ink-soft);font-size:12.5px;margin-top:30px;display:flex;flex-directi
     <div class="card-caption no-print" id="categoryCaption"></div>
     <div class="table-scroll">
       <table>
-        <thead><tr><th style="text-align:left;">계정</th><th style="text-align:right;">수입 합계</th><th style="text-align:right;">지출 합계</th><th style="text-align:right;">차액(수입-지출)</th><th style="text-align:right;">건수</th></tr></thead>
+        <thead><tr><th style="text-align:left;">계정</th><th style="text-align:right;">금액</th><th style="text-align:right;">건수</th></tr></thead>
         <tbody id="categoryBody"></tbody>
       </table>
     </div>
@@ -1352,7 +1352,7 @@ function computeGroupSummary(field, year, asOfMonth){
      '이체 제외'(거래내역 합계와 일치) 두 가지를 모두 계산해 둔다. */
 function computeCategorySummary(year, month){
   const groups = {};
-  getCategoryList().forEach(c => groups[c] = {income:0, expense:0, count:0});
+  getCategoryList().forEach(c => groups[c] = {income:0, expense:0, count:0, incomeCount:0, expenseCount:0});
   const ym = (year && month) ? `${year}-${month}` : null;
   transactions.forEach(t=>{
     if(ym){
@@ -1361,8 +1361,9 @@ function computeCategorySummary(year, month){
       if(t.date.slice(0,4) !== String(year)) return;
     }
     const cat = t.category || autoClassify(t);
-    if(!groups[cat]) groups[cat] = {income:0, expense:0, count:0};
+    if(!groups[cat]) groups[cat] = {income:0, expense:0, count:0, incomeCount:0, expenseCount:0};
     groups[cat][t.type] += t.amount;
+    groups[cat][t.type + 'Count'] += 1;
     groups[cat].count += 1;
   });
 
@@ -1373,7 +1374,9 @@ function computeCategorySummary(year, month){
       income: groups[k].income,
       expense: groups[k].expense,
       net: groups[k].income - groups[k].expense,
-      count: groups[k].count
+      count: groups[k].count,
+      incomeCount: groups[k].incomeCount,
+      expenseCount: groups[k].expenseCount
     }));
 
   const sum = (list, key) => list.reduce((s,r)=> s + r[key], 0);
@@ -1397,42 +1400,66 @@ function renderCategorySummary(){
   else if(filterYear) periodLabel = `${filterYear}년`;
   else periodLabel = '전체 기간';
   heading.textContent = `계정별 합계 (${periodLabel})`;
-  caption.textContent = `모든 통장을 통합한 계정별 합계입니다(통장 구분 없음). 거래내역의 연도·월 필터와 같은 기간(${periodLabel})만 집계합니다. "합계(이체 포함)"는 위 통장별 합계와, "합계(이체 제외)"는 거래내역 표의 합계와 같은 기준입니다(거래내역에서 통장 필터를 쓰지 않았을 때). 계정은 거래내역에서 계정 배지를 눌러 바꿀 수 있습니다.`;
+  caption.textContent = `모든 통장을 통합한 계정별 합계이며, 수입 계정과 지출 계정을 나누어 보여 줍니다. 거래내역의 연도·월 필터와 같은 기간(${periodLabel})만 집계합니다. "이체 포함"은 위 통장별 합계와, "이체 제외"는 거래내역 표의 합계와 같은 기준입니다(거래내역에서 통장 필터를 쓰지 않았을 때). 계정은 거래내역에서 계정 배지를 눌러 바꿀 수 있습니다.`;
 
   body.innerHTML = '';
   const {rows, all, noTransfer, isEmpty} = computeCategorySummary(filterYear, filterMonth);
   if(isEmpty){ empty.style.display = 'block'; return; }
   empty.style.display = 'none';
 
-  rows.forEach(r=>{
+  // 수입 계정과 지출 계정을 따로 나누어 보여 준다(같은 이름의 계정이라도 수입/지출을 각각 집계).
+  const addSection = (title)=>{
     const tr = document.createElement('tr');
-    if(r.label === '이체') tr.classList.add('tx-transfer');
-    else if(AMBER_CATEGORIES.includes(r.label)) tr.classList.add('tx-refund');
+    tr.className = 'cat-section-row';
+    tr.innerHTML = `<td colspan="3" style="text-align:left;font-weight:700;background:var(--row-alt);">${title}</td>`;
+    body.appendChild(tr);
+  };
+  const addRow = (label, amount, count, kind)=>{
+    const tr = document.createElement('tr');
+    if(label === '이체') tr.classList.add('tx-transfer');
+    else if(AMBER_CATEGORIES.includes(label)) tr.classList.add('tx-refund');
     tr.innerHTML = `
-      <td>${escapeHtml(r.label)}</td>
-      <td class="income">${r.income ? won(r.income) : '-'}</td>
-      <td class="expense">${r.expense ? won(r.expense) : '-'}</td>
-      <td class="${r.net>=0?'balance-pos':'balance-neg'}">${won(r.net)}</td>
-      <td>${r.count}건</td>
+      <td>${escapeHtml(label)}</td>
+      <td class="${kind}">${won(amount)}</td>
+      <td>${count}건</td>
     `;
     body.appendChild(tr);
-  });
-
-  const addTotal = (label, s)=>{
-    const net = s.income - s.expense;
+  };
+  const addTotal = (label, amount, count, kind)=>{
     const tr = document.createElement('tr');
     tr.className = 'total-row';
     tr.innerHTML = `
       <td>${label}</td>
-      <td class="income">${won(s.income)}</td>
-      <td class="expense">${won(s.expense)}</td>
-      <td class="${net>=0?'balance-pos':'balance-neg'}">${won(net)}</td>
-      <td>${s.count}건</td>
+      <td class="${kind}">${won(amount)}</td>
+      <td>${count ?? ''}${count === undefined || count === null ? '' : '건'}</td>
     `;
     body.appendChild(tr);
   };
-  addTotal('합계 (이체 포함)', all);
-  addTotal('합계 (이체 제외)', noTransfer);
+  const order = list => {
+    const base = getCategoryList();
+    return [...list].sort((x,y)=> base.indexOf(x.label) - base.indexOf(y.label));
+  };
+
+  const incRows = order(rows.filter(r => r.incomeCount > 0));
+  const expRows = order(rows.filter(r => r.expenseCount > 0));
+  const incAll = incRows.reduce((a,r)=>a+r.income,0), incCnt = incRows.reduce((a,r)=>a+r.incomeCount,0);
+  const expAll = expRows.reduce((a,r)=>a+r.expense,0), expCnt = expRows.reduce((a,r)=>a+r.expenseCount,0);
+  const incEx = incRows.filter(r=>r.label!=='이체'), expEx = expRows.filter(r=>r.label!=='이체');
+  const incNet = incEx.reduce((a,r)=>a+r.income,0), incNetCnt = incEx.reduce((a,r)=>a+r.incomeCount,0);
+  const expNet = expEx.reduce((a,r)=>a+r.expense,0), expNetCnt = expEx.reduce((a,r)=>a+r.expenseCount,0);
+
+  addSection('수입 계정');
+  incRows.forEach(r => addRow(r.label, r.income, r.incomeCount, 'income'));
+  addTotal('수입 합계 (이체 포함)', incAll, incCnt, 'income');
+  addTotal('수입 합계 (이체 제외)', incNet, incNetCnt, 'income');
+
+  addSection('지출 계정');
+  expRows.forEach(r => addRow(r.label, r.expense, r.expenseCount, 'expense'));
+  addTotal('지출 합계 (이체 포함)', expAll, expCnt, 'expense');
+  addTotal('지출 합계 (이체 제외)', expNet, expNetCnt, 'expense');
+
+  const diff = incNet - expNet;
+  addTotal('차액 (수입-지출, 이체 제외)', diff, undefined, diff >= 0 ? 'balance-pos' : 'balance-neg');
 }
 
 function renderAccountSummary(){
@@ -1801,13 +1828,23 @@ function writeSingleSheetWorkbook(sheetRows, colWidths, sheetName, filenamePrefi
 
 const LEDGER_COL_WIDTHS = [{wch:12},{wch:14},{wch:22},{wch:12},{wch:12},{wch:14}];
 const SUMMARY4_COL_WIDTHS = [{wch:14},{wch:14},{wch:14},{wch:14}];
-const CATEGORY_COL_WIDTHS = [{wch:18},{wch:14},{wch:14},{wch:16},{wch:8}];
+const CATEGORY_COL_WIDTHS = [{wch:8},{wch:26},{wch:16},{wch:8}];
 
 function categorySheetRows(cat){
-  const sheetRows = [['계정','수입 합계','지출 합계','차액(수입-지출)','건수']];
-  cat.rows.forEach(r => sheetRows.push([r.label, r.income, r.expense, r.net, r.count]));
-  sheetRows.push(['합계 (이체 포함)', cat.all.income, cat.all.expense, cat.all.income - cat.all.expense, cat.all.count]);
-  sheetRows.push(['합계 (이체 제외)', cat.noTransfer.income, cat.noTransfer.expense, cat.noTransfer.income - cat.noTransfer.expense, cat.noTransfer.count]);
+  const base = getCategoryList();
+  const order = list => [...list].sort((x,y)=> base.indexOf(x.label) - base.indexOf(y.label));
+  const incRows = order(cat.rows.filter(r => r.incomeCount > 0));
+  const expRows = order(cat.rows.filter(r => r.expenseCount > 0));
+  const sumBy = (list, key) => list.reduce((a,r)=>a+r[key],0);
+  const incEx = incRows.filter(r=>r.label!=='이체'), expEx = expRows.filter(r=>r.label!=='이체');
+  const sheetRows = [['구분','계정','금액','건수']];
+  incRows.forEach(r => sheetRows.push(['수입', r.label, r.income, r.incomeCount]));
+  sheetRows.push(['수입','수입 합계 (이체 포함)', sumBy(incRows,'income'), sumBy(incRows,'incomeCount')]);
+  sheetRows.push(['수입','수입 합계 (이체 제외)', sumBy(incEx,'income'), sumBy(incEx,'incomeCount')]);
+  expRows.forEach(r => sheetRows.push(['지출', r.label, r.expense, r.expenseCount]));
+  sheetRows.push(['지출','지출 합계 (이체 포함)', sumBy(expRows,'expense'), sumBy(expRows,'expenseCount')]);
+  sheetRows.push(['지출','지출 합계 (이체 제외)', sumBy(expEx,'expense'), sumBy(expEx,'expenseCount')]);
+  sheetRows.push(['','차액 (수입-지출, 이체 제외)', sumBy(incEx,'income') - sumBy(expEx,'expense'), '']);
   return sheetRows;
 }
 
