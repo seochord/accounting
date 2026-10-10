@@ -718,8 +718,19 @@ function looksLikePersonName(text){
    - 선교 지원 대상 국가명이 포함되면(예: "26상반기 네팔", "필리핀 배요셉") 선교헌금
    - 사람 이름처럼 보이면 '헌금'
    - 그 외에는 애매한 항목이므로 '기타' */
+// 선교헌금 통장(통장 이름에 '선교'가 들어간 계좌)의 수입은 모두 선교헌금으로 본다.
+// 단, 이체·이월금·오류·여입·환입·이자·예배당이전헌금처럼 성격이 뚜렷한 항목은 그대로 둔다.
+const MISSION_ACCOUNT_KEEP = ['이체','이월금','오류','여입','환입','이자','예배당이전헌금'];
 function autoClassify(tx){
   if(tx.category) return tx.category;
+  const base = classifyByMemo(tx);
+  if(tx.type === 'income' && String(tx.account || '').includes('선교') && !MISSION_ACCOUNT_KEEP.includes(base)){
+    return '선교헌금';
+  }
+  return base;
+}
+
+function classifyByMemo(tx){
   const raw = tx.memo || '';
   const text = raw.replace(/\s/g, '');
   const isIncome = tx.type === 'income';
