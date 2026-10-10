@@ -131,16 +131,21 @@
     cursor:pointer;white-space:nowrap;vertical-align:middle;
   }
   .category-badge:hover{background:var(--paper-line);color:var(--ink);}
-  .category-badge.badge-transfer{background:#DCE6F2;color:#3A5A85;}
+  .category-badge.badge-transfer{background:#FBE7C6;color:#8A5A10;}
   .category-badge.badge-refund{background:#FBE7C6;color:#8A5A10;}
   tr.tx-transfer td.memo, tr.tx-refund td.memo{font-style:italic;}
-  tr.tx-transfer{background:#EEF3FA !important;-webkit-print-color-adjust:exact;print-color-adjust:exact;}
+  tr.tx-transfer{background:#FDF3E3 !important;-webkit-print-color-adjust:exact;print-color-adjust:exact;}
   tr.tx-refund{background:#FDF3E3 !important;-webkit-print-color-adjust:exact;print-color-adjust:exact;}
+  .acct-chip{
+    display:inline-block;padding:1px 8px;border-radius:9px;font-size:12.5px;font-weight:600;
+    white-space:nowrap;-webkit-print-color-adjust:exact;print-color-adjust:exact;
+  }
+  tbody td.acct-cell{border-left:4px solid var(--acct-c,transparent);}
   .special-tag{
     display:inline-block;margin-left:6px;padding:1px 6px;border-radius:8px;
     font-size:11px;font-weight:700;vertical-align:middle;-webkit-print-color-adjust:exact;print-color-adjust:exact;
   }
-  .special-tag.tag-transfer{background:#DCE6F2;color:#3A5A85;}
+  .special-tag.tag-transfer{background:#FBE7C6;color:#8A5A10;}
   .special-tag.tag-refund{background:#FBE7C6;color:#8A5A10;}
   select.category-picker{
     margin-left:6px;padding:1px 4px;border-radius:6px;border:1px solid var(--accent);
@@ -501,6 +506,16 @@ color:var(--ink-soft);font-size:12.5px;margin-top:30px;display:flex;flex-directi
       </table>
     </div>
     <div id="accountEmpty" class="empty" style="display:none;">등록된 거래가 없습니다.</div>
+
+    <h3 id="categoryHeading" style="font-family:'Noto Serif KR',serif;font-size:16.5px;margin:28px 0 10px;">계정별 합계</h3>
+    <div class="card-caption no-print" id="categoryCaption"></div>
+    <div class="table-scroll">
+      <table>
+        <thead><tr><th style="text-align:left;">계정</th><th style="text-align:right;">수입 합계</th><th style="text-align:right;">지출 합계</th><th style="text-align:right;">차액(수입-지출)</th><th style="text-align:right;">건수</th><th style="text-align:right;border-left:2px solid var(--paper-line);">전체기간 수입</th><th style="text-align:right;">전체기간 지출</th><th style="text-align:right;">전체기간 차액</th></tr></thead>
+        <tbody id="categoryBody"></tbody>
+      </table>
+    </div>
+    <div id="categoryEmpty" class="empty" style="display:none;">해당 기간에 거래가 없습니다.</div>
   </div>
 
   <div class="card" id="nameSearchCard">
@@ -649,7 +664,7 @@ function updateStorageStatus(extra){
 }
 
 /* ---------- 계정(카테고리) 자동 분류 ---------- */
-const DEFAULT_CATEGORIES = ['헌금','선교헌금','사례비','공공요금','문화비','대출금','월세','운영비','수리유지비','이체','이월금','여입','오류','기타'];
+const DEFAULT_CATEGORIES = ['헌금','선교헌금','예배당이전헌금','사례비','공공요금','문화비','대출금','월세','운영비','수리유지비','이체','이월금','여입','오류','기타'];
 
 // 선교 지원 대상 국가명 패턴 감지용 (예: "26상반기 네팔", "필리핀 배요셉", "네팔 이정엽" 등 국가명이 포함된 지원비)
 const MISSION_COUNTRY_KEYWORDS = ['네팔','필리핀','파키스탄','대만','타사와르'];
@@ -658,6 +673,8 @@ const MISSION_COUNTRY_KEYWORDS = ['네팔','필리핀','파키스탄','대만','
 const CATEGORY_RULES = [
   { category: '여입', keywords: ['여입'] },
   { category: '오류', keywords: ['오류'] },
+  // 예배당 이전을 위한 헌금: 일반 '헌금'(사람 이름 등)이나 다른 규칙보다 먼저 걸리도록 앞쪽에 둔다.
+  { category: '예배당이전헌금', keywords: ['예배당이전', '예배당이전헌금', '이전헌금'] },
   // 이월금은 계좌간 이체와 성격이 다르다(맞상대 거래가 없는 순수 이월 잔액이므로) — 별도 계정으로 분리해
   // 이체 제외 계산을 하더라도 이월 잔액은 계속 반영되도록 한다.
   { category: '이월금', keywords: ['이월금'] },
@@ -1036,6 +1053,29 @@ document.getElementById('filterMonth').addEventListener('change', (e)=>{
   syncMomMonthWithFilter();
 });
 
+const ACCOUNT_PALETTE = [
+  ['#DCE9F9','#1F4E8C','#4A86D6'], ['#DDF1E2','#1E6B3A','#3FAE66'], ['#EADFF6','#5B3492','#8E5FD0'],
+  ['#D9F0F0','#146666','#2FB0B0'], ['#F9DDE8','#8F2556','#D6558A'], ['#E4E7F7','#33408F','#5C6BD0'],
+  ['#E7EDD2','#4C6014','#8DAA2B'], ['#E6E1DC','#5A4A3C','#9A8574'], ['#D8EAF5','#1B5C80','#3B9AD0'],
+  ['#F3DDF3','#7A2A7A','#C45BC4']
+];
+function accountColor(name){
+  const key = String(name||'').trim();
+  if(!key) return null;
+  let map = {};
+  try{ map = JSON.parse(localStorage.getItem('accountColorMap')||'{}') || {}; }catch(e){}
+  if(map[key] === undefined){
+    const used = Object.keys(map).length;
+    map[key] = used % ACCOUNT_PALETTE.length;
+    try{ localStorage.setItem('accountColorMap', JSON.stringify(map)); }catch(e){}
+  }
+  return ACCOUNT_PALETTE[map[key]];
+}
+function accountCellHTML(name){
+  const c = accountColor(name);
+  if(!c) return '<td class="memo"></td>';
+  return `<td class="memo acct-cell" style="--acct-c:${c[2]}"><span class="acct-chip" style="background:${c[0]};color:${c[1]}">${escapeHtml(name)}</span></td>`;
+}
 function renderLedger(){
   const body = document.getElementById('ledgerBody');
   const empty = document.getElementById('ledgerEmpty');
@@ -1089,7 +1129,7 @@ function renderLedger(){
     const badgeClass = isTransfer ? ' badge-transfer' : (isAmber ? ' badge-refund' : '');
     tr.innerHTML = `
       <td>${tx.date}</td>
-      <td class="memo">${escapeHtml(tx.account || '')}</td>
+      ${accountCellHTML(tx.account || '')}
       <td class="memo">
         ${escapeHtml(tx.memo)}
         <span class="category-badge${badgeClass}" data-id="${tx.id}" title="클릭해서 계정 변경">${escapeHtml(category)}</span>
@@ -1246,6 +1286,107 @@ function computeGroupSummary(field, year, asOfMonth){
   return {rows, grandIncome, grandExpense, isEmpty: transactions.length === 0};
 }
 
+/* 계정(카테고리)별 수입·지출 합계. 거래내역·통장별 잔액과 같은 연도·월 필터 기간을 사용한다.
+   - 연도+월 선택: 그 달 / 연도만 선택: 그 해 / 둘 다 전체: 전체 기간
+   - '이체' 계정도 한 줄로 그대로 보여주되, 합계는 '이체 포함'(통장별 합계와 일치)과
+     '이체 제외'(거래내역 합계와 일치) 두 가지를 모두 계산해 둔다. */
+function computeCategorySummary(year, month){
+  const groups = {};
+  getCategoryList().forEach(c => groups[c] = {income:0, expense:0, count:0});
+  const ym = (year && month) ? `${year}-${month}` : null;
+  transactions.forEach(t=>{
+    if(ym){
+      if(t.date.slice(0,7) !== ym) return;
+    } else if(year){
+      if(t.date.slice(0,4) !== String(year)) return;
+    }
+    const cat = t.category || autoClassify(t);
+    if(!groups[cat]) groups[cat] = {income:0, expense:0, count:0};
+    groups[cat][t.type] += t.amount;
+    groups[cat].count += 1;
+  });
+
+  const rows = Object.keys(groups)
+    .filter(k => groups[k].count > 0)
+    .map(k => ({
+      label: k,
+      income: groups[k].income,
+      expense: groups[k].expense,
+      net: groups[k].income - groups[k].expense,
+      count: groups[k].count
+    }));
+
+  const sum = (list, key) => list.reduce((s,r)=> s + r[key], 0);
+  const exTransfer = rows.filter(r => r.label !== '이체');
+  return {
+    rows,
+    all:        { income: sum(rows,'income'),       expense: sum(rows,'expense'),       count: sum(rows,'count') },
+    noTransfer: { income: sum(exTransfer,'income'), expense: sum(exTransfer,'expense'), count: sum(exTransfer,'count') },
+    isEmpty: rows.length === 0
+  };
+}
+
+function renderCategorySummary(){
+  const body = document.getElementById('categoryBody');
+  const empty = document.getElementById('categoryEmpty');
+  const heading = document.getElementById('categoryHeading');
+  const caption = document.getElementById('categoryCaption');
+
+  let periodLabel;
+  if(filterYear && filterMonth) periodLabel = `${filterYear}년 ${parseInt(filterMonth,10)}월`;
+  else if(filterYear) periodLabel = `${filterYear}년`;
+  else periodLabel = '전체 기간';
+  heading.textContent = `계정별 합계 (${periodLabel})`;
+  caption.textContent = `모든 통장을 통합한 계정별 합계입니다(통장 구분 없음). 왼쪽은 거래내역의 연도·월 필터와 같은 기간(${periodLabel}), 오른쪽 "전체기간"은 필터와 관계없이 모든 거래의 총합입니다. "합계(이체 포함)"는 위 통장별 합계와, "합계(이체 제외)"는 거래내역 표의 합계와 같은 기준입니다(거래내역에서 통장 필터를 쓰지 않았을 때). 계정은 거래내역에서 계정 배지를 눌러 바꿀 수 있습니다.`;
+
+  body.innerHTML = '';
+  const {rows, all, noTransfer, isEmpty} = computeCategorySummary(filterYear, filterMonth);
+  const full = computeCategorySummary('', '');
+  if(isEmpty && full.isEmpty){ empty.style.display = 'block'; return; }
+  empty.style.display = 'none';
+  const fullMap = {};
+  full.rows.forEach(r => fullMap[r.label] = r);
+  const fullCells = (inc, exp) => `
+      <td class="income" style="border-left:2px solid var(--paper-line);">${inc ? won(inc) : '-'}</td>
+      <td class="expense">${exp ? won(exp) : '-'}</td>
+      <td class="${inc-exp>=0?'balance-pos':'balance-neg'}">${won(inc-exp)}</td>`;
+  // 선택 기간에는 거래가 없지만 전체기간에는 있는 계정도 표시한다.
+  const shown = new Set(rows.map(r=>r.label));
+  full.rows.forEach(r=>{ if(!shown.has(r.label)) rows.push({label:r.label, income:0, expense:0, net:0, count:0}); });
+
+  rows.forEach(r=>{
+    const tr = document.createElement('tr');
+    if(r.label === '이체') tr.classList.add('tx-transfer');
+    else if(r.label === '여입' || r.label === '오류') tr.classList.add('tx-refund');
+    tr.innerHTML = `
+      <td>${escapeHtml(r.label)}</td>
+      <td class="income">${r.income ? won(r.income) : '-'}</td>
+      <td class="expense">${r.expense ? won(r.expense) : '-'}</td>
+      <td class="${r.net>=0?'balance-pos':'balance-neg'}">${won(r.net)}</td>
+      <td>${r.count}건</td>
+      ${fullCells((fullMap[r.label]||{}).income||0, (fullMap[r.label]||{}).expense||0)}
+    `;
+    body.appendChild(tr);
+  });
+
+  const addTotal = (label, s, f)=>{
+    const net = s.income - s.expense;
+    const tr = document.createElement('tr');
+    tr.className = 'total-row';
+    tr.innerHTML = `
+      <td>${label}</td>
+      <td class="income">${won(s.income)}</td>
+      <td class="expense">${won(s.expense)}</td>
+      <td class="${net>=0?'balance-pos':'balance-neg'}">${won(net)}</td>
+      <td>${s.count}건</td>
+      ${fullCells(f.income, f.expense)}
+    `;
+    body.appendChild(tr);
+  };
+  addTotal('합계 (이체 포함)', all, full.all);
+  addTotal('합계 (이체 제외)', noTransfer, full.noTransfer);
+}
+
 function renderAccountSummary(){
   // 통장별 잔액은 거래내역과 동일한 연도·월 필터를 사용한다.
   // 단, 잔액은 선택 기간 말까지의 누적 잔액으로 계산한다.
@@ -1266,6 +1407,9 @@ function renderAccountSummary(){
   }
   document.getElementById('accountPrintTitle').textContent = title;
   document.getElementById('accountCaption').textContent = caption;
+
+  // 같은 카드 안의 '계정별 합계' 표도 같은 필터 기준으로 함께 갱신한다.
+  renderCategorySummary();
 }
 
 function renderGroupTable(field, bodyId, emptyId, year, asOfMonth){
@@ -1495,7 +1639,7 @@ function buildMonthlyReportHTML(monthStr){
     const tagLabel = isTransfer ? '이체' : (isRefund ? '여입' : (isError ? '오류' : ''));
     const tagClass = isTransfer ? 'tag-transfer' : ((isRefund || isError) ? 'tag-refund' : '');
     const tag = tagLabel ? ` <span class="special-tag ${tagClass}">${tagLabel}</span>` : '';
-    return `<tr${rowClass}><td>${tx.date}</td><td class="memo">${escapeHtml(tx.account||'')}</td><td class="memo">${escapeHtml(tx.memo)}${tag}</td><td class="income">${inc?won(inc):''}</td><td class="expense">${exp?won(exp):''}</td><td>${won(balance)}</td></tr>`;
+    return `<tr${rowClass}><td>${tx.date}</td>${accountCellHTML(tx.account||'')}<td class="memo">${escapeHtml(tx.memo)}${tag}</td><td class="income">${inc?won(inc):''}</td><td class="expense">${exp?won(exp):''}</td><td>${won(balance)}</td></tr>`;
   }).join('') || `<tr><td colspan="6" style="text-align:center;font-family:'Pretendard';color:var(--ink-soft);">해당 월 거래 내역이 없습니다.</td></tr>`;
 
   // 통장별 잔액 현황: 이체는 해당 통장의 실제 입출금이므로 포함해서 계산한다(거래내역 소계·합계와는 다른 기준).
@@ -1608,6 +1752,20 @@ function writeSingleSheetWorkbook(sheetRows, colWidths, sheetName, filenamePrefi
 
 const LEDGER_COL_WIDTHS = [{wch:12},{wch:14},{wch:22},{wch:12},{wch:12},{wch:14}];
 const SUMMARY4_COL_WIDTHS = [{wch:14},{wch:14},{wch:14},{wch:14}];
+const CATEGORY_COL_WIDTHS = [{wch:18},{wch:14},{wch:14},{wch:16},{wch:8},{wch:16},{wch:16},{wch:16}];
+
+function categorySheetRows(cat){
+  const full = computeCategorySummary('', '');
+  const fm = {}; full.rows.forEach(r => fm[r.label] = r);
+  const fx = (i,e) => [i, e, i-e];
+  const sheetRows = [['계정','수입 합계','지출 합계','차액(수입-지출)','건수','전체기간 수입','전체기간 지출','전체기간 차액']];
+  const labels = cat.rows.map(r=>r.label);
+  full.rows.forEach(r=>{ if(!labels.includes(r.label)) cat.rows.push({label:r.label,income:0,expense:0,net:0,count:0}); });
+  cat.rows.forEach(r => sheetRows.push([r.label, r.income, r.expense, r.net, r.count, ...fx((fm[r.label]||{}).income||0,(fm[r.label]||{}).expense||0)]));
+  sheetRows.push(['합계 (이체 포함)', cat.all.income, cat.all.expense, cat.all.income - cat.all.expense, cat.all.count, ...fx(full.all.income, full.all.expense)]);
+  sheetRows.push(['합계 (이체 제외)', cat.noTransfer.income, cat.noTransfer.expense, cat.noTransfer.income - cat.noTransfer.expense, cat.noTransfer.count, ...fx(full.noTransfer.income, full.noTransfer.expense)]);
+  return sheetRows;
+}
 
 function downloadLedgerExcel(){
   let list = sortedTx();
@@ -1619,13 +1777,19 @@ function downloadLedgerExcel(){
   writeSingleSheetWorkbook(buildLedgerSheetRows(list, openingInfo), LEDGER_COL_WIDTHS, '거래내역', '거래내역');
 }
 
-function downloadGroupExcel(field, sheetName, prefix, year, asOfMonth){
-  const {rows, grandIncome, grandExpense, isEmpty} = computeGroupSummary(field, year, asOfMonth);
+/* 03번 카드 엑셀: 통장별 잔액 + 계정별 합계를 두 시트로 내려받는다(화면과 같은 연도·월 필터 기준). */
+function downloadAccountExcel(){
+  const asOfMonth = (filterYear && filterMonth) ? `${filterYear}-${filterMonth}` : null;
+  const {rows, grandIncome, grandExpense, isEmpty} = computeGroupSummary('account', filterYear, asOfMonth);
   if(isEmpty){ alert('내보낼 내역이 없습니다.'); return; }
-  const headerLabel = field === 'account' ? '통장' : '명목';
-  const finalPrefix = asOfMonth ? `${prefix}_${asOfMonth}` : (year ? `${prefix}_${year}년` : prefix);
   const grandNet = rows.reduce((s,r)=>s+r.net,0);
-  writeSingleSheetWorkbook(summaryToSheetRows(headerLabel, rows, grandIncome, grandExpense, grandNet), SUMMARY4_COL_WIDTHS, sheetName, finalPrefix);
+  const prefix = asOfMonth ? `통장별잔액_${asOfMonth}` : (filterYear ? `통장별잔액_${filterYear}년` : '통장별잔액');
+
+  const wb = XLSX.utils.book_new();
+  appendSheet(wb, summaryToSheetRows('통장', rows, grandIncome, grandExpense, grandNet), SUMMARY4_COL_WIDTHS, '통장별잔액');
+  const cat = computeCategorySummary(filterYear, filterMonth);
+  appendSheet(wb, categorySheetRows(cat), CATEGORY_COL_WIDTHS, '계정별합계');
+  XLSX.writeFile(wb, excelFilename(prefix));
 }
 
 function yearlySummaryRows(){
@@ -1660,15 +1824,13 @@ function downloadFullExcelBackup(){
   const aGrandNet = accRows.reduce((s,r)=>s+r.net,0);
   appendSheet(wb, summaryToSheetRows('통장', accRows, aGrandIncome, aGrandExpense, aGrandNet), SUMMARY4_COL_WIDTHS, '통장별잔액');
 
+  appendSheet(wb, categorySheetRows(computeCategorySummary('', '')), CATEGORY_COL_WIDTHS, '계정별합계(전체기간)');
+
   XLSX.writeFile(wb, excelFilename('전체데이터_종합백업'));
 }
 
 document.getElementById('ledgerExcelBtn').addEventListener('click', downloadLedgerExcel);
-document.getElementById('accountExcelBtn').addEventListener('click', ()=> {
-  // 통장별 잔액 엑셀도 화면의 거래내역과 동일한 연도·월 필터를 사용한다.
-  const asOfMonth = (filterYear && filterMonth) ? `${filterYear}-${filterMonth}` : null;
-  downloadGroupExcel('account','통장별잔액','통장별잔액', filterYear, asOfMonth);
-});
+document.getElementById('accountExcelBtn').addEventListener('click', downloadAccountExcel);
 document.getElementById('exportFullExcelBtn').addEventListener('click', downloadFullExcelBackup);
 
 /* ---------- 백업 / 복원 (JSON) ---------- */
