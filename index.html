@@ -2570,8 +2570,9 @@ document.getElementById('bulkSaveBtn').addEventListener('click', async ()=>{
       let colMap = { date: -1, memo: -1, note: -1, income: -1, expense: -1, amount: -1, type: -1 };
 
       const dateKeys = ['거래일', '일자', '거래일자', '날짜', 'date', '일시'];
-      const nameKeys = ['보낸분', '받는분', '보낸사람', '받은사람', '보내는이', '받는이', '입금자명', '출금자명', '거래상대방', '상대계좌예금주', '예금주', '송금인', '수취인', '입금자', '출금자'];
-      const memoKeys = ['적요', '내용', '거래내용', '취급점', '기증자', '비고', '상호', '기름', '적요/내용'];
+      const nameKeys = ['보낸분', '받는분', '보낸사람', '받은사람', '보내는이', '받는이', '입금자명', '출금자명', '거래상대방', '상대계좌예금주', '예금주', '송금인', '수취인', '입금자', '출금자', '거래기록사항', '기록사항', '기재내용', '의뢰인'];
+      const memoKeys = ['적요', '내용', '거래내용', '기증자', '비고', '상호', '기름', '적요/내용'];
+      const branchKeys = ['거래점', '취급점']; // 지점명 열: 보낸 사람 열이 없을 때만 최후 수단으로 사용
       const noteKeys = ['내통장표시', '내통장메모', '통장메모', '나의메모', '개인메모', '메모'];
       const incomeKeys = ['입금원금', '입금', '입금액', '수입', '수입액', '받은금액'];
       const expenseKeys = ['출금원금', '출금', '출금액', '지출', '지출액', '보낸금액'];
@@ -2582,7 +2583,7 @@ document.getElementById('bulkSaveBtn').addEventListener('click', async ()=>{
         const row = rows[r];
         if(!Array.isArray(row)) continue;
 
-        let dCol = -1, mCol = -1, nCol = -1, noteCol = -1, iCol = -1, eCol = -1, aCol = -1, tCol = -1;
+        let dCol = -1, mCol = -1, bCol = -1, nCol = -1, noteCol = -1, iCol = -1, eCol = -1, aCol = -1, tCol = -1;
 
         row.forEach((cell, c) => {
           if(!cell) return;
@@ -2592,6 +2593,7 @@ document.getElementById('bulkSaveBtn').addEventListener('click', async ()=>{
           if(nCol === -1 && nameKeys.some(k => text.includes(k))) nCol = c;
           if(noteCol === -1 && noteKeys.some(k => text.includes(k))) noteCol = c;
           if(mCol === -1 && memoKeys.some(k => text.includes(k))) mCol = c;
+          if(bCol === -1 && branchKeys.some(k => text.includes(k))) bCol = c;
           if(iCol === -1 && incomeKeys.some(k => text.includes(k))) iCol = c;
           if(eCol === -1 && expenseKeys.some(k => text.includes(k))) eCol = c;
           if(aCol === -1 && amountKeys.some(k => text.includes(k))) aCol = c;
@@ -2600,7 +2602,7 @@ document.getElementById('bulkSaveBtn').addEventListener('click', async ()=>{
 
         if(dCol !== -1 && (iCol !== -1 || eCol !== -1 || aCol !== -1)){
           headerIdx = r;
-          colMap = { date: dCol, memo: (nCol !== -1 ? nCol : mCol), note: noteCol, income: iCol, expense: eCol, amount: aCol, type: tCol };
+          colMap = { date: dCol, memo: (nCol !== -1 ? nCol : (mCol !== -1 ? mCol : bCol)), note: noteCol, income: iCol, expense: eCol, amount: aCol, type: tCol };
           break;
         }
       }
