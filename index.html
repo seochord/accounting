@@ -141,22 +141,75 @@
     white-space:nowrap;-webkit-print-color-adjust:exact;print-color-adjust:exact;
   }
   tbody td.acct-cell{border-left:4px solid var(--acct-c,transparent);}
-  table.cat-side td{font-size:13.5px;padding-left:8px;padding-right:8px;vertical-align:top;}
-  table.cat-side td.cs-label{text-align:left;font-family:'Pretendard';word-break:keep-all;}
-  table.cat-side td.cs-amt{text-align:right;white-space:nowrap;}
-  table.cat-side td.cs-div{border-left:2px solid var(--paper-line);}
-  table.cat-side .cs-cnt{font-size:11.5px;color:var(--ink-soft);margin-left:4px;}
-  table.cat-side td.c-group{background:#E4E6F7;color:#2B3270;font-weight:700;text-align:center;-webkit-print-color-adjust:exact;print-color-adjust:exact;}
-  table.cat-side td.c-group2{background:#F0F1FA;color:#2B3270;font-weight:700;-webkit-print-color-adjust:exact;print-color-adjust:exact;}
+  /* ===== 계정별 현황: 좌(수입) · 우(지출) 표 ===== */
+  table.cat-side{
+    table-layout:fixed;border-collapse:separate;border-spacing:0;width:100%;
+    border:1px solid var(--paper-line);border-radius:10px;overflow:hidden;
+    font-family:'Pretendard',-apple-system,sans-serif;font-size:14.5px;
+  }
+  table.cat-side col.c-l{width:30%;}
+  table.cat-side col.c-a{width:20%;}
+  table.cat-side thead th{
+    padding:11px 12px;font-size:14.5px;font-weight:700;letter-spacing:0.5px;white-space:nowrap;
+    border-bottom:1px solid var(--paper-line);
+    -webkit-print-color-adjust:exact;print-color-adjust:exact;
+  }
+  table.cat-side thead th.h-inc{background:#E3EEFA;color:var(--income);text-align:left;}
+  table.cat-side thead th.h-exp{background:#FBEAEC;color:var(--expense);text-align:left;}
+  table.cat-side thead th.h-amt{text-align:right;}
+  table.cat-side tbody tr, table.cat-side tbody tr:nth-child(even){background:transparent !important;}
+  table.cat-side tbody td{
+    padding:8px 12px;border-bottom:1px solid #E8EFF6;vertical-align:middle;
+    font-family:'Pretendard',-apple-system,sans-serif;font-size:14.5px;line-height:1.45;
+    font-variant-numeric:tabular-nums;color:var(--ink);white-space:normal;
+  }
+  table.cat-side td.cs-label{text-align:left;font-weight:500;word-break:keep-all;overflow-wrap:anywhere;}
+  table.cat-side td.cs-amt{text-align:right;white-space:nowrap;font-weight:600;letter-spacing:-0.2px;}
+  table.cat-side td.cs-amt.income{color:var(--income);}
+  table.cat-side td.cs-amt.expense{color:var(--expense);}
+  table.cat-side td.cs-div{border-left:1px solid var(--paper-line);}
+  table.cat-side .cs-cnt{display:inline-block;margin-left:6px;padding:0 6px;border-radius:8px;background:#EDF2F8;color:var(--ink-soft);font-size:11px;font-weight:600;vertical-align:1px;white-space:nowrap;}
+  table.cat-side td.c-empty{border-bottom-color:transparent;}
+  table.cat-side td.c-group2{
+    background:#F3F6FA;color:var(--ink-soft);font-weight:700;font-size:13px;letter-spacing:0.3px;text-align:left;
+    border-left:3px solid var(--accent);padding-top:7px;padding-bottom:7px;
+    -webkit-print-color-adjust:exact;print-color-adjust:exact;
+  }
+  table.cat-side td.c-group2.cs-div{border-left:3px solid var(--accent);}
   table.cat-side td.c-amber{background:#FDF3E3;-webkit-print-color-adjust:exact;print-color-adjust:exact;}
-  table.cat-side td.c-detail{font-size:12px;color:var(--ink-soft);padding-top:1px;padding-bottom:1px;}
-  table.cat-side td.c-detail.cs-label{padding-left:20px;}
-  table.cat-side td.c-sub{font-weight:700;border-top:1px solid var(--paper-line);}
-  table.cat-side td.c-total{font-weight:700;background:#FFF6CC;border-top:2px solid var(--paper-line);-webkit-print-color-adjust:exact;print-color-adjust:exact;}
-  tr.cat-group-row td{text-align:left !important;font-weight:700;background:#E4E6F7;color:#2B3270;-webkit-print-color-adjust:exact;print-color-adjust:exact;}
-  tr.cat-detail-row td{font-size:12.5px;color:var(--ink-soft);padding-top:2px;padding-bottom:2px;}
-  tr.cat-detail-row td:first-child{padding-left:26px;}
-  tr.cat-subtotal-row td{font-weight:700;border-top:1px solid var(--paper-line);}
+  table.cat-side td.c-detail{font-size:12.5px;font-weight:400;color:var(--ink-soft);padding-top:3px;padding-bottom:3px;border-bottom:1px dashed #E8EFF6;}
+  table.cat-side td.c-detail.cs-label{padding-left:24px;}
+  table.cat-side td.c-detail.cs-label::before{content:'└';color:#B5C7DA;margin-right:6px;}
+  table.cat-side td.c-detail.cs-amt{font-weight:500;color:var(--ink-soft) !important;}
+  table.cat-side td.c-sub{font-weight:700;background:#FAFBFD;border-top:1px solid var(--paper-line);border-bottom:1px solid var(--paper-line);-webkit-print-color-adjust:exact;print-color-adjust:exact;}
+  table.cat-side td.c-sub.cs-label{color:var(--ink-soft);text-align:right;padding-right:6px;}
+  table.cat-side td.c-total{font-weight:800;font-size:15.5px;padding-top:11px;padding-bottom:11px;border-top:2px solid var(--ink);border-bottom:none;-webkit-print-color-adjust:exact;print-color-adjust:exact;}
+  table.cat-side td.c-total.t-inc{background:#E3EEFA;}
+  table.cat-side td.c-total.t-exp{background:#FBEAEC;}
+  table.cat-side td.c-total .cs-cnt{background:rgba(255,255,255,0.7);}
+  table.cat-side td.c-note{background:#F3F6FA;color:var(--ink-soft);font-size:13px;font-weight:700;text-align:left;padding-top:8px;padding-bottom:8px;}
+  @media (max-width:640px){
+    table.cat-side col.c-l{width:24%;}
+    table.cat-side col.c-a{width:26%;}
+    table.cat-side, table.cat-side tbody td{font-size:12.5px;}
+    table.cat-side thead th{padding:9px 6px;font-size:13px;}
+    table.cat-side tbody td{padding:7px 4px;}
+    table.cat-side td.cs-amt{letter-spacing:-0.4px;}
+    table.cat-side td.c-detail{font-size:11.5px;}
+    table.cat-side td.c-detail.cs-label{padding-left:10px;}
+    table.cat-side td.c-total{font-size:12.5px;}
+    table.cat-side td.c-detail.cs-label::before{display:none;}
+    table.cat-side td.cs-amt{padding-left:0;}
+    table.cat-side .cs-cnt{display:none;}
+  }
+  /* 재정보고서(인쇄)용 큰 글씨 */
+  .elder-report table.cat-side{font-size:17px;border-radius:0;}
+  .elder-report table.cat-side thead th{font-size:18px;padding:12px 12px;border-bottom-width:1px;}
+  .elder-report table.cat-side tbody td{font-size:17px;padding:9px 12px;}
+  .elder-report table.cat-side td.c-detail{font-size:15px;padding-top:4px;padding-bottom:4px;}
+  .elder-report table.cat-side td.c-group2{font-size:16px;}
+  .elder-report table.cat-side td.c-total{font-size:19px;}
+  .elder-report table.cat-side .cs-cnt{font-size:13px;}
   .special-tag{
     display:inline-block;margin-left:6px;padding:1px 6px;border-radius:8px;
     font-size:11px;font-weight:700;vertical-align:middle;-webkit-print-color-adjust:exact;print-color-adjust:exact;
@@ -520,7 +573,8 @@ color:var(--ink-soft);font-size:12.5px;margin-top:30px;display:flex;flex-directi
     </label>
     <div class="table-scroll">
       <table class="cat-side">
-        <thead><tr><th style="text-align:left;">수입 항목</th><th style="text-align:right;">금액</th><th style="text-align:left;border-left:2px solid var(--paper-line);">지출 항목</th><th style="text-align:right;">금액</th></tr></thead>
+        <colgroup><col class="c-l"><col class="c-a"><col class="c-l"><col class="c-a"></colgroup>
+        <thead><tr><th class="h-inc">수입 항목</th><th class="h-inc h-amt">금액(원)</th><th class="h-exp">지출 항목</th><th class="h-exp h-amt">금액(원)</th></tr></thead>
         <tbody id="categoryBody"></tbody>
       </table>
     </div>
@@ -757,8 +811,8 @@ function looksLikePersonName(text){
    - 사람 이름처럼 보이면 '헌금'
    - 그 외에는 애매한 항목이므로 '기타' */
 // 선교헌금 통장(통장 이름에 '선교'가 들어간 계좌)의 수입은 모두 선교헌금으로 본다.
-// 단, 이체·이월금·오류·여입·환입·이자·예배당이전헌금처럼 성격이 뚜렷한 항목은 그대로 둔다.
-const MISSION_ACCOUNT_KEEP = ['이체','이월금','오류','여입','환입','이자','예배당이전헌금'];
+// 단, 실제 수입이 아닌 계좌간 이체와 이월금만 그대로 둔다. 그 외 수입은 모두 선교헌금이다.
+const MISSION_ACCOUNT_KEEP = ['이체','이월금'];
 function autoClassify(tx){
   if(tx.category) return tx.category;
   const base = classifyByMemo(tx);
@@ -826,8 +880,17 @@ function isAmberTx(tx){
 }
 
 /* 전체 거래 목록에 대해 category가 없는 거래에만 자동 분류를 채워 넣는다(수동 지정 값은 보존). */
+function isMissionAccountIncome(t){
+  return t.type === 'income' && String(t.account || '').includes('선교');
+}
+
 function classifyAllTransactions(list){
   return list.map(t=>{
+    // 선교헌금 통장의 수입은 모두 선교헌금으로 바꾼다(직접 지정한 계정은 유지, 이체·이월금은 제외).
+    if(isMissionAccountIncome(t) && !t.categoryManual && !MISSION_ACCOUNT_KEEP.includes(t.category || '')){
+      const base = t.category && !LEGACY_CATEGORY_MAP[t.category] ? t.category : autoClassify({...t, category: undefined});
+      return { ...t, category: MISSION_ACCOUNT_KEEP.includes(base) ? base : '선교헌금' };
+    }
     const legacy = LEGACY_CATEGORY_MAP[t.category];
     if(legacy){
       // 정리되어 없어진 예전 계정: 자동 분류였다면 새 규칙으로 다시 분류, 직접 지정이었다면 대응하는 새 계정으로 옮긴다.
@@ -1544,19 +1607,19 @@ function categorySideRowsHTML(R, label, showDetail){
   const L = [], Rt = [], Ltot = [], Rtot = [];
   const addItems = (arr, items, kind)=> items.forEach(it=>{
     arr.push({t:'item', name:it.cat, amount:it.amount, count:it.count, kind, amber:AMBER_CATEGORIES.includes(it.cat)});
-    if(showDetail){
-      it.details.forEach(d => arr.push({t:'detail', name:'· ' + d.label, amount:d.amount, count:d.count, kind}));
-      if(it.more) arr.push({t:'detail', name:'· ' + it.more.label, amount:it.more.amount, count:it.more.count, kind});
+    // 세부내역이 계정 이름과 같은 한 줄뿐이면(예: 사례비 > 사례비) 중복이므로 생략한다.
+    const redundant = it.details.length === 1 && !it.more && it.details[0].label === it.cat;
+    if(showDetail && !redundant){
+      it.details.forEach(d => arr.push({t:'detail', name:d.label, amount:d.amount, count:d.count > 1 ? d.count : null, kind}));
+      if(it.more) arr.push({t:'detail', name:it.more.label, amount:it.more.amount, count:it.more.count, kind});
     }
   });
 
-  L.push({t:'group', name:'수입'});
   if(R.opening !== null) L.push({t:'item', name:'전월 이월금액', amount:R.opening, kind:pn(R.opening)});
   addItems(L, R.incomeItems, 'income');
   Ltot.push({t:'total', name:`${label} 총수입액`, amount:R.incomeTotal, count:R.incomeCount, kind:'income'});
   if(R.opening !== null) Ltot.push({t:'total', name:'총계 (이월금 포함)', amount:R.withCarry, kind:pn(R.withCarry)});
 
-  Rt.push({t:'group', name:'지출'});
   R.groups.forEach(g=>{
     Rt.push({t:'group2', name:g.name});
     addItems(Rt, g.items, 'expense');
@@ -1575,12 +1638,12 @@ function categorySideRowsHTML(R, label, showDetail){
 
   const cells = (e, divider)=>{
     const dv = divider ? ' cs-div' : '';
-    if(!e) return `<td class="cs-label${dv}"></td><td class="cs-amt"></td>`;
+    if(!e) return `<td class="cs-label c-empty${dv}"></td><td class="cs-amt c-empty"></td>`;
     if(e.t === 'group') return `<td colspan="2" class="c-group${dv}">${e.name}</td>`;
     if(e.t === 'group2') return `<td colspan="2" class="c-group2${dv}">${e.name}</td>`;
-    const cls = e.t === 'detail' ? ' c-detail' : (e.t === 'sub' ? ' c-sub' : (e.t === 'total' ? ' c-total' : (e.amber ? ' c-amber' : '')));
+    const cls = e.t === 'detail' ? ' c-detail' : (e.t === 'sub' ? ' c-sub' : (e.t === 'total' ? (' c-total ' + (divider ? 't-exp' : 't-inc')) : (e.amber ? ' c-amber' : '')));
     const cnt = (e.count !== undefined && e.count !== null && e.count !== '') ? `<span class="cs-cnt">${e.count}건</span>` : '';
-    const amt = (e.amount === undefined || e.amount === null) ? '' : won(e.amount);
+    const amt = (e.amount === undefined || e.amount === null) ? '' : String(won(e.amount)).replace(/원$/, '');
     return `<td class="cs-label${cls}${dv}">${escapeHtml(e.name)}${cnt}</td><td class="cs-amt ${e.kind || ''}${cls}">${amt}</td>`;
   };
   const html = [];
@@ -1588,7 +1651,7 @@ function categorySideRowsHTML(R, label, showDetail){
   for(let i=0; i<m; i++) html.push(`<tr>${cells(Ltot[i], false)}${cells(Rtot[i], true)}</tr>`);
 
   if(R.transfer.incomeCount || R.transfer.expenseCount){
-    html.push(`<tr><td colspan="4" class="c-group2" style="text-align:left;">참고 · 계좌간 이체 (총수입·총지출에서 제외)</td></tr>`);
+    html.push(`<tr><td colspan="4" class="c-note">참고 · 계좌간 이체 (총수입·총지출에서 제외)</td></tr>`);
     const tIn = R.transfer.incomeCount ? {t:'item', name:'이체 입금', amount:R.transfer.income, count:R.transfer.incomeCount, kind:'income', amber:true} : null;
     const tOut = R.transfer.expenseCount ? {t:'item', name:'이체 출금', amount:R.transfer.expense, count:R.transfer.expenseCount, kind:'expense', amber:true} : null;
     html.push(`<tr>${cells(tIn, false)}${cells(tOut, true)}</tr>`);
@@ -1844,7 +1907,7 @@ document.getElementById('ledgerBulkDeleteBtn').addEventListener('click', bulkDel
 /* 재정보고서용 '계정별 현황' 표(HTML 문자열). 화면의 03번 카드와 같은 계산(buildCategoryReport)을 쓴다. */
 function categoryReportTableHTML(year, month){
   const R = buildCategoryReport(year, month);
-  return `<table class="cat-side"><thead><tr><th style="text-align:left;">수입 항목</th><th>금액</th><th style="text-align:left;border-left:2px solid var(--paper-line);">지출 항목</th><th>금액</th></tr></thead><tbody>${categorySideRowsHTML(R, `${parseInt(month,10)}월`, true)}</tbody></table>`;
+  return `<table class="cat-side"><colgroup><col class="c-l"><col class="c-a"><col class="c-l"><col class="c-a"></colgroup><thead><tr><th class="h-inc">수입 항목</th><th class="h-inc h-amt">금액(원)</th><th class="h-exp">지출 항목</th><th class="h-exp h-amt">금액(원)</th></tr></thead><tbody>${categorySideRowsHTML(R, `${parseInt(month,10)}월`, true)}</tbody></table>`;
 }
 
 function buildMonthlyReportHTML(monthStr){
