@@ -143,6 +143,9 @@
   tbody td.acct-cell{border-left:4px solid var(--acct-c,transparent);}
   table.cat-side td{font-size:17px;padding:9px 8px;vertical-align:top;}
   table.cat-side thead th{font-size:15.5px;}
+  /* 같은 항목(항목+세부내역)은 한 박스 안에 줄 없이 표시하고, 항목이 끝나는 줄에만 구분선을 긋는다 */
+  table.cat-side tbody td{border-bottom:none;}
+  table.cat-side tbody td.c-end{border-bottom:1px solid var(--paper-line);}
   table.cat-side td.cs-label{text-align:left;font-family:'Pretendard';word-break:keep-all;}
   table.cat-side td.cs-amt{text-align:right;white-space:nowrap;}
   table.cat-side td.cs-div{border-left:2px solid var(--paper-line);}
@@ -1555,6 +1558,7 @@ function categorySideRowsHTML(R, label, showDetail){
       it.details.forEach(d => arr.push({t:'detail', name:'· ' + d.label, amount:d.amount, count:d.count, kind}));
       if(it.more) arr.push({t:'detail', name:'· ' + it.more.label, amount:it.more.amount, count:it.more.count, kind});
     }
+    arr[arr.length - 1].end = true; // 같은 항목(항목+세부내역)은 한 박스: 마지막 줄에만 구분선
   });
 
   L.push({t:'group', name:'수입'});
@@ -1585,7 +1589,7 @@ function categorySideRowsHTML(R, label, showDetail){
     if(!e) return `<td class="cs-label${dv}"></td><td class="cs-amt"></td>`;
     if(e.t === 'group') return `<td colspan="2" class="c-group${dv}">${e.name}</td>`;
     if(e.t === 'group2') return `<td colspan="2" class="c-group2${dv}">${e.name}</td>`;
-    const cls = e.t === 'detail' ? ' c-detail' : (e.t === 'sub' ? ' c-sub' : (e.t === 'total' ? ' c-total' : (e.amber ? ' c-amber' : '')));
+    const cls = (e.t === 'detail' ? ' c-detail' : (e.t === 'sub' ? ' c-sub' : (e.t === 'total' ? ' c-total' : (e.amber ? ' c-amber' : '')))) + (e.end ? ' c-end' : '');
     const cnt = (e.count !== undefined && e.count !== null && e.count !== '') ? `<span class="cs-cnt">${e.count}건</span>` : '';
     const amt = (e.amount === undefined || e.amount === null) ? '' : won(e.amount);
     return `<td class="cs-label${cls}${dv}">${escapeHtml(e.name)}${cnt}</td><td class="cs-amt ${e.kind || ''}${cls}">${amt}</td>`;
