@@ -141,16 +141,17 @@
     white-space:nowrap;-webkit-print-color-adjust:exact;print-color-adjust:exact;
   }
   tbody td.acct-cell{border-left:4px solid var(--acct-c,transparent);}
-  table.cat-side td{font-size:13.5px;padding-left:8px;padding-right:8px;vertical-align:top;}
+  table.cat-side td{font-size:17px;padding:9px 8px;vertical-align:top;}
+  table.cat-side thead th{font-size:15.5px;}
   table.cat-side td.cs-label{text-align:left;font-family:'Pretendard';word-break:keep-all;}
   table.cat-side td.cs-amt{text-align:right;white-space:nowrap;}
   table.cat-side td.cs-div{border-left:2px solid var(--paper-line);}
-  table.cat-side .cs-cnt{font-size:11.5px;color:var(--ink-soft);margin-left:4px;}
+  table.cat-side .cs-cnt{font-size:14px;color:var(--ink-soft);margin-left:4px;}
   table.cat-side td.c-group{background:#E4E6F7;color:#2B3270;font-weight:700;text-align:center;-webkit-print-color-adjust:exact;print-color-adjust:exact;}
   table.cat-side td.c-group2{background:#F0F1FA;color:#2B3270;font-weight:700;-webkit-print-color-adjust:exact;print-color-adjust:exact;}
   table.cat-side td.c-amber{background:#FDF3E3;-webkit-print-color-adjust:exact;print-color-adjust:exact;}
-  table.cat-side td.c-detail{font-size:12px;color:var(--ink-soft);padding-top:1px;padding-bottom:1px;}
-  table.cat-side td.c-detail.cs-label{padding-left:20px;}
+  table.cat-side td.c-detail{font-size:15px;color:var(--ink-soft);padding-top:3px;padding-bottom:3px;}
+  table.cat-side td.c-detail.cs-label{padding-left:22px;}
   table.cat-side td.c-sub{font-weight:700;border-top:1px solid var(--paper-line);}
   table.cat-side td.c-total{font-weight:700;background:#FFF6CC;border-top:2px solid var(--paper-line);-webkit-print-color-adjust:exact;print-color-adjust:exact;}
   tr.cat-group-row td{text-align:left !important;font-weight:700;background:#E4E6F7;color:#2B3270;-webkit-print-color-adjust:exact;print-color-adjust:exact;}
@@ -287,6 +288,12 @@ color:var(--ink-soft);font-size:12.5px;margin-top:30px;display:flex;flex-directi
   .elder-report .card-caption{ font-size:16px; line-height:1.6; }
   body.printing .elder-report .print-title.print-target-title{ font-size:30px; margin-bottom:22px; }
   .elder-report div[style*="text-align:right"]{ font-size:18px; }
+  /* 재정보고서의 '계정별 현황' 표(수입/지출 2단)도 같이 크게 */
+  .elder-report table.cat-side td{ font-size:22px; padding:12px 10px; }
+  .elder-report table.cat-side thead th{ font-size:20px; }
+  .elder-report table.cat-side td.c-detail{ font-size:19px; padding-top:5px; padding-bottom:5px; }
+  .elder-report table.cat-side td.c-detail.cs-label{ padding-left:26px; }
+  .elder-report table.cat-side .cs-cnt{ font-size:17px; margin-left:6px; }
 
   /* OCR & Excel & PDF Upload */
   .ocr-toolbar, .excel-toolbar, .pdf-toolbar{display:flex;gap:10px;flex-wrap:wrap;align-items:end;margin-bottom:14px;}
