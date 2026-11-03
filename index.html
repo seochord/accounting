@@ -205,11 +205,17 @@
   /* 재정보고서(인쇄)용 큰 글씨 */
   .elder-report table.cat-side{font-size:17px;border-radius:0;}
   .elder-report table.cat-side thead th{font-size:18px;padding:12px 12px;border-bottom-width:1px;}
-  .elder-report table.cat-side tbody td{font-size:17px;padding:9px 12px;}
-  .elder-report table.cat-side td.c-detail{font-size:15px;padding-top:4px;padding-bottom:4px;}
-  .elder-report table.cat-side td.c-group2{font-size:16px;}
-  .elder-report table.cat-side td.c-total{font-size:19px;}
-  .elder-report table.cat-side .cs-cnt{font-size:13px;}
+  .elder-report table.cat-side tbody td{font-size:16px;padding:6px 12px;}
+  .elder-report table.cat-side td.c-detail{font-size:14px;padding-top:2px;padding-bottom:2px;}
+  .elder-report table.cat-side td.c-group2{font-size:15px;padding-top:5px;padding-bottom:5px;}
+  .elder-report table.cat-side td.c-total{font-size:18px;padding-top:9px;padding-bottom:9px;}
+  .elder-report table.cat-side .cs-cnt{font-size:12px;}
+  /* 인쇄: 계정별 현황은 새 페이지에서 시작하고, 표의 줄이 중간에 잘리지 않게 한다 */
+  .rpt-new-page{break-before:page;page-break-before:always;}
+  .rpt-keep{break-inside:avoid;page-break-inside:avoid;}
+  .elder-report tr{break-inside:avoid;page-break-inside:avoid;}
+  .elder-report thead{display:table-header-group;}
+  .elder-report table.cat-side, .elder-report table.cat-side *{-webkit-print-color-adjust:exact;print-color-adjust:exact;}
   .special-tag{
     display:inline-block;margin-left:6px;padding:1px 6px;border-radius:8px;
     font-size:11px;font-weight:700;vertical-align:middle;-webkit-print-color-adjust:exact;print-color-adjust:exact;
@@ -1986,11 +1992,15 @@ function buildMonthlyReportHTML(monthStr){
     </tbody></table>
     <div class="card-caption" style="margin-top:8px;"><span class="special-tag tag-transfer">이체</span> 계좌간 이체 · <span class="special-tag tag-refund">여입 · 오류</span> 오류로 지출됐다 재입금(여입)되거나 착오 처리된 거래(오류) — 이체만 위 합계·소계 계산에서 제외되며, 여입·오류는 포함됩니다. 아래 통장별 잔액은 이체까지 포함하는 별도 기준입니다.</div>
 
-    <h3 style="font-family:'Noto Serif KR',serif;margin:26px 0 8px;">2. ${monthLabel} 계정별 현황</h3>
+    <div class="rpt-new-page">
+    <h3 style="font-family:'Noto Serif KR',serif;margin:0 0 8px;">2. ${monthLabel} 계정별 현황</h3>
     ${categoryReportTableHTML(y, m)}
     <div class="card-caption" style="margin-top:8px;">개인 헌금자 이름은 세부내역에 나열하지 않습니다. 계좌간 이체는 총수입·총지출에서 제외하고 표 맨 아래에 따로 표시합니다.</div>
+    </div>
 
+    <div class="rpt-keep">
     ${accountSummaryHtml}
+    </div>
     <div style="margin-top:40px;text-align:right;">작성일: ${today}</div>
     </div>
   `;
