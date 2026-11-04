@@ -917,6 +917,12 @@ async function loadData(){
       updateStorageStatus('인증 실패 · 로컬 캐시만 사용');
       return;
     }
+    if(res.status === 429){
+      sessionStorage.removeItem(PASSCODE_KEY);
+      alert('암호를 너무 많이 틀려서 잠시 차단되었습니다. 15분 후에 다시 시도해 주세요.');
+      updateStorageStatus('암호 시도 초과 · 로컬 캐시만 사용');
+      return;
+    }
     if(!res.ok) throw new Error('서버 응답 오류 (' + res.status + ')');
     const data = await res.json();
     transactions = classifyAllTransactions(Array.isArray(data.transactions) ? data.transactions : []);
@@ -952,6 +958,13 @@ async function saveData(){
       alert('암호가 올바르지 않아 서버에 저장되지 않았습니다. 로컬에는 저장되었습니다.');
       serverAvailable = false;
       updateStorageStatus('인증 실패 · 로컬에만 저장됨');
+      return;
+    }
+    if(res.status === 429){
+      sessionStorage.removeItem(PASSCODE_KEY);
+      alert('암호를 너무 많이 틀려서 잠시 차단되었습니다. 서버에 저장되지 않았고 로컬에만 저장되었습니다. 15분 후에 다시 시도해 주세요.');
+      serverAvailable = false;
+      updateStorageStatus('암호 시도 초과 · 로컬에만 저장됨');
       return;
     }
     if(!res.ok) throw new Error('서버 응답 오류 (' + res.status + ')');
@@ -1229,16 +1242,16 @@ function renderLedger(){
     if(isAmber) tr.classList.add('tx-refund');
     const badgeClass = isTransfer ? ' badge-transfer' : (isAmber ? ' badge-refund' : '');
     tr.innerHTML = `
-      <td>${tx.date}</td>
+      <td>${escapeHtml(tx.date)}</td>
       ${accountCellHTML(tx.account || '')}
       <td class="memo">
         ${escapeHtml(tx.memo)}
-        <span class="category-badge${badgeClass}" data-id="${tx.id}" title="클릭해서 계정 변경">${escapeHtml(category)}</span>
+        <span class="category-badge${badgeClass}" data-id="${escapeHtml(tx.id)}" title="클릭해서 계정 변경">${escapeHtml(category)}</span>
       </td>
       <td class="income">${inc ? wonNum(inc) : ''}</td>
       <td class="expense">${exp ? wonNum(exp) : ''}</td>
       <td class="${balance>=0?'balance-pos':'balance-neg'}">${wonNum(balance)}</td>
-      <td class="row-actions"><button class="edit-btn" data-id="${tx.id}">수정</button><button class="del-btn" data-id="${tx.id}">삭제</button></td>
+      <td class="row-actions"><button class="edit-btn" data-id="${escapeHtml(tx.id)}">수정</button><button class="del-btn" data-id="${escapeHtml(tx.id)}">삭제</button></td>
     `;
     body.appendChild(tr);
   });
@@ -1321,10 +1334,12 @@ function openCategoryPicker(badge){
   select.addEventListener('blur', ()=> finish(false));
 }
 
+/* HTML 본문과 속성값(큰따옴표/작은따옴표) 양쪽에서 안전하도록 5개 문자를 모두 치환한다.
+   (이전 방식은 따옴표를 바꾸지 않아 value="..." 같은 속성에서 탈출이 가능했다) */
 function escapeHtml(s){
-  const d = document.createElement('div');
-  d.textContent = s;
-  return d.innerHTML;
+  return String(s === undefined || s === null ? '' : s).replace(/[&<>"']/g, ch => (
+    {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]
+  ));
 }
 
 function computeOpeningBalance(list){
@@ -1587,8 +1602,8 @@ function categorySideRowsHTML(R, label, showDetail){
   const cells = (e, divider)=>{
     const dv = divider ? ' cs-div' : '';
     if(!e) return `<td class="cs-label${dv}"></td><td class="cs-amt"></td>`;
-    if(e.t === 'group') return `<td colspan="2" class="c-group${dv}">${e.name}</td>`;
-    if(e.t === 'group2') return `<td colspan="2" class="c-group2${dv}">${e.name}</td>`;
+    if(e.t === 'group') return `<td colspan="2" class="c-group${dv}">${escapeHtml(e.name)}</td>`;
+    if(e.t === 'group2') return `<td colspan="2" class="c-group2${dv}">${escapeHtml(e.name)}</td>`;
     const cls = (e.t === 'detail' ? ' c-detail' : (e.t === 'sub' ? ' c-sub' : (e.t === 'total' ? ' c-total' : (e.amber ? ' c-amber' : '')))) + (e.end ? ' c-end' : '');
     const cnt = (e.count !== undefined && e.count !== null && e.count !== '') ? `<span class="cs-cnt">${e.count}건</span>` : '';
     const amt = (e.amount === undefined || e.amount === null) ? '' : won(e.amount);
@@ -1770,7 +1785,7 @@ function renderNameSearch(){
     const exp = tx.type === 'expense' ? tx.amount : 0;
     const tr = document.createElement('tr');
     tr.innerHTML = `
-      <td>${tx.date}</td>
+      <td>${escapeHtml(tx.date)}</td>
       <td class="memo">${escapeHtml(tx.account || '')}</td>
       <td class="memo">${escapeHtml(tx.memo)}</td>
       <td class="income">${inc ? won(inc) : ''}</td>
@@ -1887,8 +1902,8 @@ function buildMonthlyReportHTML(monthStr){
     const rowClass = isTransfer ? ' class="tx-transfer"' : ((isRefund || isError) ? ' class="tx-refund"' : '');
     const tagLabel = isTransfer ? '이체' : (isRefund ? catNow : (isError ? '오류' : ''));
     const tagClass = isTransfer ? 'tag-transfer' : ((isRefund || isError) ? 'tag-refund' : '');
-    const tag = tagLabel ? ` <span class="special-tag ${tagClass}">${tagLabel}</span>` : '';
-    return `<tr${rowClass}><td>${tx.date}</td>${accountCellHTML(tx.account||'')}<td class="memo">${escapeHtml(tx.memo)}${tag}</td><td class="income">${inc?won(inc):''}</td><td class="expense">${exp?won(exp):''}</td><td>${won(balance)}</td></tr>`;
+    const tag = tagLabel ? ` <span class="special-tag ${tagClass}">${escapeHtml(tagLabel)}</span>` : '';
+    return `<tr${rowClass}><td>${escapeHtml(tx.date)}</td>${accountCellHTML(tx.account||'')}<td class="memo">${escapeHtml(tx.memo)}${tag}</td><td class="income">${inc?won(inc):''}</td><td class="expense">${exp?won(exp):''}</td><td>${won(balance)}</td></tr>`;
   }).join('') || `<tr><td colspan="6" style="text-align:center;font-family:'Pretendard';color:var(--ink-soft);">해당 월 거래 내역이 없습니다.</td></tr>`;
 
   // 통장별 잔액 현황: 이체는 해당 통장의 실제 입출금이므로 포함해서 계산한다(거래내역 소계·합계와는 다른 기준).

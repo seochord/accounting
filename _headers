@@ -1,0 +1,17 @@
+# Cloudflare Pages 보안 헤더 (이 파일은 저장소 최상위 폴더에 있어야 적용됩니다)
+
+/*
+  X-Content-Type-Options: nosniff
+  X-Frame-Options: DENY
+  Referrer-Policy: no-referrer
+  Permissions-Policy: camera=(), microphone=(), geolocation=(), payment=(), usb=()
+  Strict-Transport-Security: max-age=31536000
+  Cross-Origin-Opener-Policy: same-origin
+  # ▼ 1단계: 먼저 "Report-Only"(보고만 하고 차단은 안 함)로 시작합니다.
+  #   사이트에서 OCR·PDF·엑셀 기능을 모두 써보고 브라우저 콘솔(F12)에
+  #   'Content Security Policy' 경고가 없으면, 아래 줄의 이름에서 "-Report-Only"를
+  #   지워 "Content-Security-Policy"로 바꾸면 실제로 차단이 적용됩니다.
+  Content-Security-Policy-Report-Only: default-src 'self'; script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval' blob: https://cdnjs.cloudflare.com https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com https://cdn.jsdelivr.net; img-src 'self' data: blob:; connect-src 'self' https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://tessdata.projectnaptha.com; worker-src 'self' blob:; object-src 'none'; base-uri 'none'; form-action 'self'; frame-ancestors 'none'
+
+/api/*
+  Cache-Control: no-store
