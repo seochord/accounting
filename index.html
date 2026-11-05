@@ -147,6 +147,14 @@
     border:1px solid var(--paper-line);border-radius:10px;overflow:hidden;
     font-family:'Pretendard',-apple-system,sans-serif;font-size:14.5px;
   }
+  .cat-mode{display:inline-flex;gap:0;margin:0 0 10px;border:1px solid var(--paper-line);border-radius:999px;overflow:hidden;background:#fff;}
+  .cat-mode label{display:flex;align-items:baseline;gap:6px;padding:7px 16px;cursor:pointer;font-size:14px;color:var(--ink-soft);}
+  .cat-mode label + label{border-left:1px solid var(--paper-line);}
+  .cat-mode input{position:absolute;opacity:0;pointer-events:none;}
+  .cat-mode label span{font-weight:700;}
+  .cat-mode label small{font-size:11.5px;}
+  .cat-mode label:has(input:checked){background:var(--accent);color:#fff;}
+  .cat-mode label:has(input:focus-visible){outline:2px solid var(--accent);outline-offset:2px;}
   table.cat-side col.c-l{width:30%;}
   table.cat-side col.c-a{width:20%;}
   table.cat-side thead th{
@@ -574,9 +582,10 @@ color:var(--ink-soft);font-size:12.5px;margin-top:30px;display:flex;flex-directi
       </div>
     </h2>
     <div class="card-caption no-print" id="categoryCaption"></div>
-    <label class="no-print" style="display:inline-flex;align-items:center;gap:6px;font-size:13.5px;margin:0 0 8px;cursor:pointer;">
-      <input type="checkbox" id="categoryDetailToggle" checked> 세부내역 함께 보기
-    </label>
+    <div class="cat-mode no-print" role="radiogroup" aria-label="보기 구분">
+      <label><input type="radio" name="categoryMode" value="internal" checked><span>내부용</span><small>세부내역까지</small></label>
+      <label><input type="radio" name="categoryMode" value="external"><span>외부용</span><small>계정별 건수·합계만</small></label>
+    </div>
     <div class="table-scroll">
       <table class="cat-side">
         <colgroup><col class="c-l"><col class="c-a"><col class="c-l"><col class="c-a"></colgroup>
@@ -654,6 +663,13 @@ color:var(--ink-soft);font-size:12.5px;margin-top:30px;display:flex;flex-directi
       <div class="f-item">
         <label>기준월</label>
         <input type="month" id="momMonth">
+      </div>
+      <div class="f-item">
+        <label>계정별 현황</label>
+        <select id="reportCategoryMode">
+          <option value="external" selected>외부용 (건수·합계만)</option>
+          <option value="internal">내부용 (세부내역 포함)</option>
+        </select>
       </div>
       <div class="f-item">
         <button type="button" class="tool-btn" id="churchReportBtn">월간재정보고서 출력</button>
@@ -1511,7 +1527,7 @@ const EXPENSE_GROUPS = [
   { name:'고정비', cats:['대출금','건물관리비'] }
 ];
 // 개인 헌금자 이름이 그대로 노출되지 않도록 세부내역을 생략하는 수입 계정
-const NO_DETAIL_INCOME = ['헌금','선교헌금'];
+const NO_DETAIL_INCOME = ['헌금','선교헌금','예배당이전헌금'];
 const CATEGORY_DETAIL_LIMIT = 5;
 // 세부내역을 개수 제한 없이 모두 보여 줄 계정(선교비는 후원 내역을 전부 확인해야 하므로)
 const CATEGORY_DETAIL_ALL = ['선교비'];
@@ -1542,7 +1558,9 @@ function summarizeDetails(list, withDetail, limit){
   return res;
 }
 
-function buildCategoryReport(year, month){
+// 보기 구분: internal(내부용) = 모든 계정의 세부내역 / external(외부용) = 계정별 건수·합계만(환입·여입 등 일부 수입은 적요 유지)
+function buildCategoryReport(year, month, mode){
+  mode = mode === 'external' ? 'external' : 'internal';
   const bounds = periodBounds(year, month);
   const base = getCategoryList();
   const sortCats = list => [...list].sort((x,y)=> base.indexOf(x) - base.indexOf(y));
@@ -1570,7 +1588,7 @@ function buildCategoryReport(year, month){
   const inc = byType('income'), exp = byType('expense');
 
   const incomeItems = sortCats(Object.keys(inc).filter(c => c !== '이체')).map(c=>{
-    const r = summarizeDetails(inc[c], !NO_DETAIL_INCOME.includes(c));
+    const r = summarizeDetails(inc[c], mode === 'internal' || !NO_DETAIL_INCOME.includes(c));
     return { cat:c, ...r };
   });
   const incomeTotal = incomeItems.reduce((a,i)=>a+i.amount,0);
@@ -1579,10 +1597,10 @@ function buildCategoryReport(year, month){
   const expCats = sortCats(Object.keys(exp).filter(c => c !== '이체'));
   const used = new Set();
   const groups = EXPENSE_GROUPS.map(g=>{
-    const items = g.cats.filter(c => expCats.includes(c)).map(c=>{ used.add(c); return { cat:c, ...summarizeDetails(exp[c], true, CATEGORY_DETAIL_ALL.includes(c) ? Infinity : undefined) }; });
+    const items = g.cats.filter(c => expCats.includes(c)).map(c=>{ used.add(c); return { cat:c, ...summarizeDetails(exp[c], mode === 'internal', CATEGORY_DETAIL_ALL.includes(c) ? Infinity : undefined) }; });
     return { name:g.name, items };
   });
-  const others = expCats.filter(c => !used.has(c)).map(c => ({ cat:c, ...summarizeDetails(exp[c], true) }));
+  const others = expCats.filter(c => !used.has(c)).map(c => ({ cat:c, ...summarizeDetails(exp[c], mode === 'internal') }));
   groups.push({ name:'기타 지출', items: others });
   groups.forEach(g=>{
     g.amount = g.items.reduce((a,i)=>a+i.amount,0);
@@ -1604,10 +1622,10 @@ function buildCategoryReport(year, month){
   };
 }
 
-let categoryDetailVisible = true;
+let categoryMode = 'internal';   // 03번 카드 보기 구분(내부용/외부용)
 
 /* 좌(수입) · 우(지출) 두 칸으로 나란히 보여 주는 표의 <tr> 목록을 만든다. (03번 카드와 재정보고서가 함께 사용) */
-function categorySideRowsHTML(R, label, showDetail){
+function categorySideRowsHTML(R, label){
   const pn = v => v >= 0 ? 'balance-pos' : 'balance-neg';
   // 한쪽 칸의 항목: {t:'group'|'group2'|'item'|'detail'|'sub'|'total', name, amount, count, kind, amber}
   const L = [], Rt = [], Ltot = [], Rtot = [];
@@ -1615,7 +1633,7 @@ function categorySideRowsHTML(R, label, showDetail){
     arr.push({t:'item', name:it.cat, amount:it.amount, count:it.count, kind, amber:AMBER_CATEGORIES.includes(it.cat)});
     // 세부내역이 계정 이름과 같은 한 줄뿐이면(예: 사례비 > 사례비) 중복이므로 생략한다.
     const redundant = it.details.length === 1 && !it.more && it.details[0].label === it.cat;
-    if(showDetail && !redundant){
+    if(!redundant){
       it.details.forEach(d => arr.push({t:'detail', name:d.label, amount:d.amount, count:d.count > 1 ? d.count : null, kind}));
       if(it.more) arr.push({t:'detail', name:it.more.label, amount:it.more.amount, count:it.more.count, kind});
     }
@@ -1676,14 +1694,15 @@ function renderCategorySummary(){
   else if(filterYear) periodLabel = `${filterYear}년`;
   else periodLabel = '전체 기간';
   const shortLabel = (filterYear && filterMonth) ? `${parseInt(filterMonth,10)}월` : (filterYear ? `${filterYear}년` : '전체');
-  heading.textContent = `계정별 현황 (${periodLabel})`;
-  caption.textContent = `모든 통장을 통합한 재정현황입니다. 왼쪽은 수입, 오른쪽은 지출이며 거래내역의 연도·월 필터와 같은 기간(${periodLabel})만 집계합니다. 계좌간 이체는 총수입·총지출에서 제외하고 맨 아래에 따로 표시합니다. 개인 헌금자 이름은 세부내역에 나열하지 않습니다.`;
+  heading.textContent = `계정별 현황 (${periodLabel})${categoryMode === 'internal' ? ' · 내부용' : ''}`;
+  caption.textContent = `모든 통장을 통합한 재정현황입니다. 왼쪽은 수입, 오른쪽은 지출이며 거래내역의 연도·월 필터와 같은 기간(${periodLabel})만 집계합니다. 계좌간 이체는 총수입·총지출에서 제외하고 맨 아래에 따로 표시합니다.`;
+  caption.textContent += categoryMode === 'internal' ? ' [내부용] 계정별 세부내역(적요별 금액)까지 보여 줍니다.' : ' [외부용] 계정별 건수와 합계만 보여 줍니다.';
 
   body.innerHTML = '';
-  const R = buildCategoryReport(filterYear, filterMonth);
+  const R = buildCategoryReport(filterYear, filterMonth, categoryMode);
   if(R.isEmpty && !R.opening){ empty.style.display = 'block'; return; }
   empty.style.display = 'none';
-  body.innerHTML = categorySideRowsHTML(R, shortLabel, categoryDetailVisible);
+  body.innerHTML = categorySideRowsHTML(R, shortLabel);
 }
 
 function renderAccountSummary(){
@@ -1911,13 +1930,15 @@ document.getElementById('ledgerBulkDeleteBtn').addEventListener('click', bulkDel
 
 /* ---------- 월간 재정보고서 (통합 인쇄) ---------- */
 /* 재정보고서용 '계정별 현황' 표(HTML 문자열). 화면의 03번 카드와 같은 계산(buildCategoryReport)을 쓴다. */
-function categoryReportTableHTML(year, month){
-  const R = buildCategoryReport(year, month);
-  return `<table class="cat-side"><colgroup><col class="c-l"><col class="c-a"><col class="c-l"><col class="c-a"></colgroup><thead><tr><th class="h-inc">수입 항목</th><th class="h-inc h-amt">금액(원)</th><th class="h-exp">지출 항목</th><th class="h-exp h-amt">금액(원)</th></tr></thead><tbody>${categorySideRowsHTML(R, `${parseInt(month,10)}월`, true)}</tbody></table>`;
+function categoryReportTableHTML(year, month, mode){
+  const R = buildCategoryReport(year, month, mode);
+  return `<table class="cat-side"><colgroup><col class="c-l"><col class="c-a"><col class="c-l"><col class="c-a"></colgroup><thead><tr><th class="h-inc">수입 항목</th><th class="h-inc h-amt">금액(원)</th><th class="h-exp">지출 항목</th><th class="h-exp h-amt">금액(원)</th></tr></thead><tbody>${categorySideRowsHTML(R, `${parseInt(month,10)}월`)}</tbody></table>`;
 }
 
 function buildMonthlyReportHTML(monthStr){
   const [y, m] = monthStr.split('-');
+  const catModeEl = document.getElementById('reportCategoryMode');
+  const catMode = catModeEl ? catModeEl.value : 'external';
   const monthLabel = `${y}년 ${parseInt(m,10)}월`;
 
   const monthTx = sortedTx().filter(t => t.date.slice(0,7) === monthStr);
@@ -1993,9 +2014,9 @@ function buildMonthlyReportHTML(monthStr){
     <div class="card-caption" style="margin-top:8px;"><span class="special-tag tag-transfer">이체</span> 계좌간 이체 · <span class="special-tag tag-refund">여입 · 오류</span> 오류로 지출됐다 재입금(여입)되거나 착오 처리된 거래(오류) — 이체만 위 합계·소계 계산에서 제외되며, 여입·오류는 포함됩니다. 아래 통장별 잔액은 이체까지 포함하는 별도 기준입니다.</div>
 
     <div class="rpt-new-page">
-    <h3 style="font-family:'Noto Serif KR',serif;margin:0 0 8px;">2. ${monthLabel} 계정별 현황</h3>
-    ${categoryReportTableHTML(y, m)}
-    <div class="card-caption" style="margin-top:8px;">개인 헌금자 이름은 세부내역에 나열하지 않습니다. 계좌간 이체는 총수입·총지출에서 제외하고 표 맨 아래에 따로 표시합니다.</div>
+    <h3 style="font-family:'Noto Serif KR',serif;margin:0 0 8px;">2. ${monthLabel} 계정별 현황${catMode === 'internal' ? ' (내부용)' : ''}</h3>
+    ${categoryReportTableHTML(y, m, catMode)}
+    <div class="card-caption" style="margin-top:8px;">계좌간 이체는 총수입·총지출에서 제외하고 표 맨 아래에 따로 표시합니다.</div>
     </div>
 
     <div class="rpt-keep">
@@ -2069,8 +2090,8 @@ const LEDGER_COL_WIDTHS = [{wch:12},{wch:14},{wch:22},{wch:12},{wch:12},{wch:14}
 const SUMMARY4_COL_WIDTHS = [{wch:14},{wch:14},{wch:14},{wch:14}];
 const CATEGORY_COL_WIDTHS = [{wch:8},{wch:34},{wch:16},{wch:8}];
 
-function categorySheetRows(year, month){
-  const R = buildCategoryReport(year || '', month || '');
+function categorySheetRows(year, month, mode){
+  const R = buildCategoryReport(year || '', month || '', mode || 'internal');
   const label = (year && month) ? `${parseInt(month,10)}월` : (year ? `${year}년` : '전체');
   const sheetRows = [['구분','항목','금액','건수']];
   const addItems = (kind, items)=>{
@@ -2123,10 +2144,10 @@ function downloadAccountExcel(){
 
 /* 03번 카드 엑셀: 계정별 현황(화면과 같은 연도·월 필터 기준) */
 function downloadCategoryExcel(){
-  const R = buildCategoryReport(filterYear, filterMonth);
+  const R = buildCategoryReport(filterYear, filterMonth, categoryMode);
   if(R.isEmpty && !R.opening){ alert('내보낼 내역이 없습니다.'); return; }
   const prefix = (filterYear && filterMonth) ? `계정별현황_${filterYear}-${filterMonth}` : (filterYear ? `계정별현황_${filterYear}년` : '계정별현황');
-  writeSingleSheetWorkbook(categorySheetRows(filterYear, filterMonth), CATEGORY_COL_WIDTHS, '계정별현황', prefix);
+  writeSingleSheetWorkbook(categorySheetRows(filterYear, filterMonth, categoryMode), CATEGORY_COL_WIDTHS, '계정별현황', prefix + (categoryMode === 'external' ? '_외부용' : '_내부용'));
 }
 
 function yearlySummaryRows(){
@@ -2166,7 +2187,7 @@ function downloadFullExcelBackup(){
   XLSX.writeFile(wb, excelFilename('전체데이터_종합백업'));
 }
 
-document.getElementById('categoryDetailToggle').addEventListener('change', e=>{ categoryDetailVisible = e.target.checked; renderCategorySummary(); });
+document.querySelectorAll('input[name="categoryMode"]').forEach(r=> r.addEventListener('change', e=>{ if(e.target.checked){ categoryMode = e.target.value; renderCategorySummary(); } }));
 document.getElementById('ledgerExcelBtn').addEventListener('click', downloadLedgerExcel);
 document.getElementById('accountExcelBtn').addEventListener('click', downloadAccountExcel);
 document.getElementById('categoryExcelBtn').addEventListener('click', downloadCategoryExcel);
