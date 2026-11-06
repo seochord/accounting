@@ -346,6 +346,23 @@ color:var(--ink-soft);font-size:12.5px;margin-top:30px;display:flex;flex-directi
     body.printing .print-title.print-target-title{display:block;font-family:'Noto Serif KR',serif;font-size:20.5px;font-weight:700;margin-bottom:14px;}
   }
 
+
+  /* 재정보고서(03) 인쇄: A4 한 장, 제목 가운데 정렬 */
+  @page{size:A4 portrait;margin:12mm;}
+  @media print{
+    body.printing #categoryCard .idx{display:none;}
+    body.printing #categoryCard > h2{display:block;margin:0 0 4mm;padding:0;border:none;font-size:0;}
+    body.printing #categoryCard .print-title.print-target-title{text-align:center;font-size:26px;letter-spacing:1px;margin:0 0 5mm;padding-bottom:3mm;border-bottom:2px solid #1F2A3C;}
+    body.printing #categoryCard .table-scroll{overflow:visible;}
+    body.printing #categoryCard{width:186mm;}
+    body.printing #categoryCard table.cat-side{font-size:15px;}
+    body.printing #categoryCard table.cat-side tbody td{padding:6px 8px;}
+    body.printing #categoryCard table.cat-side td.c-detail{font-size:13px;padding-top:3px;padding-bottom:3px;}
+    body.printing #categoryCard table.cat-side td.c-total{font-size:16px;}
+    body.printing #categoryCard table.cat-side, body.printing #categoryCard table.cat-side *{-webkit-print-color-adjust:exact;print-color-adjust:exact;}
+    body.printing #categoryCard tr{break-inside:avoid;page-break-inside:avoid;}
+  }
+
   /* 재정보고서 전용: 나이 드신 분들도 편하게 보실 수 있도록 글씨를 크게, 줄 간격을 넓게 잡은 인쇄용 레이아웃 */
   .elder-report{ line-height:1.6; }
   .elder-report table{ font-size:20px; }
@@ -584,8 +601,8 @@ color:var(--ink-soft);font-size:12.5px;margin-top:30px;display:flex;flex-directi
 
   <div class="card" id="categoryCard">
     <h2>
-      <span class="idx">03</span> 계정별 현황
-      <span class="print-title print-target-title" id="categoryPrintTitle">계정별 현황</span>
+      <span class="idx">03</span> 재정보고서
+      <span class="print-title print-target-title" id="categoryPrintTitle">재정보고서</span>
       <div class="card-tools no-print">
         <button class="tool-btn" id="categoryPrintBtn">인쇄</button>
         <button class="tool-btn" id="categoryExcelBtn">엑셀 다운로드</button>
@@ -593,8 +610,8 @@ color:var(--ink-soft);font-size:12.5px;margin-top:30px;display:flex;flex-directi
     </h2>
     <div class="card-caption no-print" id="categoryCaption"></div>
     <div class="cat-mode no-print" role="radiogroup" aria-label="보기 구분">
-      <label><input type="radio" name="categoryMode" value="internal" checked><span>내부용</span><small>실명 포함 세부내역</small></label>
-      <label><input type="radio" name="categoryMode" value="external"><span>외부용</span><small>건수·합계만</small></label>
+      <label><input type="radio" name="categoryMode" value="internal"><span>내부용</span><small>실명 포함 세부내역</small></label>
+      <label><input type="radio" name="categoryMode" value="external" checked><span>외부용</span><small>건수·합계만</small></label>
     </div>
     <div class="no-print" id="categoryEditBar" style="display:none;gap:10px;align-items:center;flex-wrap:wrap;margin:0 0 10px;font-size:13.5px;color:var(--ink-soft);">
       <button type="button" class="tool-btn" id="categoryEditToggleBtn">✎ 내역 이름 수정</button>
@@ -670,31 +687,6 @@ color:var(--ink-soft);font-size:12.5px;margin-top:30px;display:flex;flex-directi
     </div>
   </div>
 
-  <div class="card" id="momCard">
-    <h2>
-      <span class="idx">06</span> 재정보고서
-    </h2>
-    <div class="filter-row no-print">
-      <div class="f-item">
-        <label>기준월</label>
-        <input type="month" id="momMonth">
-      </div>
-      <div class="f-item">
-        <label>계정별 현황</label>
-        <select id="reportCategoryMode">
-          <option value="external" selected>외부용 (건수·합계만)</option>
-          <option value="internal">내부용 (실명 포함)</option>
-        </select>
-      </div>
-      <div class="f-item">
-        <button type="button" class="tool-btn" id="churchReportBtn">월간재정보고서 출력</button>
-      </div>
-    </div>
-    <div class="card-caption">기준월을 선택하고 버튼을 누르면 해당 월의 ① 거래 내역, ② 계정별 현황, ③ 통장별 잔액이 한 장의 인쇄용 보고서로 출력됩니다.</div>
-  </div>
-
-  <div class="card" id="reportPrintArea" style="display:none;"></div>
-
   <footer>
     <div>암호를 입력하면 서버에 저장되어 어느 기기·브라우저에서도 같은 데이터를 볼 수 있습니다. 암호를 입력하지 않았거나 서버 연결에 실패한 경우에는 이 브라우저에만 임시로 저장됩니다. 정기적으로 백업을 내려받아 두는 것을 권장합니다.</div>
     <div id="storageStatus" style="font-family:'JetBrains Mono',monospace;"></div>
@@ -743,7 +735,6 @@ document.getElementById('appTitle').addEventListener('keydown', (e)=>{
   if(e.key === 'Enter' || e.key === ' '){ e.preventDefault(); window.location.reload(); }
 });
 document.getElementById('f-date').value = new Date().toISOString().slice(0,10);
-document.getElementById('momMonth').value = new Date().toISOString().slice(0,7);
 
 function won(n){
   const sign = n < 0 ? '-' : '';
@@ -1221,13 +1212,6 @@ function populateFilters(){
   filterMonth = monthSel.value;
 }
 
-/* 거래내역에서 연도·월을 모두 선택하면(=특정 월로 좁히면) 06번 재정보고서의 기준월도
-   같은 월로 자동으로 맞춰준다. 재정보고서 카드에서 기준월을 따로 바꾸는 것은 그대로 가능하다. */
-function syncMomMonthWithFilter(){
-  if(filterYear && filterMonth){
-    document.getElementById('momMonth').value = `${filterYear}-${filterMonth}`;
-  }
-}
 
 document.getElementById('filterAccount').addEventListener('change', (e)=>{ filterAccount = e.target.value; renderLedger(); renderAccountSummary(); });
 document.getElementById('filterYear').addEventListener('change', (e)=>{
@@ -1241,7 +1225,6 @@ document.getElementById('filterMonth').addEventListener('change', (e)=>{
   filterMonth = e.target.value;
   renderLedger();
   renderAccountSummary();
-  syncMomMonthWithFilter();
 });
 
 const ACCOUNT_PALETTE = [
@@ -1757,7 +1740,7 @@ function categorySideRowsHTML(R, label, editable){
   return html.join('');
 }
 
-let categoryMode = 'internal';      // 03번 카드 보기 구분(내부용/외부용)
+let categoryMode = 'external';      // 03번 카드 보기 구분(내부용/외부용)
 let categoryEditMode = false;      // 외부용 세부내역 이름 수정 모드
 function categoryViewOpts(){ return { mode: categoryMode }; }
 
@@ -1772,7 +1755,7 @@ function renderCategorySummary(){
   else if(filterYear) periodLabel = `${filterYear}년`;
   else periodLabel = '전체 기간';
   const shortLabel = (filterYear && filterMonth) ? `${parseInt(filterMonth,10)}월` : (filterYear ? `${filterYear}년` : '전체');
-  heading.textContent = `계정별 현황 (${periodLabel})${categoryMode === 'internal' ? ' · 내부용' : ''}`;
+  heading.textContent = `진리침례교회 ${periodLabel} 재정보고서`;
   caption.textContent = `모든 통장을 통합한 재정현황입니다. 왼쪽은 수입, 오른쪽은 지출이며 거래내역의 연도·월 필터와 같은 기간(${periodLabel})만 집계합니다. 계좌간 이체는 총수입·총지출에서 제외하고 맨 아래에 따로 표시합니다.`;
   caption.textContent += categoryMode === 'external' ? ' [외부용] 세부내역 없이 계정별 건수와 합계만 보여 줍니다.' : ' [내부용] 세부내역(적요별 금액)을 실명 포함해 보여 줍니다.';
 
@@ -2003,13 +1986,24 @@ function render(){
 
 function printSection(cardId){
   document.querySelectorAll('.card').forEach(c=>c.classList.remove('print-target'));
-  document.getElementById(cardId).classList.add('print-target');
+  const card = document.getElementById(cardId);
+  card.classList.add('print-target');
   document.body.classList.add('printing');
+  card.style.zoom = ''; card.style.width = '';
+  if(cardId === 'categoryCard') fitToOnePage(card);
   window.print();
+}
+/* 재정보고서가 A4 한 장(여백 제외 약 186×273mm)에 들어가도록 배율을 줄인다 */
+function fitToOnePage(card){
+  const mm = 96/25.4, maxH = 271*mm;
+  card.style.width = '186mm';
+  const h = card.getBoundingClientRect().height;
+  card.style.width = '';
+  if(h > maxH){ const z = Math.max(0.5, maxH/h); card.style.zoom = z.toFixed(3); card.style.width = (186/z).toFixed(1)+'mm'; }
 }
 window.addEventListener('afterprint', ()=>{
   document.body.classList.remove('printing');
-  document.querySelectorAll('.card').forEach(c=>c.classList.remove('print-target'));
+  document.querySelectorAll('.card').forEach(c=>{c.classList.remove('print-target'); c.style.zoom=''; c.style.width='';});
 });
 
 document.getElementById('ledgerPrintBtn').addEventListener('click', ()=> printSection('ledgerCard'));
@@ -2039,119 +2033,6 @@ document.getElementById('categoryPrintBtn').addEventListener('click', ()=> print
 document.getElementById('reclassifyBtn').addEventListener('click', reclassifyAllTransactions);
 document.getElementById('ledgerBulkDeleteBtn').addEventListener('click', bulkDeleteByFilter);
 
-/* ---------- 월간 재정보고서 (통합 인쇄) ---------- */
-/* 재정보고서용 '계정별 현황' 표(HTML 문자열). 화면의 03번 카드와 같은 계산(buildCategoryReport)을 쓴다. */
-function categoryReportTableHTML(year, month, opts){
-  const R = buildCategoryReport(year, month, opts);
-  return `<table class="cat-side"><colgroup><col class="c-l"><col class="c-a"><col class="c-l"><col class="c-a"></colgroup><thead><tr><th class="h-inc">수입 항목</th><th class="h-inc h-amt">금액(원)</th><th class="h-exp">지출 항목</th><th class="h-exp h-amt">금액(원)</th></tr></thead><tbody>${categorySideRowsHTML(R, `${parseInt(month,10)}월`)}</tbody></table>`;
-}
-
-function buildMonthlyReportHTML(monthStr){
-  const [y, m] = monthStr.split('-');
-  const catSel = document.getElementById('reportCategoryMode');
-  const catVal = catSel ? catSel.value : 'external';
-  const catOpts = { mode: catVal === 'internal' ? 'internal' : 'external' };
-  const catInternal = catVal === 'internal';
-  const monthLabel = `${y}년 ${parseInt(m,10)}월`;
-
-  const monthTx = sortedTx().filter(t => t.date.slice(0,7) === monthStr);
-
-  // 거래 내역 섹션(1번)은 계좌간 이체만 수입·지출·잔액 계산에서 제외한다.
-  // 이체 거래 자체는 표에 그대로 표시되지만, 소계(누적 잔액)와 합계에는 반영되지 않는다.
-  // 여입·오류는 실제 거래로서 수입·지출 합계에 포함한다.
-  const openingBalance = transactions.reduce((sum, t) => {
-    if(isTransferTx(t)) return sum;
-    return t.date < `${monthStr}-01` ? sum + (t.type === 'income' ? t.amount : -t.amount) : sum;
-  }, 0);
-  let balance = openingBalance, totalIncome = 0, totalExpense = 0;
-  const openingRowHtml = `<tr class="opening-row"><td colspan="3">이월금 (${monthLabel} 이전, 이체 제외)</td><td class="income"></td><td class="expense"></td><td>${won(balance)}</td></tr>`;
-  const ledgerRowsHtml = monthTx.map(tx=>{
-    const inc = tx.type === 'income' ? tx.amount : 0;
-    const exp = tx.type === 'expense' ? tx.amount : 0;
-    const isTransfer = isTransferTx(tx);
-    const catNow = tx.category || autoClassify(tx);
-    const isRefund = catNow === '여입' || catNow === '환입';
-    const isError = catNow === '오류';
-    if(!isTransfer){
-      balance += inc - exp;
-      totalIncome += inc; totalExpense += exp;
-    }
-    const rowClass = isTransfer ? ' class="tx-transfer"' : ((isRefund || isError) ? ' class="tx-refund"' : '');
-    const tagLabel = isTransfer ? '이체' : (isRefund ? catNow : (isError ? '오류' : ''));
-    const tagClass = isTransfer ? 'tag-transfer' : ((isRefund || isError) ? 'tag-refund' : '');
-    const tag = tagLabel ? ` <span class="special-tag ${tagClass}">${tagLabel}</span>` : '';
-    return `<tr${rowClass}><td>${tx.date}</td>${accountCellHTML(tx.account||'')}<td class="memo">${escapeHtml(tx.memo)}${tag}</td><td class="income">${inc?won(inc):''}</td><td class="expense">${exp?won(exp):''}</td><td>${won(balance)}</td></tr>`;
-  }).join('') || `<tr><td colspan="6" style="text-align:center;font-family:'Pretendard';color:var(--ink-soft);">해당 월 거래 내역이 없습니다.</td></tr>`;
-
-  // 통장별 잔액 현황: 이체는 해당 통장의 실제 입출금이므로 포함해서 계산한다(거래내역 소계·합계와는 다른 기준).
-  const acctGroups = {};
-  getAccountList().forEach(k => acctGroups[k] = {income:0, expense:0, balance:0});
-  transactions.forEach(t=>{
-    const key = t.account;
-    if(!key) return;
-    if(!acctGroups[key]) acctGroups[key] = {income:0, expense:0, balance:0};
-    const delta = t.type === 'income' ? t.amount : -t.amount;
-    if(t.date.slice(0,7) <= monthStr) acctGroups[key].balance += delta;
-    if(t.date.slice(0,7) === monthStr) acctGroups[key][t.type] += t.amount;
-  });
-  const accRows = Object.keys(acctGroups).map(k=>({
-    label:k, income:acctGroups[k].income, expense:acctGroups[k].expense, net:acctGroups[k].balance,
-    opening: acctGroups[k].balance - acctGroups[k].income + acctGroups[k].expense
-  }));
-  const accGrandIncome = accRows.reduce((s,r)=>s+r.income,0);
-  const accGrandExpense = accRows.reduce((s,r)=>s+r.expense,0);
-  const accGrandNet = accRows.reduce((s,r)=>s+r.net,0);
-  const accGrandOpening = accRows.reduce((s,r)=>s+r.opening,0);
-  const accRowsHtml = accRows.map(r=>`<tr><td>${escapeHtml(r.label)}</td><td class="${r.opening>=0?'balance-pos':'balance-neg'}">${won(r.opening)}</td><td class="income">${r.income?won(r.income):'-'}</td><td class="expense">${r.expense?won(r.expense):'-'}</td><td class="${r.net>=0?'balance-pos':'balance-neg'}">${won(r.net)}</td></tr>`).join('')
-    + `<tr class="total-row"><td>합계</td><td class="${accGrandOpening>=0?'balance-pos':'balance-neg'}">${won(accGrandOpening)}</td><td class="income">${won(accGrandIncome)}</td><td class="expense">${won(accGrandExpense)}</td><td class="${accGrandNet>=0?'balance-pos':'balance-neg'}">${won(accGrandNet)}</td></tr>`;
-  const accountSummaryHtml = `
-    <h3 style="font-family:'Noto Serif KR',serif;margin:26px 0 8px;">3. 통장별 잔액 현황 (${monthLabel} 말 기준 누적, 이체 포함)</h3>
-    <table><thead><tr><th style="text-align:left;">통장</th><th>이월잔액</th><th>수입 합계</th><th>지출 합계</th><th>잔액</th></tr></thead>
-    <tbody>${accRowsHtml}</tbody></table>
-    <div class="card-caption" style="margin-top:8px;">통장별 잔액은 계좌간 이체를 그 통장의 실제 입출금으로 보아 포함해서 계산합니다. 위 1번 거래 내역 표와 2번 계정별 현황은 여러 통장을 합친 전체 합계이므로 이체를 제외하며, 따라서 두 표의 수입·지출 합계는 서로 다를 수 있습니다.</div>
-  `;
-
-  const today = new Date().toLocaleDateString('ko-KR', {year:'numeric',month:'long',day:'numeric'});
-
-  return `
-    <div class="elder-report">
-    <div class="print-title print-target-title">진리침례교회 재정보고서 — ${monthLabel}</div>
-
-    <h3 style="font-family:'Noto Serif KR',serif;margin:20px 0 8px;">1. ${monthLabel} 거래 내역</h3>
-    <table><thead><tr><th style="text-align:left;">거래일</th><th style="text-align:left;">통장</th><th style="text-align:left;">내용</th><th>수입</th><th>지출</th><th>소계</th></tr></thead>
-    <tbody>
-      ${openingRowHtml}
-      ${ledgerRowsHtml}
-      <tr class="total-row"><td colspan="3">합계 (이체 제외)</td><td class="income">${won(totalIncome)}</td><td class="expense">${won(totalExpense)}</td><td>${won(balance)}</td></tr>
-    </tbody></table>
-    <div class="card-caption" style="margin-top:8px;"><span class="special-tag tag-transfer">이체</span> 계좌간 이체 · <span class="special-tag tag-refund">여입 · 오류</span> 오류로 지출됐다 재입금(여입)되거나 착오 처리된 거래(오류) — 이체만 위 합계·소계 계산에서 제외되며, 여입·오류는 포함됩니다. 아래 통장별 잔액은 이체까지 포함하는 별도 기준입니다.</div>
-
-    <div class="rpt-new-page">
-    <h3 style="font-family:'Noto Serif KR',serif;margin:0 0 8px;">2. ${monthLabel} 계정별 현황${catInternal ? ' (내부용)' : ''}</h3>
-    ${categoryReportTableHTML(y, m, catOpts)}
-    <div class="card-caption" style="margin-top:8px;">계좌간 이체는 총수입·총지출에서 제외하고 표 맨 아래에 따로 표시합니다.</div>
-    </div>
-
-    <div class="rpt-keep">
-    ${accountSummaryHtml}
-    </div>
-    <div style="margin-top:40px;text-align:right;">작성일: ${today}</div>
-    </div>
-  `;
-}
-
-function printMonthlyReport(){
-  const monthStr = document.getElementById('momMonth').value;
-  if(!monthStr){ alert('기준월을 먼저 선택해 주세요.'); return; }
-  const area = document.getElementById('reportPrintArea');
-  area.innerHTML = buildMonthlyReportHTML(monthStr);
-  document.querySelectorAll('.card').forEach(c=>c.classList.remove('print-target'));
-  area.classList.add('print-target');
-  document.body.classList.add('printing');
-  window.print();
-}
-
-document.getElementById('churchReportBtn').addEventListener('click', printMonthlyReport);
 
 /* ---------- 엑셀 다운로드 ---------- */
 function excelFilename(prefix){
