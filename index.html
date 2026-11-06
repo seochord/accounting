@@ -594,7 +594,7 @@ color:var(--ink-soft);font-size:12.5px;margin-top:30px;display:flex;flex-directi
     <div class="card-caption no-print" id="categoryCaption"></div>
     <div class="cat-mode no-print" role="radiogroup" aria-label="보기 구분">
       <label><input type="radio" name="categoryMode" value="internal" checked><span>내부용</span><small>실명 포함 세부내역</small></label>
-      <label><input type="radio" name="categoryMode" value="external"><span>외부용</span><small>실명 제외 · 수정 가능</small></label>
+      <label><input type="radio" name="categoryMode" value="external"><span>외부용</span><small>건수·합계만</small></label>
     </div>
     <div class="no-print" id="categoryEditBar" style="display:none;gap:10px;align-items:center;flex-wrap:wrap;margin:0 0 10px;font-size:13.5px;color:var(--ink-soft);">
       <button type="button" class="tool-btn" id="categoryEditToggleBtn">✎ 내역 이름 수정</button>
@@ -682,7 +682,7 @@ color:var(--ink-soft);font-size:12.5px;margin-top:30px;display:flex;flex-directi
       <div class="f-item">
         <label>계정별 현황</label>
         <select id="reportCategoryMode">
-          <option value="external" selected>외부용 (실명 제외)</option>
+          <option value="external" selected>외부용 (건수·합계만)</option>
           <option value="internal">내부용 (실명 포함)</option>
         </select>
       </div>
@@ -1660,7 +1660,7 @@ function buildCategoryReport(year, month, opts){
   const inc = byType('income'), exp = byType('expense');
 
   const incomeItems = sortCats(Object.keys(inc).filter(c => c !== '이체')).map(c=>{
-    const r = summarizeDetails(inc[c], true, undefined, {type:'income', cat:c, hideNames});
+    const r = summarizeDetails(inc[c], !hideNames, undefined, {type:'income', cat:c, hideNames});
     return { cat:c, ...r };
   });
   const incomeTotal = incomeItems.reduce((a,i)=>a+i.amount,0);
@@ -1669,10 +1669,10 @@ function buildCategoryReport(year, month, opts){
   const expCats = sortCats(Object.keys(exp).filter(c => c !== '이체'));
   const used = new Set();
   const groups = EXPENSE_GROUPS.map(g=>{
-    const items = g.cats.filter(c => expCats.includes(c)).map(c=>{ used.add(c); return { cat:c, ...summarizeDetails(exp[c], true, CATEGORY_DETAIL_ALL.includes(c) ? Infinity : undefined, {type:'expense', cat:c, hideNames}) }; });
+    const items = g.cats.filter(c => expCats.includes(c)).map(c=>{ used.add(c); return { cat:c, ...summarizeDetails(exp[c], !hideNames, CATEGORY_DETAIL_ALL.includes(c) ? Infinity : undefined, {type:'expense', cat:c, hideNames}) }; });
     return { name:g.name, items };
   });
-  const others = expCats.filter(c => !used.has(c)).map(c => ({ cat:c, ...summarizeDetails(exp[c], true, undefined, {type:'expense', cat:c, hideNames}) }));
+  const others = expCats.filter(c => !used.has(c)).map(c => ({ cat:c, ...summarizeDetails(exp[c], !hideNames, undefined, {type:'expense', cat:c, hideNames}) }));
   groups.push({ name:'기타 지출', items: others });
   groups.forEach(g=>{
     g.amount = g.items.reduce((a,i)=>a+i.amount,0);
@@ -1774,12 +1774,12 @@ function renderCategorySummary(){
   const shortLabel = (filterYear && filterMonth) ? `${parseInt(filterMonth,10)}월` : (filterYear ? `${filterYear}년` : '전체');
   heading.textContent = `계정별 현황 (${periodLabel})${categoryMode === 'internal' ? ' · 내부용' : ''}`;
   caption.textContent = `모든 통장을 통합한 재정현황입니다. 왼쪽은 수입, 오른쪽은 지출이며 거래내역의 연도·월 필터와 같은 기간(${periodLabel})만 집계합니다. 계좌간 이체는 총수입·총지출에서 제외하고 맨 아래에 따로 표시합니다.`;
-  caption.textContent += categoryMode === 'external' ? ' [외부용] 세부내역에서 실명을 뺀 적요만 보여 줍니다. 이름뿐인 적요는 "개인(이름 생략)"으로 모읍니다.' : ' [내부용] 세부내역(적요별 금액)을 실명 포함해 보여 줍니다.';
+  caption.textContent += categoryMode === 'external' ? ' [외부용] 세부내역 없이 계정별 건수와 합계만 보여 줍니다.' : ' [내부용] 세부내역(적요별 금액)을 실명 포함해 보여 줍니다.';
 
   body.innerHTML = '';
   // 수정 도구 모음은 외부용에서만 보인다
   const editBar = document.getElementById('categoryEditBar');
-  if(editBar) editBar.style.display = categoryMode === 'external' ? 'flex' : 'none';
+  if(editBar) editBar.style.display = 'none';
   const toggleBtn = document.getElementById('categoryEditToggleBtn');
   if(toggleBtn){
     toggleBtn.textContent = categoryEditMode ? '✓ 수정 끝내기' : '✎ 내역 이름 수정';
