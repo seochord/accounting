@@ -349,7 +349,8 @@ color:var(--ink-soft);font-size:12.5px;margin-top:30px;display:flex;flex-directi
 
   /* 재정보고서(03) 인쇄: A4 한 장, 제목 가운데 정렬 */
   @page{size:A4 portrait;margin:12mm;}
-  @media print{
+    body.printing #categoryCard .no-print{display:none !important;}
+    body.printing #categoryCard{padding:0;margin:0;border:none;box-shadow:none;}
     body.printing #categoryCard .idx{display:none;}
     body.printing #categoryCard > h2{display:block;margin:0 0 4mm;padding:0;border:none;font-size:0;}
     body.printing #categoryCard .print-title.print-target-title{text-align:center;font-size:26px;letter-spacing:1px;margin:0 0 5mm;padding-bottom:3mm;border-bottom:2px solid #1F2A3C;}
@@ -361,7 +362,6 @@ color:var(--ink-soft);font-size:12.5px;margin-top:30px;display:flex;flex-directi
     body.printing #categoryCard table.cat-side td.c-total{font-size:16px;}
     body.printing #categoryCard table.cat-side, body.printing #categoryCard table.cat-side *{-webkit-print-color-adjust:exact;print-color-adjust:exact;}
     body.printing #categoryCard tr{break-inside:avoid;page-break-inside:avoid;}
-  }
 
   /* 재정보고서 전용: 나이 드신 분들도 편하게 보실 수 있도록 글씨를 크게, 줄 간격을 넓게 잡은 인쇄용 레이아웃 */
   .elder-report{ line-height:1.6; }
@@ -1993,13 +1993,19 @@ function printSection(cardId){
   if(cardId === 'categoryCard') fitToOnePage(card);
   window.print();
 }
-/* 재정보고서가 A4 한 장(여백 제외 약 186×273mm)에 들어가도록 배율을 줄인다 */
+/* 재정보고서가 A4 한 장(여백 제외 약 186×273mm)을 가득 채우도록 배율을 맞춘다(줄이거나 키움) */
 function fitToOnePage(card){
-  const mm = 96/25.4, maxH = 271*mm;
-  card.style.width = '186mm';
-  const h = card.getBoundingClientRect().height;
-  card.style.width = '';
-  if(h > maxH){ const z = Math.max(0.5, maxH/h); card.style.zoom = z.toFixed(3); card.style.width = (186/z).toFixed(1)+'mm'; }
+  const mm = 96/25.4, maxH = 256*mm;
+  const heightAt = z => {
+    card.style.zoom = z; card.style.width = (186/z)+'mm';
+    return card.getBoundingClientRect().height;
+  };
+  let lo = 0.5, hi = 2.4;
+  for(let i=0;i<14;i++){
+    const mid = (lo+hi)/2;
+    if(heightAt(mid) > maxH) hi = mid; else lo = mid;
+  }
+  heightAt(lo);
 }
 window.addEventListener('afterprint', ()=>{
   document.body.classList.remove('printing');
